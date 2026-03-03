@@ -77,3 +77,13 @@ Mostly Visual Baisc files for interacting with AOL and AIM
 ## programs
 Compiled AOL AND AIM programs used to interact with AOL.  Also known as Proggies.
 
+See [proggie-list-sorted.txt](proggie-list-sorted.txt) for a complete sorted list of all 5,964+ proggies in this archive.
+
+### Automated List Updates
+The proggie list is automatically updated via GitHub Actions whenever new files are added. Contributors don't need to manually update the list - just add your proggies and push!
+
+To manually update the list locally:
+```bash
+make update-list
+```
+
