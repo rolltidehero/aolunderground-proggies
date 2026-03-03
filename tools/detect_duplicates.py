@@ -1,86 +1,83 @@
 #!/usr/bin/env python3
+"""Detect duplicate archives by exe hash."""
+from __future__ import annotations
+
+import argparse
 import json
+import logging
 import sys
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
+
 from analyze_archive import analyze_archive
 
-def detect_duplicates(archives_dir, passwords_file, output_file):
+logger = logging.getLogger(__name__)
+
+
+def detect_duplicates(archives_dir: str | Path, passwords_file: str | Path,
+                      output_file: str | Path) -> dict[str, object] | None:
     """Group archives by exe hash and detect duplicates."""
     archives_dir = Path(archives_dir)
-    hash_groups = defaultdict(list)
-    
-    # Load passwords database
-    passwords_db = {}
+    hash_groups: dict[str, list[dict[str, object]]] = defaultdict(list)
+
+    passwords_db: dict[str, list[str]] = {}
     if passwords_file and Path(passwords_file).exists():
         with open(passwords_file) as f:
             passwords_db = json.load(f)
-    
-    # Find all archives
+
     archives = list(archives_dir.rglob("*.zip")) + list(archives_dir.rglob("*.rar"))
-    print(f"Found {len(archives)} archives")
-    
+    logger.info("Found %d archives", len(archives))
+
     if not archives:
-        print("No archives found!")
+        logger.warning("No archives found!")
         return None
-    
-    # Analyze each archive
+
     for i, archive in enumerate(archives, 1):
         if i % 100 == 0:
-            print(f"Processed {i}/{len(archives)}...")
-        
+            logger.info("Processed %d/%d...", i, len(archives))
+
         try:
             metadata = analyze_archive(str(archive), passwords_db)
             if metadata and metadata.get("exe_hash"):
                 hash_groups[metadata["exe_hash"]].append({
                     "archive": str(archive),
-                    "metadata": metadata
+                    "metadata": metadata,
                 })
-        except Exception as e:
-            print(f"Error analyzing {archive}: {e}", file=sys.stderr)
-    
-    # Find duplicates (groups with >1 archive)
+        except OSError as e:
+            logger.error("Error analyzing %s: %s", archive, e)
+
     duplicates = {h: g for h, g in hash_groups.items() if len(g) > 1}
-    
-    # Analyze each duplicate group
-    report = {
+
+    report: dict[str, object] = {
         "total_archives": len(archives),
         "unique_exes": len(hash_groups),
         "duplicate_groups": len(duplicates),
-        "groups": []
+        "groups": [],
     }
-    
+
     for exe_hash, group in duplicates.items():
-        # Collect all files from all archives
-        all_files = defaultdict(list)  # filename -> [(archive, hash)]
-        
+        all_files: dict[str, list[tuple[str, str | None]]] = defaultdict(list)
+
         for item in group:
             metadata = item["metadata"]
             archive = item["archive"]
-            
-            # Track exe
+
             if metadata.get("exe_name"):
                 all_files[metadata["exe_name"]].append((archive, exe_hash))
-            
-            # Track dependencies
+
             for dep_type, deps in metadata.get("dependencies", {}).items():
                 for dep in deps:
                     all_files[dep].append((archive, None))
-        
-        # Find conflicts (same filename, different content)
+
         conflicts = []
         unique_files = []
-        
+
         for filename, sources in all_files.items():
             if len(sources) > 1:
-                # Check if hashes differ (for non-exe files, we don't have hashes yet)
-                conflicts.append({
-                    "filename": filename,
-                    "sources": [s[0] for s in sources]
-                })
+                conflicts.append({"filename": filename, "sources": [s[0] for s in sources]})
             else:
                 unique_files.append(filename)
-        
+
         report["groups"].append({
             "exe_hash": exe_hash,
             "exe_name": group[0]["metadata"].get("exe_name"),
@@ -88,24 +85,50 @@ def detect_duplicates(archives_dir, passwords_file, output_file):
             "archives": [item["archive"] for item in group],
             "metadata": [item["metadata"] for item in group],
             "potential_conflicts": conflicts,
-            "unique_files": unique_files
+            "unique_files": unique_files,
         })
-    
-    # Save report
+
+    Path(output_file).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w") as f:
         json.dump(report, f, indent=2)
-    
-    print(f"\nDuplicate Detection Complete:")
-    print(f"  Total archives: {report['total_archives']}")
-    print(f"  Unique .exe files: {report['unique_exes']}")
-    print(f"  Duplicate groups: {report['duplicate_groups']}")
-    print(f"  Report saved to: {output_file}")
-    
+
+    logger.info("Duplicate Detection Complete:")
+    logger.info("  Total archives: %d", report["total_archives"])
+    logger.info("  Unique .exe files: %d", report["unique_exes"])
+    logger.info("  Duplicate groups: %d", report["duplicate_groups"])
+    logger.info("  Report saved to: %s", output_file)
+
     return report
 
+
+def setup_logging(verbose: bool = False) -> None:
+    """Configure timestamped logging."""
+    level = logging.DEBUG if verbose else logging.INFO
+    fmt = "%(asctime)s [%(levelname)-8s] %(name)s: %(message)s"
+    logging.basicConfig(level=level, format=fmt, datefmt="%Y-%m-%d %H:%M:%S")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Detect duplicate archives by exe hash")
+    parser.add_argument("archives_dir", help="Directory containing archives")
+    parser.add_argument("passwords_file", help="Path to passwords.json")
+    parser.add_argument("output_file", help="Output JSON file")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    args = parser.parse_args()
+
+    setup_logging(verbose=args.verbose)
+    logger.info("Starting %s", Path(__file__).name)
+
+    try:
+        detect_duplicates(args.archives_dir, args.passwords_file, args.output_file)
+        return 0
+    except KeyboardInterrupt:
+        logger.warning("Interrupted by user")
+        return 130
+    except Exception:
+        logger.exception("Fatal error")
+        return 1
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: detect_duplicates.py <archives_dir> <passwords_file> <output_file>")
-        sys.exit(1)
-    
-    detect_duplicates(sys.argv[1], sys.argv[2], sys.argv[3])
+    sys.exit(main())
