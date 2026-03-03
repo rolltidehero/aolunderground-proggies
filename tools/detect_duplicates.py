@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import sys
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def detect_duplicates(archives_dir: str | Path, passwords_file: str | Path,
                     "archive": str(archive),
                     "metadata": metadata,
                 })
-        except OSError as e:
+        except (OSError, RuntimeError, zipfile.BadZipFile) as e:
             logger.error("Error analyzing %s: %s", archive, e)
 
     duplicates = {h: g for h, g in hash_groups.items() if len(g) > 1}

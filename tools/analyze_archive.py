@@ -33,7 +33,7 @@ def extract_archive(archive_path: Path, temp_dir: str) -> list[str]:
         if archive_path.suffix.lower() == ".zip":
             with zipfile.ZipFile(archive_path, "r") as zf:
                 for name in zf.namelist():
-                    if name.startswith("/") or ".." in name:
+                    if name.startswith("/") or "/../" in name or name.startswith("../"):
                         logger.warning("Skipping suspicious path in %s: %s", archive_path.name, name)
                         continue
                 zf.extractall(temp_dir)
@@ -41,6 +41,9 @@ def extract_archive(archive_path: Path, temp_dir: str) -> list[str]:
         return []
     except zipfile.BadZipFile:
         logger.error("%s is not a valid zip file", archive_path)
+        return []
+    except RuntimeError as e:
+        logger.warning("Cannot extract %s (encrypted?): %s", archive_path, e)
         return []
     except OSError as e:
         logger.error("Error extracting %s: %s", archive_path, e)
