@@ -77,7 +77,28 @@ Mostly Visual Baisc files for interacting with AOL and AIM
 ## programs
 Compiled AOL AND AIM programs used to interact with AOL.  Also known as Proggies.
 
-See [proggie-list-sorted.txt](proggie-list-sorted.txt) for a complete sorted list of all 5,964+ proggies in this archive.
+### 🎉 Repository Reorganization (2026)
+
+This repository has been reorganized for better discoverability! Changes include:
+- **Duplicate Detection:** Merged archives containing identical .exe files
+- **Version Tagging:** Proggies now organized by AOL version compatibility (2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+- **Enhanced Metadata:** Program names, authors, dependencies, and passwords extracted
+- **Searchable Interfaces:** Multiple ways to find what you need
+
+### Finding Proggies
+
+**Search Tools:**
+- [proggie-index.html](proggie-index.html) - Interactive web search (recommended)
+- [proggie-index.md](proggie-index.md) - Browse by category with markdown tables
+- [proggie-index.txt](proggie-index.txt) - Greppable tab-delimited file
+
+**Old Links Broken?**
+- Check [REDIRECTS.md](.github/REDIRECTS.md) to find where files moved
+- View original structure: switch to `archive-original` branch
+
+**Want to Help?**
+- See [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for proggies needing version verification
+- Submit corrections via issues or pull requests
 
 ### Automated List Updates
 The proggie list is automatically updated via GitHub Actions whenever new files are added. Contributors don't need to manually update the list - just add your proggies and push!
