@@ -84,6 +84,7 @@ This repository has been reorganized for better discoverability! Changes include
 - **Version Tagging:** Proggies now organized by AOL version compatibility (2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
 - **Enhanced Metadata:** Program names, authors, dependencies, and passwords extracted
 - **Searchable Interfaces:** Multiple ways to find what you need
+- **API-Based Version Detection:** Accurate version detection using actual AOL API signatures ([Learn More](docs/AOL_VERSION_DETECTION.md))
 
 ### Finding Proggies
 

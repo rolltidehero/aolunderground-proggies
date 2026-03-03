@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import logging
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -27,45 +28,151 @@ def compute_hash(filepath: Path) -> str:
     return sha256.hexdigest()
 
 
-def extract_archive(archive_path: Path, temp_dir: str) -> list[str]:
-    """Extract archive to temporary directory."""
-    try:
-        if archive_path.suffix.lower() == ".zip":
+def extract_archive(archive_path: Path, temp_dir: str, passwords: list[str] | None = None) -> list[str]:
+    """Extract archive to temporary directory.
+
+    Strategy: try Python zipfile first, fall back to 7z for
+    corrupt zips, encoding mismatches, RAR files, and encrypted archives.
+    """
+    # Try Python zipfile first (fastest)
+    if archive_path.suffix.lower() == ".zip":
+        try:
             with zipfile.ZipFile(archive_path, "r") as zf:
                 for name in zf.namelist():
                     if name.startswith("/") or "/../" in name or name.startswith("../"):
                         logger.warning("Skipping suspicious path in %s: %s", archive_path.name, name)
                         continue
-                # Try extractall first, fall back to per-file extraction
-                try:
-                    zf.extractall(temp_dir)
-                except (zipfile.BadZipFile, RuntimeError) as e:
-                    logger.debug("extractall failed for %s (%s), trying per-file", archive_path.name, e)
-                    for info in zf.infolist():
-                        if info.is_dir():
-                            continue
-                        try:
-                            zf.extract(info, temp_dir)
-                        except (zipfile.BadZipFile, RuntimeError, KeyError) as e2:
-                            # Last resort: read raw data and write manually
-                            try:
-                                data = zf.read(info.filename)
-                                safe_name = info.filename.encode("cp437", errors="replace").decode("ascii", errors="replace")
-                                out = Path(temp_dir) / safe_name
-                                out.parent.mkdir(parents=True, exist_ok=True)
-                                out.write_bytes(data)
-                            except (RuntimeError, KeyError, OSError) as e3:
-                                logger.debug("Cannot extract %s from %s: %s", info.filename, archive_path.name, e3)
+                zf.extractall(temp_dir)
                 return list(zf.namelist())
+        except (zipfile.BadZipFile, RuntimeError, OSError) as e:
+            logger.debug("Python zipfile failed on %s (%s), trying 7z", archive_path.name, e)
+
+    # Fall back to 7z for everything Python can't handle
+    return _extract_with_7z(archive_path, temp_dir, passwords)
+
+
+def _extract_with_7z(archive_path: Path, temp_dir: str, passwords: list[str] | None = None) -> list[str]:
+    """Extract any archive using 7z, with unrar fallback for RAR files."""
+    try:
+        # First attempt without password
+        result = subprocess.run(
+            ["7z", "x", f"-o{temp_dir}", "-y", str(archive_path)],
+            capture_output=True, timeout=60,
+        )
+        files = [str(p.relative_to(temp_dir)) for p in Path(temp_dir).rglob("*") if p.is_file()]
+        
+        # Check if EXE files are valid (not 0 bytes) - this is what matters
+        exe_files = [f for f in Path(temp_dir).rglob("*.exe") if f.is_file()]
+        valid_exes = [f for f in exe_files if f.stat().st_size > 0]
+        
+        # If RAR file and no valid EXE (either 0 bytes or not extracted), try unrar
+        if archive_path.suffix.lower() == ".rar" and not valid_exes:
+            logger.debug("RAR file with no valid EXE, trying unrar...")
+            # Clean temp dir
+            for f in Path(temp_dir).rglob("*"):
+                if f.is_file():
+                    f.unlink()
+            return _extract_with_unrar(archive_path, temp_dir, passwords)
+        
+        # Check if any files are valid
+        valid_files = [f for f in Path(temp_dir).rglob("*") if f.is_file() and f.stat().st_size > 0]
+        
+        if valid_files:
+            logger.debug("7z extracted %d files from %s (exit %d)",
+                         len(files), archive_path.name, result.returncode)
+            return files
+        
+        # Check for unsupported RAR method in stderr
+        stderr = result.stderr.decode(errors="replace")
+        if "Unsupported Method" in stderr and archive_path.suffix.lower() == ".rar":
+            logger.debug("7z reports unsupported RAR method, trying unrar...")
+            return _extract_with_unrar(archive_path, temp_dir, passwords)
+        
+        # Try with passwords if extraction failed or files are 0 bytes
+        if passwords:
+            logger.debug("Initial extraction failed or produced empty files, trying passwords...")
+            # Clean temp dir for retry
+            for f in Path(temp_dir).rglob("*"):
+                if f.is_file():
+                    f.unlink()
+            
+            for pwd in passwords:
+                logger.debug("Trying password for %s: %s", archive_path.name, pwd)
+                result = subprocess.run(
+                    ["7z", "x", f"-o{temp_dir}", "-y", f"-p{pwd}", str(archive_path)],
+                    capture_output=True, timeout=60,
+                )
+                files = [str(p.relative_to(temp_dir)) for p in Path(temp_dir).rglob("*") if p.is_file()]
+                valid_files = [f for f in Path(temp_dir).rglob("*") if f.is_file() and f.stat().st_size > 0]
+                
+                if valid_files:
+                    logger.info("Successfully extracted %s with password: %s", archive_path.name, pwd)
+                    return files
+                
+                # Check for unsupported RAR method with password
+                stderr = result.stderr.decode(errors="replace")
+                if "Unsupported Method" in stderr and archive_path.suffix.lower() == ".rar":
+                    logger.debug("7z reports unsupported RAR method with password, trying unrar...")
+                    return _extract_with_unrar(archive_path, temp_dir, passwords)
+        
+        if result.returncode > 0 and not files:
+            logger.warning("7z could not extract %s (exit %d): %s",
+                           archive_path.name, result.returncode,
+                           stderr.strip()[:200])
+        return files
+    except FileNotFoundError:
+        logger.error("7z not found - install with: brew install p7zip")
         return []
-    except zipfile.BadZipFile:
-        logger.error("%s is not a valid zip file", archive_path)
+    except subprocess.TimeoutExpired:
+        logger.error("7z timed out on %s", archive_path.name)
         return []
-    except RuntimeError as e:
-        logger.warning("Cannot extract %s (encrypted?): %s", archive_path, e)
+
+
+def _extract_with_unrar(archive_path: Path, temp_dir: str, passwords: list[str] | None = None) -> list[str]:
+    """Extract RAR archive using compiled unrar (supports old RAR formats)."""
+    unrar_bin = Path(__file__).parent / "unrar" / "unrar"
+    if not unrar_bin.exists():
+        unrar_bin = Path("tools/unrar/unrar")
+    
+    try:
+        # Try without password first
+        result = subprocess.run(
+            [str(unrar_bin), "x", "-o+", "-y", str(archive_path), temp_dir + "/"],
+            capture_output=True, timeout=60,
+        )
+        files = [str(p.relative_to(temp_dir)) for p in Path(temp_dir).rglob("*") if p.is_file()]
+        valid_files = [f for f in Path(temp_dir).rglob("*") if f.is_file() and f.stat().st_size > 0]
+        
+        if valid_files:
+            logger.debug("unrar extracted %d files from %s", len(files), archive_path.name)
+            return files
+        
+        # Try with passwords
+        if passwords:
+            for f in Path(temp_dir).rglob("*"):
+                if f.is_file():
+                    f.unlink()
+            
+            for pwd in passwords:
+                logger.debug("Trying unrar with password: %s", pwd)
+                result = subprocess.run(
+                    [str(unrar_bin), "x", "-o+", "-y", f"-p{pwd}", str(archive_path), temp_dir + "/"],
+                    capture_output=True, timeout=60,
+                )
+                files = [str(p.relative_to(temp_dir)) for p in Path(temp_dir).rglob("*") if p.is_file()]
+                valid_files = [f for f in Path(temp_dir).rglob("*") if f.is_file() and f.stat().st_size > 0]
+                
+                if valid_files:
+                    logger.info("Successfully extracted %s with unrar using password: %s", archive_path.name, pwd)
+                    return files
+        
+        logger.warning("unrar could not extract %s", archive_path.name)
+        return files
+    except FileNotFoundError:
+        logger.warning("unrar not found at %s", unrar_bin)
         return []
-    except OSError as e:
-        logger.error("Error extracting %s: %s", archive_path, e)
+    except subprocess.TimeoutExpired:
+        logger.error("unrar timed out on %s", archive_path.name)
         return []
 
 
@@ -115,8 +222,14 @@ def analyze_archive(archive_path: str | Path,
         "new_path": None,
     }
 
+    # Collect all passwords to try
+    all_passwords = []
+    if passwords_db:
+        for db_passwords in passwords_db.values():
+            all_passwords.extend(db_passwords)
+
     with tempfile.TemporaryDirectory() as temp_dir:
-        files = extract_archive(archive_path, temp_dir)
+        files = extract_archive(archive_path, temp_dir, all_passwords if all_passwords else None)
         if not files:
             return metadata
 
@@ -125,6 +238,10 @@ def analyze_archive(archive_path: str | Path,
             return metadata
 
         exe_file = exe_files[0]
+        if exe_file.stat().st_size == 0:
+            logger.warning("Exe %s in %s is 0 bytes (encrypted/corrupt archive?)", exe_file.name, archive_path.name)
+            metadata["exe_name"] = exe_file.name
+            return metadata
         metadata["exe_name"] = exe_file.name
         metadata["exe_hash"] = f"sha256:{compute_hash(exe_file)}"
 

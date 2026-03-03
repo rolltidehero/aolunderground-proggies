@@ -62,10 +62,16 @@ def merge_group(group: list[dict[str, object]], output_dir: str | Path) -> dict[
                 for info in zf.infolist():
                     if info.is_dir():
                         continue
-                    data = zf.read(info.filename)
-                    file_hash = hash_file(data)
-                    files_by_name[info.filename].append((file_hash, data, archive_path))
-                    file_data_lookup[(info.filename, file_hash)] = data
+                    try:
+                        data = zf.read(info.filename)
+                        file_hash = hash_file(data)
+                        files_by_name[info.filename].append((file_hash, data, archive_path))
+                        file_data_lookup[(info.filename, file_hash)] = data
+                    except RuntimeError as e:
+                        if "encrypted" in str(e):
+                            logger.warning("Skipping encrypted file %s in %s", info.filename, archive_path)
+                        else:
+                            raise
         except (OSError, zipfile.BadZipFile) as e:
             logger.error("Error reading %s: %s", archive_path, e)
 
