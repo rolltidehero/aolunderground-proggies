@@ -36,7 +36,26 @@ def extract_archive(archive_path: Path, temp_dir: str) -> list[str]:
                     if name.startswith("/") or "/../" in name or name.startswith("../"):
                         logger.warning("Skipping suspicious path in %s: %s", archive_path.name, name)
                         continue
-                zf.extractall(temp_dir)
+                # Try extractall first, fall back to per-file extraction
+                try:
+                    zf.extractall(temp_dir)
+                except (zipfile.BadZipFile, RuntimeError) as e:
+                    logger.debug("extractall failed for %s (%s), trying per-file", archive_path.name, e)
+                    for info in zf.infolist():
+                        if info.is_dir():
+                            continue
+                        try:
+                            zf.extract(info, temp_dir)
+                        except (zipfile.BadZipFile, RuntimeError, KeyError) as e2:
+                            # Last resort: read raw data and write manually
+                            try:
+                                data = zf.read(info.filename)
+                                safe_name = info.filename.encode("cp437", errors="replace").decode("ascii", errors="replace")
+                                out = Path(temp_dir) / safe_name
+                                out.parent.mkdir(parents=True, exist_ok=True)
+                                out.write_bytes(data)
+                            except (RuntimeError, KeyError, OSError) as e3:
+                                logger.debug("Cannot extract %s from %s: %s", info.filename, archive_path.name, e3)
                 return list(zf.namelist())
         return []
     except zipfile.BadZipFile:
