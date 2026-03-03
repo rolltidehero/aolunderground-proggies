@@ -38,13 +38,20 @@ def merge_group(group, output_dir):
     merged_name = Path(primary_archive).name
     merged_path = output_dir / merged_name
     
-    # Track all files by hash
+    # Track all files by hash and name
     files_by_hash = {}  # hash -> (filename, data, source_archive)
     files_by_name = defaultdict(list)  # filename -> [(hash, data, source)]
+    file_data_lookup = {}  # (filename, hash) -> data
     
     # Extract all files from all archives
     for item in group:
         archive_path = item["archive"]
+        
+        # Validate archive exists
+        if not Path(archive_path).exists():
+            print(f"Warning: Archive not found: {archive_path}", file=sys.stderr)
+            continue
+            
         try:
             with zipfile.ZipFile(archive_path, 'r') as zf:
                 for info in zf.infolist():
@@ -56,6 +63,7 @@ def merge_group(group, output_dir):
                     
                     files_by_hash[file_hash] = (info.filename, data, archive_path)
                     files_by_name[info.filename].append((file_hash, data, archive_path))
+                    file_data_lookup[(info.filename, file_hash)] = data
         except Exception as e:
             print(f"Error reading {archive_path}: {e}", file=sys.stderr)
     
@@ -98,14 +106,13 @@ def merge_group(group, output_dir):
             
             # Store alternate versions
             for conflict in conflicts:
-                for i, (file_hash, source) in enumerate(conflict['versions']):
+                for file_hash, source in conflict['versions']:
                     if source != primary_archive:
-                        # Find the data for this version
-                        for versions in files_by_name[conflict['filename']]:
-                            if versions[0] == file_hash:
-                                alt_name = f"_conflicts/{conflict['filename']}.from_{Path(source).stem}"
-                                zf.writestr(alt_name, versions[1])
-                                break
+                        # O(1) lookup instead of nested loop
+                        key = (conflict['filename'], file_hash)
+                        if key in file_data_lookup:
+                            alt_name = f"_conflicts/{conflict['filename']}.from_{Path(source).stem}_{file_hash[:8]}"
+                            zf.writestr(alt_name, file_data_lookup[key])
     
     # Merge metadata
     merged_meta = primary_meta.copy()

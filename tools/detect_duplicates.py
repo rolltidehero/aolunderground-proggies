@@ -12,13 +12,17 @@ def detect_duplicates(archives_dir, passwords_file, output_file):
     
     # Load passwords database
     passwords_db = {}
-    if passwords_file:
+    if passwords_file and Path(passwords_file).exists():
         with open(passwords_file) as f:
             passwords_db = json.load(f)
     
     # Find all archives
     archives = list(archives_dir.rglob("*.zip")) + list(archives_dir.rglob("*.rar"))
     print(f"Found {len(archives)} archives")
+    
+    if not archives:
+        print("No archives found!")
+        return None
     
     # Analyze each archive
     for i, archive in enumerate(archives, 1):

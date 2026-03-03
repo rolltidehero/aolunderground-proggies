@@ -26,11 +26,19 @@ def compute_hash(filepath):
 def extract_archive(archive_path, temp_dir):
     """Extract archive to temporary directory."""
     try:
-        if archive_path.suffix == '.zip':
+        if archive_path.suffix.lower() == '.zip':
             with zipfile.ZipFile(archive_path, 'r') as zf:
+                # Security: Check for path traversal
+                for name in zf.namelist():
+                    if name.startswith('/') or '..' in name:
+                        print(f"Warning: Skipping suspicious path: {name}")
+                        continue
                 zf.extractall(temp_dir)
                 return list(zf.namelist())
         # TODO: Add rarfile support
+        return []
+    except zipfile.BadZipFile:
+        print(f"Error: {archive_path} is not a valid zip file")
         return []
     except Exception as e:
         print(f"Error extracting {archive_path}: {e}")
@@ -77,7 +85,7 @@ def analyze_archive(archive_path, passwords_db=None):
         "password_confidence": 0.0,
         "detection_evidence": {},
         "needs_review": True,
-        "original_path": str(archive_path.relative_to(archive_path.parents[4])),
+        "original_path": str(archive_path),
         "new_path": None
     }
     
