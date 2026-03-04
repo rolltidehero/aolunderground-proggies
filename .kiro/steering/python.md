@@ -4,14 +4,15 @@ fileMatchPattern: "**/*.py"
 description: Enforces production-grade Python standards including type hints, structured logging, and defensive error handling.
 ---
 
-# Python Standards — Pentest Scripts Repo
+# Python Standards — AOL Underground Proggies Archive
 
 ## PRODUCTION GRADE REQUIREMENT
 
-These scripts interact with critical infrastructure including medical devices
-at hospitals. Patient lives depend on correct behavior. Every script must be
-production grade: defensive, well-tested, and fail-safe. When in doubt, fail
-loudly and safely rather than silently proceeding with bad data.
+These scripts manage and index a historic archive of AOL programs. Data
+integrity matters — incorrect indexing, lost metadata, or silent failures
+mean proggies get misfiled or lost. Every script must be production grade:
+defensive, well-tested, and fail-safe. When in doubt, fail loudly and safely
+rather than silently proceeding with bad data.
 
 ## CRITICAL RULES (OVERRIDE ALL OTHERS)
 
