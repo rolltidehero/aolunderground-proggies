@@ -349,10 +349,8 @@ On Error GoTo RunTErr
       frm_p0060.Caption = Mak_Filename
       
       If CommandlineMode Then
-         
-         If vbCancel = MsgBox(Mak_Filename & Chr$(10) & "Now save *.FRM as text" & Chr$(10) & "Continue work?" & Chr$(10) & "Press ESC or 'Cancel' to Quit the program now.", vbExclamation Or vbYesNoCancel, "Project created") Then
-            End
-         End If
+         ' CLI mode: decompile done, just exit
+         End
       Else
          MsgBox Mak_Filename & Chr$(10) & "Now save *.FRM as text, please", mc00C6, "Project created"
       End If

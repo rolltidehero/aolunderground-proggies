@@ -88,7 +88,12 @@ Dim MsgBoxText As String
   End Select
   If Len(MsgBoxText) Then
     If Right$(MsgBoxText, 1) = "!" Then MsgBoxText = MsgBoxText & Chr$(10) & "You may send this program to DoDi to improve VB Discompiler"
-    MsgBoxResponse = MsgBox(MsgBoxText, MsgBoxStyle Or MsgBoxButtons, News_from_VB_Discompiler)
+    If CommandlineMode Then
+      Debug.Print "ERROR: " & MsgBoxText
+      MsgBoxResponse = vbIgnore
+    Else
+      MsgBoxResponse = MsgBox(MsgBoxText, MsgBoxStyle Or MsgBoxButtons, News_from_VB_Discompiler)
+    End If
     Select Case MsgBoxResponse
     Case vbRetry
       Exit Sub

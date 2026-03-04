@@ -97,7 +97,7 @@ On Error Resume Next
       If Right$(VB3Path_2, 1) <> "\" Then VB3Path_2 = VB3Path_2 & "\"
       VB3Path = VB3Path_2
     Else
-      MsgBox "Visual Basic not found", &H40
+      If Not CommandlineMode Then MsgBox "Visual Basic not found", &H40
     End If
   End If
   Err = 0

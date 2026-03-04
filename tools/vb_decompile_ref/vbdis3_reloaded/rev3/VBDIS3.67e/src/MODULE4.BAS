@@ -209,24 +209,26 @@ L_CreateControllNames:
               oldMousePointer2 = Screen.MouseIcon
               Screen.MousePointer = MousePointerConstants.vbDefault
 
-                frm_CtrlNames.ctrls_Filename = gWorkDir & VBControlNames(i) & ".txt" 'AppPathwithSlash & "myControlNames.txt"
+              If CommandlineMode Then
+                ' CLI mode: auto-generate placeholder control names
+                For j = 0 To Controls
+                  If j = 0 Then
+                    lFileName = Split(VBControlNames(i), ".")(0)
+                  Else
+                    lFileName = "control" & Format$(j)
+                  End If
+                  gv0FF6(gControlCount1).Name_4 = lFileName
+                  gControlCount1 = gControlCount1 + 1
+                Next j
+              Else
+                frm_CtrlNames.ctrls_Filename = gWorkDir & VBControlNames(i) & ".txt"
                 frm_CtrlNames.ControlsCount = Controls
-               
-               'Attention frm_CtrlNames.caption will invokes Form_Load !
                 frm_CtrlNames.FormName = VBControlNames(i)
                 frm_CtrlNames.Show vbModal
+              End If
 
               Screen.MousePointer = oldMousePointer2
               On Error GoTo 0
-            
-            
-'              For j = 0 To Controls
-'                lFileName = "control" & Format$(j)
-'
-'                gv0FF6(gControlCount1).Name_4 = lFileName
-'                gControlCount1 = gControlCount1 + 1
-'              Next j
-          
           Else
             
             ' Load  ControlNames from FrmRes2
