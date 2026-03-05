@@ -138,6 +138,21 @@ static void handle_cmd(char *line) {
         }
     } else if (!stricmp(verb,"SLEEP")) {
         Sleep(atoi(rest)); res_printf("OK\n");
+    } else if (!stricmp(verb,"GETRECT")) {
+        /* GETRECT hwnd — returns x y w h (screen coordinates) */
+        HWND hw=(HWND)(UINT_PTR)strtoul(rest,NULL,0);
+        RECT rc; GetWindowRect(hw,&rc);
+        res_printf("%d %d %d %d\n",rc.left,rc.top,rc.right-rc.left,rc.bottom-rc.top);
+    } else if (!stricmp(verb,"POSTMSG")) {
+        /* POSTMSG hwnd msg wparam lparam */
+        char *a1,*a2,*a3,*a4,*t1,*t2;
+        a1=split1(rest,&t1);a2=split1(t1,&t2);a3=split1(t2,&a4);
+        HWND hw=(HWND)(UINT_PTR)strtoul(a1,NULL,0);
+        UINT msg=(UINT)strtoul(a2,NULL,0);
+        WPARAM wp=(WPARAM)strtoul(a3,NULL,0);
+        LPARAM lp=(LPARAM)strtoul(a4,NULL,0);
+        BOOL ok=PostMessageA(hw,msg,wp,lp);
+        res_printf("%s %u\n",ok?"OK":"ERR",(unsigned)ok);
     } else if (!stricmp(verb,"ENUMMENUS")) {
         /* ENUMMENUS <hwnd> — enumerate all menu items with their command IDs */
         HWND hw = (HWND)(UINT_PTR)strtoul(rest, NULL, 0);
