@@ -16,6 +16,55 @@ description: Rules for automating Windows GUI apps under Wine headlessly. Preven
 3. **xwd + ImageMagick convert** — for pixel-level verification (e.g., confirming a checkbox state by color). Convert screenshot to text pixel map, grep for specific colors at specific coordinates.
 4. **Tesseract OCR on screenshots** — for human-readable logging ONLY. Print what's on screen so the user can follow along over SSH. **NEVER use OCR output to make automation decisions.** OCR is too unreliable on small dialogs and Wine-rendered text.
 
+## WINE PROCESS MANAGEMENT (MANDATORY)
+
+### Infrastructure processes (NEVER kill these individually)
+These run under `wineuser` and must stay alive for ANY Wine app to work:
+- `wineserver32` — shared server, death = ALL Wine apps die instantly
+- `services.exe`, `winedevice.exe`, `explorer.exe`, `plugplay.exe`, `svchost.exe` — Wine system
+- `dbus-launch` — IPC bus
+
+### Killing a specific Wine app
+```bash
+# 1. List all wineuser processes to find the exact PID
+pgrep -u wineuser -a
+# 2. Kill ONLY the specific app PID — NOT with -f pattern matching
+sudo kill <exact_pid>
+```
+
+**BANNED commands:**
+- `sudo kill -9 $(pgrep -u wineuser)` — kills wineserver, nukes everything
+- `sudo kill $(pgrep -u wineuser -f "something")` — `-f` matches command line, catches wineserver
+- `sudo pkill -u wineuser` — same problem
+
+### Full restart (ONLY when everything is already dead)
+```bash
+# Verify FIRST — if anything is alive, DO NOT proceed
+pgrep -a Xvfb; pgrep -a metacity; pgrep -u wineuser -a
+# Only if all empty:
+nohup sudo Xvfb :99 -screen 0 1024x768x24 -ac < /dev/null > /tmp/xvfb.log 2>&1 &
+sleep 2; nohup metacity --display=:99 --replace < /dev/null > /tmp/metacity.log 2>&1 &
+sleep 2; nohup sudo -u wineuser DISPLAY=:99 wine "C:\Program Files\VB Decompiler Pro\VB Decompiler.exe" < /dev/null > /tmp/vbdec.log 2>&1 &
+sleep 12
+```
+
+### Cross-process WM_SETTEXT does NOT work under Wine
+Wine does not marshal `WM_SETTEXT` string pointers across process boundaries.
+`SendMessageW(hwnd, WM_SETTEXT, 0, (LPARAM)localPtr)` silently fails — the
+target Edit control receives a null/invalid pointer.
+
+**Workaround: DLL injection.** Use `CreateRemoteThread` + `LoadLibraryA` to inject
+a C2 DLL into the target process. From inside the process, `WM_SETTEXT` works
+because the string pointer is in the same address space.
+
+```bash
+# Build injector + DLL with mingw-w64:
+i686-w64-mingw32-gcc -O2 -o inject.exe inject.c -luser32
+i686-w64-mingw32-gcc -shared -O2 -o c2dll.dll c2dll.c -luser32 -lgdi32
+# Run injector (finds target by process name, injects DLL):
+wine inject.exe
+```
+
 ## BEFORE RUNNING ANY WINE GUI APP
 
 1. **Read the source code** (if available) to find every `MsgBox`, `Show`, `Shell`, dialog, and error path.
