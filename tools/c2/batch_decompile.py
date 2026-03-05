@@ -88,10 +88,25 @@ def ensure_metacity():
     time.sleep(2)
     return True
 
+def _vbdec_alive():
+    """Check if VB Decompiler is running (not defunct)."""
+    r = subprocess.run(['pgrep', '-u', 'wineuser', '-a'], capture_output=True, text=True)
+    for line in r.stdout.split('\n'):
+        if 'VB Decompiler' in line and '<defunct>' not in line:
+            return True
+    return False
+
 def ensure_vbdecompiler():
     """Make sure VB Decompiler is running. Returns True if it's up."""
-    _, out = _run('pgrep -u wineuser -a')
-    if 'VB Decompiler' in out:
+    # Kill any defunct processes first
+    r = subprocess.run(['pgrep', '-u', 'wineuser', '-a'], capture_output=True, text=True)
+    for line in r.stdout.split('\n'):
+        if 'VB Decompiler' in line and '<defunct>' in line:
+            pid = line.split()[0]
+            subprocess.run(['sudo', 'kill', '-9', pid], capture_output=True)
+            logger.info(f'RECOVERY: Killed defunct VB Decompiler pid={pid}')
+
+    if _vbdec_alive():
         return True
     logger.info('RECOVERY: Launching VB Decompiler')
     subprocess.Popen(
@@ -99,12 +114,10 @@ def ensure_vbdecompiler():
          'wine', 'C:\\Program Files\\VB Decompiler Pro\\VB Decompiler.exe'],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL)
-    # Wait for it to appear
     deadline = time.time() + 20
     while time.time() < deadline:
         time.sleep(2)
-        _, out = _run('pgrep -u wineuser -a')
-        if 'VB Decompiler' in out:
+        if _vbdec_alive():
             return True
     return False
 
