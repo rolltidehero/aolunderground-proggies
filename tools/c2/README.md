@@ -29,6 +29,8 @@ Two isolated Wine environments run in parallel:
 - **`batch_decompile.py`** — Batch decompile all VB5/VB6 exes. Auto-recovers Xvfb/:99/VB Decompiler/C2 on failure.
 - **`screenshot_proggies.py`** — Launch each proggie under Wine, capture window screenshots. Auto-recovers Xvfb/:98/c2host.exe.
 - **`extract_frx.py`** — Extract embedded images (BMP/PNG/JPEG/GIF/ICO) from VB exe FRX resources. Pure Python, no Wine needed.
+- **`extract_metadata.py`** — Extract app name, author, version, forms, features, UI elements from decompiled .bas files. 52 tests passing.
+- **`parse_nav_graph.py`** — Parse decompiled .bas files to extract navigation graphs: which controls navigate to which forms, which are dangerous (exit/unload), which are menu items. Zero-cost static analysis for screenshot navigation planning.
 
 ## Build
 
@@ -176,9 +178,10 @@ Tests: `python3 test_metadata.py` (52 tests)
 - **Screenshots**: 81/2328 processed, running on `:98`
 
 ### TODO
-- Build `c2vb.dll` — in-process VB6 COM control enumeration (see detailed section below)
-- Update `screenshot_proggies.py` to inject `c2vb.dll` into each proggie, use ENUMCONTROLS to find buttons, CLICKCONTROL to navigate forms
-- Animated GIFs: splash → main → navigate forms via c2vb → About → FRX art
+- Build `c2vb.dll` — in-process VB6 COM control enumeration for lightweight controls (see detailed section below)
+- Update `screenshot_proggies.py` to use nav graph data + ENUMCHILDREN for windowed controls + c2vb.dll fallback for lightweight controls
+- Animated GIFs: splash → main → navigate forms → About → FRX art
+- VirtualBox VM setup for 16-bit NE executables (VB3/VB4-16)
 - GitHub Pages site generation
 
 ## Environment Setup
@@ -208,6 +211,56 @@ Or just run `screenshot_proggies.py` — it auto-starts everything.
 ### OCX/Runtime Registration
 
 Both prefixes have registered: mscomctl.ocx, comctl32.ocx, mswinsck.ocx, Comdlg32.ocx, richtx32.ocx, Tabctl32.ocx, Msinet.ocx, ssa3d30.ocx, threed32.ocx, msvbvm50.dll, msvbvm60.dll.
+
+## Screenshot Pipeline Strategy
+
+### CRITICAL FINDING: .decompiled.bas does NOT contain control coordinates
+
+VB Decompiler's "Save All To One BAS" output contains only:
+- `'Object: formname` headers
+- `Sub controlname_Click()` event handlers with code
+- Navigation calls like `formname.Show`
+
+It does NOT contain control properties (Left, Top, Width, Height, Caption).
+Those exist only in VB6 `.frm` source files (only 6 apps shipped with source)
+or in the binary form resource inside the exe.
+
+### What we CAN extract statically (Tier 1 — `parse_nav_graph.py`)
+
+From 2152 decompiled .bas files:
+- **82 apps** have explicit `.Show` navigation (control → form mappings)
+- **237 apps** have menu items (`mnu*_Click` handlers)
+- **152 apps** have dangerous controls (Unload Me, End, App.End) — AVOID these
+- **1634 apps** are multi-form (excluding Module objects)
+
+This gives us a navigation graph: which controls to click and which forms
+they open. But NOT where those controls are on screen.
+
+### Runtime control discovery (Tier 2 — at screenshot time)
+
+For 32-bit PE apps running under Wine:
+
+1. **ENUMCHILDREN** via c2host.exe — finds windowed controls (TextBox,
+   PictureBox, CommandButton sometimes) with their HWNDs and text.
+   Match control text against nav graph control names to find click targets.
+
+2. **xdotool click** at control coordinates — the ONLY reliable click method.
+   PostMessage WM_LBUTTONDOWN does NOT trigger VB6 lightweight controls.
+   xdotool generates real X11 input → Wine → VB6 hit-testing.
+
+3. **c2vb.dll injection** (fallback) — for apps where ENUMCHILDREN can't find
+   the navigation controls (lightweight Labels/Images used as buttons).
+   Walks COM Forms→Controls via IDispatch to get ALL controls with coordinates.
+
+### 16-bit NE executables (Tier 3 — VirtualBox)
+
+VB3/VB4-16 apps crash Wine. Solution: headless VirtualBox VM running
+Windows XP 32-bit (has NTVDM for 16-bit support) with AutoIt3 C2 agent.
+
+Key insight: VB3 VBX controls ARE windowed (have HWNDs), unlike VB6
+lightweight controls. EnumChildWindows WORKS for VB3 apps.
+
+See `docs/vb-screenshot-pipeline.md` for full tier architecture.
 
 ## c2vb.dll — In-Process VB6 Control Enumeration (PLANNED)
 
