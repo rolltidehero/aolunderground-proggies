@@ -10,8 +10,7 @@ checkpoint file so it can be stopped and resumed.
 
 Requires: C2 DLL injected into running VB Decompiler.
 """
-import sys, os, time, json, subprocess, argparse, hashlib, logging, re
-from pathlib import Path
+import sys, os, time, json, subprocess, argparse, logging, re
 from datetime import datetime
 
 REPO_ROOT = '/home/braker/git/aolunderground-proggies'
@@ -25,25 +24,17 @@ RES_FILE = os.path.join(C_DRIVE, 'c2_res.txt')
 STAGING = os.path.join(C_DRIVE, 'vbdec_input.exe')
 SAVE_TMP = os.path.join(C_DRIVE, 'vbdec_output.bas')
 
-BREAKGLASS_SECS = 300  # 5 min with no success = bail
+BREAKGLASS_SECS = 300
 
-# Installer filename patterns (case-insensitive)
 INSTALLER_NAME_RE = re.compile(
     r'(^setup\.exe$|^install\.exe$|setup\.exe$|install\.exe$'
     r'|installer\.exe$|[\b_ -]setup\.exe$)',
     re.IGNORECASE)
 
-# Binary signatures found in installer executables
 INSTALLER_SIGS = [
-    b'Nullsoft',        # NSIS
-    b'Inno Setup',      # InnoSetup
-    b'InstallShield',   # InstallShield
-    b'WISE',            # Wise Installer
-    b'Setup Factory',   # Setup Factory
-    b'Installer.SetupType',  # Delphi installer
+    b'Nullsoft', b'Inno Setup', b'InstallShield',
+    b'WISE', b'Setup Factory', b'Installer.SetupType',
 ]
-
-# ── logging ──
 
 logger = logging.getLogger('batch_decompile')
 
@@ -58,9 +49,19 @@ def setup_logging():
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-# ── C2 comms ──
+# ── FreeProcess — the proggie yield pattern ──
+# VB6 original: Do: DoEvents: Process=Process+1: If Process=50 Then Exit Do: Loop
+# Python equivalent: yield timeslice 100 times with no minimum delay.
+# time.sleep(0) yields the GIL + OS timeslice without any minimum wait.
+
+def free_process():
+    for _ in range(100):
+        time.sleep(0)
+
+# ── C2 comms — all use free_process polling, no arbitrary sleeps ──
 
 def c2(cmd, timeout=10):
+    """Send command to C2, poll for response with FreeProcess yield."""
     try: os.remove(RES_FILE)
     except: pass
     with open(CMD_FILE, 'w') as f:
@@ -68,11 +69,12 @@ def c2(cmd, timeout=10):
     os.chown(CMD_FILE, 994, 1005)
     deadline = time.time() + timeout
     while time.time() < deadline:
+        free_process()
         try:
             with open(RES_FILE) as f:
                 return f.read().strip().replace('\r', '')
-        except:
-            time.sleep(0.15)
+        except FileNotFoundError:
+            pass
     return None
 
 def c2_healthy():
@@ -80,12 +82,13 @@ def c2_healthy():
     return r is not None and ('PONG' in r or 'INJECTED' in r)
 
 def wait_window(cls, title, timeout=15):
+    """Poll for a window to appear using FreeProcess yield."""
     deadline = time.time() + timeout
     while time.time() < deadline:
-        r = c2(f'FINDWINDOW {cls} {title}')
+        free_process()
+        r = c2(f'FINDWINDOW {cls} {title}', timeout=3)
         if r and r != '0':
             return r
-        time.sleep(0.3)
     return None
 
 def find_edit(dlg_hwnd):
@@ -99,24 +102,23 @@ def find_edit(dlg_hwnd):
 
 def dismiss_dialogs():
     for _ in range(10):
-        d = c2('FINDWINDOW TfrmMessageDialog *')
+        d = c2('FINDWINDOW TfrmMessageDialog *', timeout=3)
         if not d or d == '0': break
         c2(f'POSTMSG {d} 16 0 0')
-        time.sleep(0.3)
+        free_process()
     for _ in range(5):
-        d = c2('FINDWINDOW #32770 *')
+        d = c2('FINDWINDOW #32770 *', timeout=3)
         if not d or d == '0': break
-        title = c2(f'GETTEXT {d}')
+        title = c2(f'GETTEXT {d}', timeout=3)
         if title and title not in ('Open EXE File', 'Save All To One BAS File'):
             c2(f'POSTMSG {d} 16 0 0')
-            time.sleep(0.3)
+            free_process()
         else:
             break
 
 # ── installer detection ──
 
 def is_installer(exe_path):
-    """Check filename patterns and binary signatures."""
     basename = os.path.basename(exe_path)
     if INSTALLER_NAME_RE.search(basename):
         return f'filename:{basename}'
@@ -146,7 +148,7 @@ def save_checkpoint(ckpt):
 # ── decompile one file ──
 
 def decompile_one(exe_path, output_path, hmain):
-    """Returns (success: bool, detail: str)."""
+    """Returns (success: bool, detail: str). All waits use FreeProcess polling."""
     start = time.time()
     dismiss_dialogs()
 
@@ -167,32 +169,38 @@ def decompile_one(exe_path, output_path, hmain):
         return False, 'Edit control not found in Open dialog'
 
     c2(f'SETTEXT {edit} C:\\vbdec_input.exe')
-    time.sleep(0.3)
-    c2(f'SENDMSG {dlg} 273 1 0')
-    time.sleep(3)
-    dismiss_dialogs()
+    free_process()  # yield, not sleep — let SETTEXT land
+    c2(f'SENDMSG {dlg} 273 1 0')  # IDOK
 
-    # Wait for decompilation — poll tree view
-    children = c2(f'ENUMCHILDREN {hmain}')
-    tree = None
-    if children:
-        for line in children.split('\n'):
-            parts = line.split('|')
-            if len(parts) >= 2 and parts[1] == 'TTreeView':
-                tree = parts[0]
-                break
-
-    if tree:
-        deadline = time.time() + 60
-        while time.time() < deadline:
-            count = c2(f'SENDMSG {tree} 4357 0 0')
-            if count and count != '0':
-                break
-            time.sleep(1)
-    else:
-        time.sleep(5)
-
-    time.sleep(1)
+    # Poll for info dialog OR tree population — no fixed sleep
+    # VB Decompiler shows TfrmMessageDialog after opening, then populates tree
+    deadline = time.time() + 30
+    dismissed_info = False
+    while time.time() < deadline:
+        free_process()
+        if not dismissed_info:
+            d = c2('FINDWINDOW TfrmMessageDialog *', timeout=2)
+            if d and d != '0':
+                c2(f'POSTMSG {d} 16 0 0')
+                dismissed_info = True
+                continue
+        # Check if tree is populated
+        break_out = False
+        children = c2(f'ENUMCHILDREN {hmain}', timeout=3)
+        if children:
+            for line in children.split('\n'):
+                parts = line.split('|')
+                if len(parts) >= 2 and parts[1] == 'TTreeView':
+                    count = c2(f'SENDMSG {parts[0]} 4357 0 0', timeout=3)
+                    if count and count != '0':
+                        break_out = True
+                    break
+        if break_out:
+            break
+        # Also check for info dialog we might have missed
+        if not dismissed_info:
+            dismiss_dialogs()
+            dismissed_info = True
 
     # Save
     try: os.remove(SAVE_TMP)
@@ -209,15 +217,15 @@ def decompile_one(exe_path, output_path, hmain):
         return False, 'Edit control not found in Save dialog'
 
     c2(f'SETTEXT {sedit} C:\\vbdec_output.bas')
-    time.sleep(0.5)
-    c2(f'SENDMSG {sdlg} 273 1 0')
+    free_process()  # yield, let SETTEXT land
+    c2(f'SENDMSG {sdlg} 273 1 0')  # IDOK
 
+    # Poll for output file — no fixed sleep
     deadline = time.time() + 15
     while time.time() < deadline:
-        if os.path.isfile(SAVE_TMP):
-            time.sleep(0.5)
+        free_process()
+        if os.path.isfile(SAVE_TMP) and os.path.getsize(SAVE_TMP) > 0:
             break
-        time.sleep(0.5)
 
     dismiss_dialogs()
 
@@ -240,6 +248,12 @@ def decompile_one(exe_path, output_path, hmain):
 
 # ── stats / report ──
 
+def _walk_exes():
+    for root, dirs, files in os.walk(PROGRAMS_DIR):
+        for f in sorted(files):
+            if f.lower().endswith('.exe'):
+                yield os.path.join(root, f)
+
 def print_stats(ckpt):
     files = ckpt['files']
     total = len(files)
@@ -248,34 +262,28 @@ def print_stats(ckpt):
     skip = sum(1 for v in files.values() if v['status'] == 'skipped')
     total_bytes = sum(v.get('output_size', 0) for v in files.values()
                       if v['status'] == 'ok')
-
-    # Count all exes
     all_count = sum(1 for _ in _walk_exes())
+    remaining = all_count - total
 
-    msg = f"""
-{"="*60}
-Checkpoint: {CHECKPOINT_FILE}
-Started:    {ckpt.get("started", "?")}
-Updated:    {ckpt.get("updated", "?")}
-{"="*60}
-Total exes: {all_count}
-Processed:  {total}
-  Success:  {ok}
-  Errors:   {err}
-  Skipped:  {skip}
-Remaining:  {all_count - total}
-Output:     {total_bytes:,} bytes ({total_bytes/1024/1024:.1f} MB)
-Est. time remaining: ~{(all_count - total) * 27 / 3600:.1f} hours
-"""
-    print(msg)
+    print(f'\n{"="*60}')
+    print(f'Checkpoint: {CHECKPOINT_FILE}')
+    print(f'Started:    {ckpt.get("started", "?")}')
+    print(f'Updated:    {ckpt.get("updated", "?")}')
+    print(f'{"="*60}')
+    print(f'Total exes: {all_count}')
+    print(f'Processed:  {total}')
+    print(f'  Success:  {ok}')
+    print(f'  Errors:   {err}')
+    print(f'  Skipped:  {skip}')
+    print(f'Remaining:  {remaining}')
+    print(f'Output:     {total_bytes:,} bytes ({total_bytes/1024/1024:.1f} MB)')
+    print()
 
     if err > 0:
-        # Group errors by type
         by_type = {}
         for path, v in files.items():
             if v['status'] == 'error':
-                d = v['detail']
-                by_type.setdefault(d, []).append(path)
+                by_type.setdefault(v['detail'], []).append(path)
         print('Errors by type:')
         for detail, paths in sorted(by_type.items(), key=lambda x: -len(x[1])):
             print(f'  [{len(paths)}] {detail}')
@@ -285,61 +293,36 @@ Est. time remaining: ~{(all_count - total) * 27 / 3600:.1f} hours
         by_reason = {}
         for path, v in files.items():
             if v['status'] == 'skipped':
-                d = v.get('detail', '?')
-                by_reason.setdefault(d, []).append(path)
+                by_reason.setdefault(v.get('detail', '?'), []).append(path)
         print('Skipped by reason:')
         for detail, paths in sorted(by_reason.items(), key=lambda x: -len(x[1])):
             print(f'  [{len(paths)}] {detail}')
         print()
 
 def print_report(ckpt):
-    """Full report to stdout."""
     files = ckpt['files']
     print('=== DECOMPILE REPORT ===\n')
-
-    print('--- SUCCESS ---')
-    for p in sorted(files):
-        v = files[p]
-        if v['status'] == 'ok':
-            print(f'  {p}  →  {v.get("output","")}  ({v.get("output_size",0)} bytes)')
-    print()
-
-    print('--- ERRORS ---')
-    for p in sorted(files):
-        v = files[p]
-        if v['status'] == 'error':
-            print(f'  {p}: {v.get("detail","")}')
-    print()
-
-    print('--- SKIPPED ---')
-    for p in sorted(files):
-        v = files[p]
-        if v['status'] == 'skipped':
-            print(f'  {p}: {v.get("detail","")}')
-    print()
-
+    for status, label in [('ok', 'SUCCESS'), ('error', 'ERRORS'), ('skipped', 'SKIPPED')]:
+        print(f'--- {label} ---')
+        for p in sorted(files):
+            v = files[p]
+            if v['status'] == status:
+                if status == 'ok':
+                    print(f'  {p}  ({v.get("output_size",0)} bytes)')
+                else:
+                    print(f'  {p}: {v.get("detail","")}')
+        print()
     print_stats(ckpt)
-
-# ── helpers ──
-
-def _walk_exes():
-    for root, dirs, files in os.walk(PROGRAMS_DIR):
-        for f in sorted(files):
-            if f.lower().endswith('.exe'):
-                yield os.path.join(root, f)
 
 # ── main ──
 
 def main():
     parser = argparse.ArgumentParser(description='Batch decompile VB executables')
-    parser.add_argument('--stats', action='store_true', help='Print stats and exit')
-    parser.add_argument('--report', action='store_true', help='Full report')
-    parser.add_argument('--reset-errors', action='store_true',
-                        help='Clear error entries so they get retried')
-    parser.add_argument('--reset-skipped', action='store_true',
-                        help='Clear skipped entries so they get retried')
-    parser.add_argument('--dry-run', action='store_true',
-                        help='List files that would be processed')
+    parser.add_argument('--stats', action='store_true')
+    parser.add_argument('--report', action='store_true')
+    parser.add_argument('--reset-errors', action='store_true')
+    parser.add_argument('--reset-skipped', action='store_true')
+    parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
     ckpt = load_checkpoint()
@@ -370,15 +353,9 @@ def main():
 
     setup_logging()
 
-    # Find all .exe files
     all_exes = list(_walk_exes())
-
-    # Filter to unprocessed
-    todo = []
-    for exe in all_exes:
-        rel = os.path.relpath(exe, REPO_ROOT)
-        if rel not in ckpt['files']:
-            todo.append(exe)
+    todo = [e for e in all_exes
+            if os.path.relpath(e, REPO_ROOT) not in ckpt['files']]
 
     logger.info(f'Total .exe files: {len(all_exes)}')
     logger.info(f'Already processed: {len(all_exes) - len(todo)}')
@@ -396,7 +373,6 @@ def main():
         print_stats(ckpt)
         return
 
-    # Verify C2
     r = c2('PING')
     if not r or ('PONG' not in r and 'INJECTED' not in r):
         logger.error(f'C2 not responding ({r}). Inject c2dll.dll first.')
@@ -417,7 +393,7 @@ def main():
 
         logger.info(f'[{i+1}/{len(todo)}] {rel} ...')
 
-        # Skip non-PE files
+        # Skip non-PE
         try:
             with open(exe_path, 'rb') as f:
                 magic = f.read(2)
@@ -449,10 +425,9 @@ def main():
             logger.info(f'  SKIP (installer: {inst})')
             continue
 
-        # Breakglass: no success in 5 minutes
+        # Breakglass
         if time.time() - last_success_time > BREAKGLASS_SECS:
-            logger.error(f'BREAKGLASS: No successful decompile in {BREAKGLASS_SECS}s. '
-                         f'Saving checkpoint and exiting.')
+            logger.error(f'BREAKGLASS: No success in {BREAKGLASS_SECS}s. Exiting.')
             save_checkpoint(ckpt)
             print_stats(ckpt)
             sys.exit(2)
@@ -462,7 +437,7 @@ def main():
         except Exception as e:
             success = False
             detail = f'Exception: {e}'
-            logger.debug(f'  Exception in decompile_one: {e}', exc_info=True)
+            logger.debug(f'  Exception: {e}', exc_info=True)
 
         if success:
             out_size = os.path.getsize(output_path) if os.path.isfile(output_path) else 0
@@ -481,14 +456,12 @@ def main():
                 'timestamp': datetime.now().isoformat()
             }
             logger.info(f'  ERROR: {detail}')
-
-            # Dismiss any stuck dialogs after error
             dismiss_dialogs()
-            time.sleep(1)
+            free_process()
             dismiss_dialogs()
 
             if not c2_healthy():
-                logger.error('FATAL: C2 died after error. Saving and exiting.')
+                logger.error('FATAL: C2 died. Saving and exiting.')
                 save_checkpoint(ckpt)
                 print_stats(ckpt)
                 sys.exit(1)
