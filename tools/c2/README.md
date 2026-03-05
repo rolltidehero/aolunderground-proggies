@@ -1,44 +1,48 @@
-# C2 — In-Process Command & Control for VB Decompiler under Wine
+# C2 — In-Process Command & Control for Wine GUI Automation
 
-DLL injection-based C2 agent for automating VB Decompiler Pro v9.8 running under Wine 9.0.
+DLL injection-based C2 for automating VB Decompiler Pro v9.8 and standalone C2 host for screenshot capture, both running under Wine 9.0 on headless Xvfb.
 
-## Why
+## Architecture
 
-Wine does not marshal `WM_SETTEXT` string pointers across process boundaries. Any cross-process attempt to set text in an Edit control silently fails. The only workaround is to run inside the target process via DLL injection.
+Two isolated Wine environments run in parallel:
+
+| | Decompile Pipeline | Screenshot Pipeline |
+|---|---|---|
+| User | `wineuser` (uid 994) | `wineshot` (uid 993) |
+| Display | `:99` | `:98` |
+| Prefix | `/home/wineuser/.wine` | `/home/wineshot/.wine` |
+| C2 binary | `c2dll.dll` (injected into VB Decompiler) | `c2host.exe` (standalone) |
+| Cmd/Res files | `C:\c2_cmd.txt` / `C:\c2_res.txt` | `C:\c2s_cmd.txt` / `C:\c2s_res.txt` |
+| Checkpoint | `decompile_checkpoint.json` | `screenshot_checkpoint.json` |
 
 ## Components
 
-- `c2dll.c` — C2 DLL that gets injected into VB Decompiler. Spawns a background thread that polls `C:\c2_cmd.txt` for commands, executes Win32 API calls in-process, writes results to `C:\c2_res.txt`.
-- `inject.c` — Injector that finds VB Decompiler by process name and injects `c2dll.dll` via `CreateRemoteThread` + `LoadLibraryA`.
-- `c2` — Bash wrapper for sending commands from Linux.
+### C2 Binaries
+
+- **`c2dll.c`** — DLL injected into VB Decompiler. Polls `C:\c2_cmd.txt`, executes Win32 API calls in-process, writes results to `C:\c2_res.txt`. Required because Wine doesn't marshal WM_SETTEXT across processes.
+- **`c2host.c`** — Standalone C2 exe for screenshot pipeline. Same command set, different file paths (`c2s_cmd.txt`/`c2s_res.txt`). No injection needed.
+- **`inject.c`** — Injector using `CreateRemoteThread` + `LoadLibraryA`.
+
+### Automation Scripts
+
+- **`batch_decompile.py`** — Batch decompile all VB5/VB6 exes. Auto-recovers Xvfb/:99/VB Decompiler/C2 on failure.
+- **`screenshot_proggies.py`** — Launch each proggie under Wine, capture window screenshots. Auto-recovers Xvfb/:98/c2host.exe.
+- **`extract_frx.py`** — Extract embedded images (BMP/PNG/JPEG/GIF/ICO) from VB exe FRX resources. Pure Python, no Wine needed.
 
 ## Build
 
 ```bash
+# C2 DLL (injected into VB Decompiler)
 i686-w64-mingw32-gcc -shared -O2 -o c2dll.dll c2dll.c -luser32 -lgdi32
+
+# Injector
 i686-w64-mingw32-gcc -O2 -o inject.exe inject.c -luser32
+
+# Standalone C2 host (for screenshots)
+i686-w64-mingw32-gcc -O2 -o c2host.exe c2host.c -luser32 -lgdi32
 ```
 
-## Usage
-
-```bash
-# 1. VB Decompiler must be running
-# 2. Deploy and inject
-sudo cp c2dll.dll inject.exe /home/wineuser/.wine/drive_c/
-sudo chown wineuser:nonet /home/wineuser/.wine/drive_c/{c2dll.dll,inject.exe}
-nohup sudo -u wineuser DISPLAY=:99 wine "C:\inject.exe" < /dev/null > /tmp/inject.log 2>&1 &
-sleep 5; sudo cat /home/wineuser/.wine/drive_c/c2_res.txt
-# Should show: C2 INJECTED pid=...
-
-# 3. Send commands
-sudo python3 -c "
-with open('/home/wineuser/.wine/drive_c/c2_cmd.txt','w') as f:
-    f.write('PING\n')
-import os; os.chown('/home/wineuser/.wine/drive_c/c2_cmd.txt', 994, 1005)"
-sleep 1; sudo cat /home/wineuser/.wine/drive_c/c2_res.txt
-```
-
-## Commands
+## C2 Commands
 
 | Command | Args | Description |
 |---------|------|-------------|
@@ -47,51 +51,125 @@ sleep 1; sudo cat /home/wineuser/.wine/drive_c/c2_res.txt
 | FINDWINDOWEX | parent after class title | FindWindowExA (* = NULL) |
 | GETTEXT | hwnd | GetWindowTextW (UTF-8) |
 | GETCLASS | hwnd | GetClassNameW (UTF-8) |
-| SETTEXT | hwnd text | SendMessageW WM_SETTEXT (in-process!) |
+| SETTEXT | hwnd text | WM_SETTEXT in-process (works under Wine!) |
 | SENDMSG | hwnd msg wp lp | SendMessageA |
 | POSTMSG | hwnd msg wp lp | PostMessageA |
 | GETDLGITEM | hwnd id | GetDlgItem |
-| CLICK | hwnd | PostMessage BM_CLICK |
-| LCLICK | hwnd | PostMessage WM_LBUTTONDOWN+UP |
-| ENUMCHILDREN | hwnd | EnumChildWindows |
-| WMCOMMAND | hwnd id | PostMessage WM_COMMAND |
+| CLICK | hwnd | BM_CLICK |
+| LCLICK | hwnd | WM_LBUTTONDOWN+UP |
+| ENUMCHILDREN | hwnd | EnumChildWindows (hwnd\|class\|ctrlid\|text) |
+| WMCOMMAND | hwnd id | WM_COMMAND |
+| SCREENSHOT | hwnd path | BitBlt window capture to BMP (SetForegroundWindow first) |
 | SLEEP | ms | Sleep |
 | EXIT | | Terminate C2 thread |
 
-## Automation Scripts
+## batch_decompile.py
 
-### vbdecompile.py — Single-file decompile
-
-Decompiles one VB5/VB6 exe via C2. Used by batch_decompile.py internally.
-
-### batch_decompile.py — Batch decompile all proggies
-
-Walks `programs/` tree, decompiles every `.exe`, saves `.decompiled.bas` next to each.
+Decompiles every `.exe` in `programs/`, saves `.decompiled.bas` next to each.
 
 ```bash
-# Run (requires C2 injected into running VB Decompiler)
-sudo python3 batch_decompile.py
-
-# Check progress
-sudo python3 batch_decompile.py --stats
-
-# Full report (success/error/skipped lists)
-sudo python3 batch_decompile.py --report
-
-# Retry failed files
-sudo python3 batch_decompile.py --reset-errors
-
-# Retry skipped files (e.g. after improving detection)
-sudo python3 batch_decompile.py --reset-skipped
-
-# Preview what would be processed
-sudo python3 batch_decompile.py --dry-run
+sudo python3 batch_decompile.py            # Run batch (auto-starts environment)
+sudo python3 batch_decompile.py --stats    # Progress summary
+sudo python3 batch_decompile.py --report   # Full success/error/skip lists
+sudo python3 batch_decompile.py --reset-errors   # Clear errors for retry
+sudo python3 batch_decompile.py --reset-skipped  # Clear skipped for retry
+sudo python3 batch_decompile.py --dry-run  # Preview remaining work
 ```
 
 Features:
-- **JSON checkpoint** (`decompile_checkpoint.json`) — resumable, saves after every file
-- **Installer detection** — auto-skips setup.exe, install.exe, and files containing NSIS/InnoSetup/InstallShield signatures. Logged as `skipped:installer:*` for later review.
-- **Breakglass** — if no successful decompile in 5 minutes, exits gracefully (C2 may be stuck)
-- **Log file** (`batch_decompile.log`) — full debug log alongside stdout
-- **Error recovery** — dismisses stuck dialogs after errors, verifies C2 health
-- **Stats** — success rate, output size, time estimates, error/skip breakdown by type
+- **Auto-recovery** — detects when Xvfb/:99, VB Decompiler, or C2 die and spins them back up (up to 3 attempts)
+- **JSON checkpoint** — resumable, saves after every file
+- **Installer detection** — skips setup.exe, NSIS, InnoSetup, InstallShield, WISE
+- **FreeProcess polling** — no arbitrary sleeps, ~5-6s per file
+- **Breakglass** — if no success in 5 minutes, attempts recovery before exiting
+
+### Decompile Sequence
+
+```
+WMCOMMAND <hmain> 2 → wait "Open EXE File" dialog → SETTEXT <edit> → SENDMSG IDOK
+→ dismiss TfrmMessageDialog → poll TTreeView TVM_GETCOUNT until >0
+→ WMCOMMAND <hmain> 9 → wait "Save All To One BAS File" → SETTEXT <edit> → SENDMSG IDOK
+→ poll for output file
+```
+
+### VB Decompiler Menu IDs
+
+| ID | Action |
+|----|--------|
+| 2 | File > Open |
+| 9 | File > Save all in one module |
+
+## screenshot_proggies.py
+
+Launches each proggie under Wine on `:98`, finds VB runtime windows, captures via C2 SCREENSHOT, kills process.
+
+```bash
+sudo python3 screenshot_proggies.py                    # Run batch
+sudo python3 screenshot_proggies.py --one /path/to.exe # Test one
+sudo python3 screenshot_proggies.py --stats            # Progress
+sudo python3 screenshot_proggies.py --reset-errors     # Retry errors
+```
+
+Features:
+- **Auto-recovery** — starts Xvfb/:98 and c2host.exe automatically
+- **16-bit NE detection** — skips NE executables that crash Wine/Xvfb
+- **Window-only capture** — SetForegroundWindow + BitBlt cropped to window rect, no background bleed
+- **Upscaling** — small windows (<400px wide) upscaled with nearest-neighbor
+- **Multi-window** — captures all VB forms (main + splash + dialogs)
+
+### VB Runtime Window Classes
+
+`ThunderRT6FormDC`, `ThunderRT6Form`, `ThunderRT6MDIForm`, `ThunderRT5FormDC`, `ThunderRT5Form`, `ThunderFormDC`, `ThunderForm`
+
+## extract_frx.py
+
+Extracts embedded images from VB exe FRX resources. Pure Python — no Wine, no VB Decompiler needed. Runs at disk speed.
+
+```bash
+python3 extract_frx.py                    # Batch extract all
+python3 extract_frx.py --one /path/to.exe # Extract from one exe
+python3 extract_frx.py --stats            # Progress
+python3 extract_frx.py --dry-run          # Preview
+```
+
+Features:
+- Scans for BMP, PNG, JPEG, GIF, ICO magic bytes with header validation
+- Converts all output to PNG
+- Upscales small images to 400px+ width
+- ~83% of VB exes have extractable images
+- Outputs: `<name>.frx_0.png`, `<name>.frx_1.png`, ... next to each exe
+
+## Environment Setup
+
+### Decompile environment (`:99` / `wineuser`)
+
+```bash
+nohup sudo Xvfb :99 -screen 0 1024x768x24 -ac < /dev/null > /dev/null 2>&1 &
+sleep 2; nohup metacity --display=:99 --replace < /dev/null > /dev/null 2>&1 &
+sleep 2; nohup sudo -u wineuser DISPLAY=:99 wine \
+  "C:\Program Files\VB Decompiler Pro\VB Decompiler.exe" < /dev/null > /dev/null 2>&1 &
+sleep 12; nohup sudo -u wineuser DISPLAY=:99 wine "C:\inject.exe" < /dev/null > /dev/null 2>&1 &
+```
+
+Or just run `batch_decompile.py` — it auto-starts everything.
+
+### Screenshot environment (`:98` / `wineshot`)
+
+```bash
+nohup sudo Xvfb :98 -screen 0 1024x768x24 -ac < /dev/null > /dev/null 2>&1 &
+sleep 2; nohup sudo -u wineshot DISPLAY=:98 WINEPREFIX=/home/wineshot/.wine \
+  wine "C:\c2host.exe" < /dev/null > /dev/null 2>&1 &
+```
+
+Or just run `screenshot_proggies.py` — it auto-starts everything.
+
+### OCX/Runtime Registration
+
+Both prefixes have registered: mscomctl.ocx, comctl32.ocx, mswinsck.ocx, Comdlg32.ocx, richtx32.ocx, Tabctl32.ocx, Msinet.ocx, ssa3d30.ocx, threed32.ocx, msvbvm50.dll, msvbvm60.dll.
+
+## Known Issues
+
+- **16-bit NE executables** (VB3, .VBX) crash Wine and can take down Xvfb. Both scripts detect and skip them.
+- **Non-VB exes** produce empty decompile output (34 "Output file is empty" errors). These are Delphi/C++ apps that VB Decompiler can't handle.
+- **PrintWindow** doesn't work under Wine — windows return black. Using BitBlt from desktop DC with SetForegroundWindow instead.
+- **Cross-process WM_SETTEXT** doesn't work under Wine — must use DLL injection.
