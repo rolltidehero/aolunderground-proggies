@@ -109,6 +109,63 @@ static void handle_cmd(char *line) {
         char *shw,*sid; shw=split1(rest,&sid);
         PostMessageA((HWND)(UINT_PTR)strtoul(shw,NULL,0),WM_COMMAND,atoi(sid),0);
         res_printf("OK\n");
+    } else if (!stricmp(verb,"SCREENSHOT")) {
+        /* SCREENSHOT <hwnd> <filepath>
+         * Captures full window (including title bar/border) to BMP via BitBlt.
+         * If hwnd is 0, captures entire desktop. */
+        char *shw, *path; shw = split1(rest, &path);
+        HWND hw = (HWND)(UINT_PTR)strtoul(shw, NULL, 0);
+        HDC hdcSrc = GetDC(NULL); /* always desktop DC for screen coords */
+        RECT rc;
+        int w, h, sx = 0, sy = 0;
+        if (hw) {
+            GetWindowRect(hw, &rc); /* full window with chrome */
+            sx = rc.left; sy = rc.top;
+            w = rc.right - rc.left; h = rc.bottom - rc.top;
+        } else {
+            w = GetSystemMetrics(SM_CXSCREEN);
+            h = GetSystemMetrics(SM_CYSCREEN);
+        }
+        if (w <= 0 || h <= 0 || !hdcSrc) {
+            if (hdcSrc) ReleaseDC(hw, hdcSrc);
+            res_printf("ERR: bad window or size %dx%d\n", w, h);
+        } else {
+            HDC hdcMem = CreateCompatibleDC(hdcSrc);
+            HBITMAP hbm = CreateCompatibleBitmap(hdcSrc, w, h);
+            SelectObject(hdcMem, hbm);
+            BitBlt(hdcMem, 0, 0, w, h, hdcSrc, sx, sy, SRCCOPY);
+            ReleaseDC(NULL, hdcSrc);
+            /* Write BMP file */
+            BITMAPINFOHEADER bi = {0};
+            bi.biSize = sizeof(bi);
+            bi.biWidth = w;
+            bi.biHeight = h; /* bottom-up */
+            bi.biPlanes = 1;
+            bi.biBitCount = 24;
+            bi.biCompression = BI_RGB;
+            int stride = ((w * 3 + 3) & ~3);
+            int imgsize = stride * h;
+            bi.biSizeImage = imgsize;
+            char *bits = (char*)malloc(imgsize);
+            GetDIBits(hdcMem, hbm, 0, h, bits, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+            BITMAPFILEHEADER bf = {0};
+            bf.bfType = 0x4D42; /* 'BM' */
+            bf.bfOffBits = sizeof(bf) + sizeof(bi);
+            bf.bfSize = bf.bfOffBits + imgsize;
+            FILE *fp = fopen(path, "wb");
+            if (fp) {
+                fwrite(&bf, sizeof(bf), 1, fp);
+                fwrite(&bi, sizeof(bi), 1, fp);
+                fwrite(bits, imgsize, 1, fp);
+                fclose(fp);
+                res_printf("OK %dx%d %d bytes\n", w, h, (int)bf.bfSize);
+            } else {
+                res_printf("ERR: cannot write %s\n", path);
+            }
+            free(bits);
+            DeleteObject(hbm);
+            DeleteDC(hdcMem);
+        }
     } else if (!stricmp(verb,"SLEEP")) {
         Sleep(atoi(rest)); res_printf("OK\n");
     } else {
