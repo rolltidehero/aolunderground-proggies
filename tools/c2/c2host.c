@@ -81,15 +81,25 @@ static void handle_cmd(char *line) {
         EnumChildWindows((HWND)(UINT_PTR)strtoul(rest,NULL,0),enum_cb,0);
         if(rlen==0) res_printf("(none)\n");
     } else if (!stricmp(verb,"SCREENSHOT")) {
-        char *shw, *path; shw = split1(rest, &path);
+        /* SCREENSHOT hwnd path [client]
+           If "client" flag present, capture client area only (no title bar) */
+        char *shw, *tail; shw = split1(rest, &tail);
+        char *path, *flags; path = split1(tail, &flags);
+        int client_only = (flags && !stricmp(flags, "client"));
         HWND hw = (HWND)(UINT_PTR)strtoul(shw, NULL, 0);
         RECT rc;
         int w, h, sx = 0, sy = 0;
         if (hw) {
-            GetWindowRect(hw, &rc);
-            sx = rc.left; sy = rc.top;
+            if (client_only) {
+                GetClientRect(hw, &rc);
+                POINT pt = {0, 0};
+                ClientToScreen(hw, &pt);
+                sx = pt.x; sy = pt.y;
+            } else {
+                GetWindowRect(hw, &rc);
+                sx = rc.left; sy = rc.top;
+            }
             w = rc.right - rc.left; h = rc.bottom - rc.top;
-            /* Bring window to front so BitBlt captures it cleanly */
             SetForegroundWindow(hw);
             BringWindowToTop(hw);
             Sleep(50);

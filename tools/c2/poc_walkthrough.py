@@ -37,6 +37,25 @@ VB_CLASSES = [
 
 # ── C2 helpers ──
 
+def ensure_c2host():
+    """Start c2host.exe if not running."""
+    r = c2('PING', timeout=5)
+    if r and 'PONG' in r:
+        return True
+    log.info('Starting c2host.exe...')
+    subprocess.Popen(
+        ['sudo', '-u', WINE_USER, 'env', 'DISPLAY=' + DISPLAY,
+         'WINEPREFIX=' + WINE_PREFIX, 'wine', 'C:\\c2host.exe'],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL)
+    for _ in range(8):
+        time.sleep(2)
+        r = c2('PING', timeout=5)
+        if r and 'PONG' in r:
+            return True
+    return False
+
+
 def c2(cmd, timeout=8):
     """Send command to c2host.exe, return response string."""
     try:
@@ -115,10 +134,11 @@ def c2_enum_menus(hwnd):
     return menus
 
 
-def c2_screenshot(hwnd, path):
-    """Screenshot a window, save as BMP. Returns True on success."""
+def c2_screenshot(hwnd, path, client=True):
+    """Screenshot a window, save as BMP. client=True crops title bar."""
     win_path = 'C:\\screenshots\\' + os.path.basename(path)
-    r = c2('SCREENSHOT %d %s' % (hwnd, win_path), timeout=10)
+    cmd = 'SCREENSHOT %d %s%s' % (hwnd, win_path, ' client' if client else '')
+    r = c2(cmd, timeout=10)
     if r and r.startswith('OK'):
         src = os.path.join(WINE_PREFIX, 'drive_c', 'screenshots',
                            os.path.basename(path))
@@ -258,6 +278,11 @@ def run_poc(exe_path):
     log.info('Cleaning up...')
     kill_all_proggies()
 
+    # Ensure c2host is running
+    if not ensure_c2host():
+        log.error('c2host.exe failed to start')
+        return
+
     # Launch
     log.info('Launching %s...', exe_name)
     proc = stage_and_launch(exe_path)
@@ -314,93 +339,78 @@ def run_poc(exe_path):
 
     step = 2
 
-    # Strategy: try nav graph menu matches first, then click ALL visible
-    # CommandButtons that aren't in the danger set
+    # Dangerous menu names to skip
+    danger_menu_words = {'exit', 'quit', 'close', 'end', 'unload', 'terminate',
+                         'shutdown', 'kill'}
+    danger_menu_words.update(d.replace('mnu', '').lower() for d in danger_names
+                             if d.startswith('mnu'))
 
-    # Phase 1: Menu-based navigation (from nav graph)
-    for nav in nav_graph['navigation']:
+    # Phase 1: Keyboard menu walk
+    # VB6 menus are internal (ENUMMENUS returns 0 for most apps).
+    # F10 activates menu bar, arrow keys navigate, Enter clicks.
+    nav_menu_count = len(nav_graph.get('menus', []))
+    if nav_menu_count > 0 or menus:
+        log.info('--- Phase 1: keyboard menu walk (%d nav graph menus, '
+                 '%d Win32 menus) ---', nav_menu_count, len(menus))
+        step = _walk_menus_keyboard(
+            hwnd, step, out_dir, frames, danger_menu_words,
+            max_top=6, max_sub=10)
+
+    # Phase 2: Tab cycling — SSTabControl, SysTabControl32, etc.
+    tab_classes = {'sstabctlwndclass', 'systabcontrol32', 'thunderrt6tabstrip'}
+    tab_controls = [c for c in children
+                    if c['class'].lower() in tab_classes]
+    if tab_controls:
+        log.info('--- Phase 2: tab cycling (%d tab controls) ---',
+                 len(tab_controls))
+        step = _cycle_tabs(hwnd, step, out_dir, frames, max_tabs=6)
+
+    # Phase 3: Click ONLY buttons that the nav graph says open another form.
+    # Match by: caption text == nav control name (case-insensitive),
+    # or nav control name starts with "Command" and we try all CommandButtons
+    # that aren't dangerous.
+    nav_names = set()  # lowercase control names that navigate to forms
+    nav_command_targets = {}  # "Command2" -> target_form (can't match by caption)
+    for nav in nav_graph.get('navigation', []):
         ctrl = nav['from_control']
-        target_form = nav['to_form']
-
+        if nav['is_menu']:
+            continue  # menus handled in Phase 1
         if ctrl.lower() in danger_names:
-            log.info('SKIP dangerous: %s', ctrl)
             continue
+        nav_names.add(ctrl.lower())
+        if ctrl.lower().startswith('command'):
+            nav_command_targets[ctrl.lower()] = nav['to_form']
 
-        if not nav['is_menu']:
-            continue
-
-        log.info('--- Menu navigate: %s -> %s ---', ctrl, target_form)
-
-        # Try Win32 menu API first (works for some apps)
-        search_name = ctrl.lower()
-        if search_name.startswith('mnu'):
-            search_name = search_name[3:]
-
-        clicked = False
-        for menu_text, menu_id in menu_map.items():
-            if search_name in menu_text or menu_text in search_name:
-                log.info('  Menu match: "%s" -> id=%d', menu_text, menu_id)
-                c2_wmcommand(hwnd, menu_id)
-                clicked = True
-                break
-
-        if not clicked and menus:
-            log.info('  No menu match for %s in Win32 menus', ctrl)
-            continue
-
-        if not clicked and not menus:
-            # VB6 menus don't use Win32 menu API — try keyboard navigation
-            # Press Alt to activate menu bar, then use xdotool to find
-            # and click the menu item
-            log.info('  No Win32 menus — trying Alt key activation')
-            # Focus the main window first
-            subprocess.run(
-                ['xdotool', 'windowactivate', '--sync', str(hwnd)],
-                env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True
-            )
-            time.sleep(0.3)
-            subprocess.run(
-                ['xdotool', 'key', 'alt+F10'],
-                env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True
-            )
-            time.sleep(0.5)
-            # Screenshot the menu state
-            shot_path = os.path.join(out_dir, '%02d_menu_%s.bmp' % (step, search_name))
-            if c2_screenshot(hwnd, shot_path):
-                frames.append(shot_path)
-                log.info('Frame %d: menu activated', step)
-                step += 1
-            # Press Escape to close menu
-            subprocess.run(
-                ['xdotool', 'key', 'Escape'],
-                env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True
-            )
-            time.sleep(0.3)
-            # Only do this once (screenshot the menu bar open)
-            break
-
-        if clicked:
-            time.sleep(1.5)
-            step = _screenshot_new_state(hwnd, step, target_form, out_dir, frames)
-
-    # Phase 2: Click all visible CommandButtons (brute force)
-    # We can't map VB control names to ENUMCHILDREN results because
-    # ENUMCHILDREN gives us captions, not VB names. So just click them all.
     clickable_children = [c for c in children
                           if 'CommandButton' in c['class'] and c['text']]
+    danger_captions = {'exit', 'quit', 'close', 'end', 'x', 'cancel',
+                       'start', 'stop', 'connect', 'send', 'crack',
+                       'punt', 'flood', 'attack', 'run', 'go', 'begin'}
 
-    # Filter out buttons whose text matches dangerous control captions
-    # (e.g. "Exit", "Quit", "Close")
-    danger_captions = {'exit', 'quit', 'close', 'end', 'x', 'cancel'}
-    safe_buttons = [c for c in clickable_children
-                    if c['text'].lower().strip().replace('&', '') not in danger_captions]
+    # Match children to nav graph entries by caption
+    nav_buttons = []
+    for child in clickable_children:
+        caption = child['text'].lower().strip().replace('&', '')
+        if caption in danger_captions:
+            continue
+        if caption in nav_names:
+            nav_buttons.append(child)
+            log.info('  Nav match by caption: "%s"', child['text'])
 
-    if safe_buttons:
-        log.info('--- Phase 2: clicking %d safe CommandButtons ---',
-                 len(safe_buttons))
+    # If nav graph has generic "Command*" entries and we have unmatched buttons,
+    # try them if they're not dangerous
+    if nav_command_targets and not nav_buttons:
+        for child in clickable_children:
+            caption = child['text'].lower().strip().replace('&', '')
+            if caption not in danger_captions:
+                nav_buttons.append(child)
 
-    for child in safe_buttons[:8]:  # cap at 8 to avoid infinite loops
-        log.info('  Clicking button: hwnd=%d text="%s"',
+    if nav_buttons:
+        log.info('--- Phase 3: clicking %d nav-graph buttons ---',
+                 len(nav_buttons))
+
+    for child in nav_buttons[:6]:
+        log.info('  Clicking nav button: hwnd=%d text="%s"',
                  child['hwnd'], child['text'])
         _xdotool_click_window(child['hwnd'])
         time.sleep(1.5)
@@ -445,6 +455,223 @@ def _xdotool_click_window(hwnd):
         log.warning('click failed: %s', e)
 
 
+def _find_x11_window(hwnd):
+    """Find the X11 window ID corresponding to a Wine hwnd by matching title."""
+    title = get_window_title(hwnd)
+    if not title:
+        return None
+    try:
+        r = subprocess.run(
+            ['xdotool', 'search', '--name', title],
+            env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True, text=True)
+        for line in r.stdout.strip().split('\n'):
+            if line.strip():
+                return int(line.strip())
+    except Exception:
+        pass
+    return None
+
+
+def _xkey(hwnd, key):
+    """Send a key via xdotool. Finds X11 window by title, falls back to focus."""
+    xid = _find_x11_window(hwnd)
+    if xid:
+        subprocess.run(
+            ['xdotool', 'windowactivate', str(xid)],
+            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
+        time.sleep(0.1)
+        subprocess.run(
+            ['xdotool', 'key', '--window', str(xid), key],
+            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
+    else:
+        subprocess.run(
+            ['xdotool', 'key', key],
+            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
+
+
+def _walk_menus_keyboard(main_hwnd, step, out_dir, frames, danger_words,
+                         max_top=6, max_sub=10):
+    """Walk VB6 menus via keyboard: F10, arrows, Enter. Screenshot new forms.
+
+    Returns next step number.
+    """
+    # Activate and focus main window via X11
+    xid = _find_x11_window(main_hwnd)
+    if xid:
+        subprocess.run(
+            ['xdotool', 'windowactivate', str(xid)],
+            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
+    time.sleep(0.3)
+
+    # F10 activates the menu bar in VB6 apps
+    _xkey(main_hwnd, 'F10')
+    time.sleep(0.5)
+
+    # Screenshot with menu bar active (full window, not client, to show menu)
+    shot_path = os.path.join(out_dir, '%02d_menubar.bmp' % step)
+    if c2_screenshot(main_hwnd, shot_path, client=False):
+        if not frames or not _frames_identical(frames[-1], shot_path):
+            frames.append(shot_path)
+            log.info('Frame %d: menu bar activated', step)
+            step += 1
+        else:
+            os.remove(shot_path)
+
+    # Escape back, then walk each top-level menu
+    _xkey(main_hwnd, 'Escape')
+    time.sleep(0.2)
+
+    for top_idx in range(max_top):
+        # Activate menu bar
+        _xkey(main_hwnd, 'F10')
+        time.sleep(0.3)
+
+        # Navigate to the Nth top-level menu
+        for _ in range(top_idx):
+            _xkey(main_hwnd, 'Right')
+            time.sleep(0.15)
+
+        # Open this top-level menu (Down arrow)
+        _xkey(main_hwnd, 'Down')
+        time.sleep(0.3)
+
+        # Check if a popup appeared (VB6 menus create popup windows)
+        # If no popup, we've gone past the last menu
+        popup = c2_find('#32768')  # Win32 popup menu class
+        if not popup:
+            # Also check for VB6 internal popup (sometimes no #32768)
+            # Try screenshotting — if identical to previous, no menu opened
+            _xkey(main_hwnd, 'Escape')
+            time.sleep(0.2)
+            _xkey(main_hwnd, 'Escape')
+            time.sleep(0.2)
+            log.info('  Top menu %d: no popup, stopping', top_idx)
+            break
+
+        log.info('  Top menu %d: popup found', top_idx)
+
+        # Walk submenu items
+        for sub_idx in range(max_sub):
+            # Get the menu item text via GETTEXT on the popup
+            # (won't work for VB6 internal menus, but try)
+
+            # Press Enter to click the current item
+            _xkey(main_hwnd, 'Return')
+            time.sleep(1.0)
+
+            # Check if a new window appeared
+            new_wins = find_all_vb_windows()
+            dlg = c2_find('#32770')
+            new_hwnd = None
+            for h in new_wins:
+                if h != main_hwnd:
+                    new_hwnd = h
+                    break
+            if not new_hwnd and dlg:
+                new_hwnd = dlg
+
+            if new_hwnd:
+                # Screenshot the new form
+                new_title = get_window_title(new_hwnd)
+                safe = re.sub(r'[^\w\-]', '_', new_title or 'menu_%d_%d' % (top_idx, sub_idx))[:30]
+                shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
+                if c2_screenshot(new_hwnd, shot_path):
+                    if not frames or not _frames_identical(frames[-1], shot_path):
+                        frames.append(shot_path)
+                        log.info('Frame %d: menu %d.%d -> "%s"',
+                                 step, top_idx, sub_idx, new_title)
+                        step += 1
+                    else:
+                        os.remove(shot_path)
+
+                # Dismiss the new window
+                _xkey(new_hwnd, 'Escape')
+                time.sleep(0.3)
+                still = find_all_vb_windows()
+                if new_hwnd in still:
+                    _xkey(new_hwnd, 'alt+F4')
+                    time.sleep(0.3)
+
+                # Check main window still alive
+                main_alive = find_all_vb_windows()
+                if main_hwnd not in main_alive:
+                    log.warning('Main window died after menu %d.%d', top_idx, sub_idx)
+                    return step
+
+                # Re-open the menu to continue walking
+                _xkey(main_hwnd, 'F10')
+                time.sleep(0.3)
+                for _ in range(top_idx):
+                    _xkey(main_hwnd, 'Right')
+                    time.sleep(0.15)
+                _xkey(main_hwnd, 'Down')
+                time.sleep(0.3)
+                # Navigate back to where we were + 1
+                for _ in range(sub_idx + 1):
+                    _xkey(main_hwnd, 'Down')
+                    time.sleep(0.15)
+            else:
+                # No new window — might be a toggle, separator, or submenu
+                # Check if we're still in a menu
+                popup2 = c2_find('#32768')
+                if not popup2:
+                    # Menu closed — item was a leaf action (no dialog)
+                    # Re-open to continue
+                    _xkey(main_hwnd, 'F10')
+                    time.sleep(0.3)
+                    for _ in range(top_idx):
+                        _xkey(main_hwnd, 'Right')
+                        time.sleep(0.15)
+                    _xkey(main_hwnd, 'Down')
+                    time.sleep(0.3)
+                    for _ in range(sub_idx + 1):
+                        _xkey(main_hwnd, 'Down')
+                        time.sleep(0.15)
+                    popup3 = c2_find('#32768')
+                    if not popup3:
+                        log.info('  Menu %d: exhausted at item %d', top_idx, sub_idx)
+                        break
+                else:
+                    # Still in menu — move down to next item
+                    _xkey(main_hwnd, 'Down')
+                    time.sleep(0.15)
+
+        # Close any remaining menu
+        _xkey(main_hwnd, 'Escape')
+        time.sleep(0.2)
+        _xkey(main_hwnd, 'Escape')
+        time.sleep(0.2)
+
+    return step
+
+
+def _cycle_tabs(main_hwnd, step, out_dir, frames, max_tabs=6):
+    """Cycle through tab pages via Ctrl+PageDown, screenshot each."""
+    for i in range(max_tabs):
+        _xkey(main_hwnd, 'ctrl+Next')  # Ctrl+PageDown
+        time.sleep(0.8)
+        safe = 'tab_%d' % (i + 1)
+        shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
+        if c2_screenshot(main_hwnd, shot_path):
+            if not frames or not _frames_identical(frames[-1], shot_path):
+                frames.append(shot_path)
+                log.info('Frame %d: tab %d', step, i + 1)
+                step += 1
+            else:
+                os.remove(shot_path)
+                log.info('Tab %d: duplicate, stopping tab cycle', i + 1)
+                break
+    return step
+
+
+def _frames_identical(path_a, path_b):
+    """Return True if two BMP files have identical pixel data."""
+    try:
+        return open(path_a, 'rb').read() == open(path_b, 'rb').read()
+    except OSError:
+        return False
+
+
 def _screenshot_new_state(main_hwnd, step, label, out_dir, frames):
     """Screenshot whatever new window appeared, dismiss it, return next step."""
     new_hwnds = find_all_vb_windows()
@@ -463,24 +690,23 @@ def _screenshot_new_state(main_hwnd, step, label, out_dir, frames):
     safe_label = re.sub(r'[^\w\-]', '_', str(label))[:30]
     shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe_label))
     if c2_screenshot(shot_hwnd, shot_path):
-        frames.append(shot_path)
-        new_title = get_window_title(shot_hwnd)
-        log.info('Frame %d: %s (hwnd=%d title="%s")',
-                 step, label, shot_hwnd, new_title)
+        # Dedup: discard if identical to previous frame
+        if frames and _frames_identical(frames[-1], shot_path):
+            os.remove(shot_path)
+            log.info('Frame %d: %s — duplicate, discarded', step, label)
+        else:
+            frames.append(shot_path)
+            new_title = get_window_title(shot_hwnd)
+            log.info('Frame %d: %s (hwnd=%d title="%s")',
+                     step, label, shot_hwnd, new_title)
 
     # Dismiss if it's a new window
     if shot_hwnd != main_hwnd:
-        subprocess.run(
-            ['xdotool', 'key', '--window', str(shot_hwnd), 'Escape'],
-            env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True
-        )
+        _xkey(shot_hwnd, 'Escape')
         time.sleep(0.5)
         still = find_all_vb_windows()
         if shot_hwnd in still:
-            subprocess.run(
-                ['xdotool', 'key', '--window', str(shot_hwnd), 'alt+F4'],
-                env={'DISPLAY': DISPLAY}, timeout=5, capture_output=True
-            )
+            _xkey(shot_hwnd, 'alt+F4')
             time.sleep(0.5)
 
     return step + 1
