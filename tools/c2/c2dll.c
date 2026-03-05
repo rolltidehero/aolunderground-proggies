@@ -111,30 +111,33 @@ static void handle_cmd(char *line) {
         res_printf("OK\n");
     } else if (!stricmp(verb,"SCREENSHOT")) {
         /* SCREENSHOT <hwnd> <filepath>
-         * Captures full window (including title bar/border) to BMP via BitBlt.
+         * Captures window via BitBlt cropped to window rect.
+         * SetForegroundWindow ensures no other window overlaps.
          * If hwnd is 0, captures entire desktop. */
         char *shw, *path; shw = split1(rest, &path);
         HWND hw = (HWND)(UINT_PTR)strtoul(shw, NULL, 0);
-        HDC hdcSrc = GetDC(NULL); /* always desktop DC for screen coords */
         RECT rc;
         int w, h, sx = 0, sy = 0;
         if (hw) {
-            GetWindowRect(hw, &rc); /* full window with chrome */
+            GetWindowRect(hw, &rc);
             sx = rc.left; sy = rc.top;
             w = rc.right - rc.left; h = rc.bottom - rc.top;
+            SetForegroundWindow(hw);
+            BringWindowToTop(hw);
+            Sleep(50);
         } else {
             w = GetSystemMetrics(SM_CXSCREEN);
             h = GetSystemMetrics(SM_CYSCREEN);
         }
-        if (w <= 0 || h <= 0 || !hdcSrc) {
-            if (hdcSrc) ReleaseDC(hw, hdcSrc);
+        if (w <= 0 || h <= 0) {
             res_printf("ERR: bad window or size %dx%d\n", w, h);
         } else {
-            HDC hdcMem = CreateCompatibleDC(hdcSrc);
-            HBITMAP hbm = CreateCompatibleBitmap(hdcSrc, w, h);
+            HDC hdcScreen = GetDC(NULL);
+            HDC hdcMem = CreateCompatibleDC(hdcScreen);
+            HBITMAP hbm = CreateCompatibleBitmap(hdcScreen, w, h);
             SelectObject(hdcMem, hbm);
-            BitBlt(hdcMem, 0, 0, w, h, hdcSrc, sx, sy, SRCCOPY);
-            ReleaseDC(NULL, hdcSrc);
+            BitBlt(hdcMem, 0, 0, w, h, hdcScreen, sx, sy, SRCCOPY);
+            ReleaseDC(NULL, hdcScreen);
             /* Write BMP file */
             BITMAPINFOHEADER bi = {0};
             bi.biSize = sizeof(bi);
