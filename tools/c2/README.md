@@ -21,6 +21,7 @@ Two isolated Wine environments run in parallel:
 
 - **`c2dll.c`** — DLL injected into VB Decompiler. Polls `C:\c2_cmd.txt`, executes Win32 API calls in-process, writes results to `C:\c2_res.txt`. Required because Wine doesn't marshal WM_SETTEXT across processes.
 - **`c2host.c`** — Standalone C2 exe for screenshot pipeline. Same command set, different file paths (`c2s_cmd.txt`/`c2s_res.txt`). No injection needed.
+- **`c2vb.c`** — **(PLANNED)** DLL injected into VB6 proggies. Walks COM `Forms`/`Controls` collections via IDispatch to enumerate all controls (including lightweight ones with no HWND) with full coordinates. Enables clicking buttons by name for form navigation.
 - **`inject.c`** — Injector using `CreateRemoteThread` + `LoadLibraryA`.
 
 ### Automation Scripts
@@ -40,6 +41,9 @@ i686-w64-mingw32-gcc -O2 -o inject.exe inject.c -luser32
 
 # Standalone C2 host (for screenshots)
 i686-w64-mingw32-gcc -O2 -o c2host.exe c2host.c -luser32 -lgdi32
+
+# VB6 in-process C2 (for control enumeration — PLANNED)
+i686-w64-mingw32-gcc -shared -O2 -o c2vb.dll c2vb.c -luser32 -lgdi32 -loleaut32 -lole32 -luuid -lcomctl32
 ```
 
 ## C2 Commands
@@ -172,8 +176,9 @@ Tests: `python3 test_metadata.py` (52 tests)
 - **Screenshots**: 81/2328 processed, running on `:98`
 
 ### TODO
-- Smart screenshot script using metadata (About form targeting, menu/button text from source)
-- Animated GIFs from FRX images + window screenshot per app
+- Build `c2vb.dll` — in-process VB6 COM control enumeration (see detailed section below)
+- Update `screenshot_proggies.py` to inject `c2vb.dll` into each proggie, use ENUMCONTROLS to find buttons, CLICKCONTROL to navigate forms
+- Animated GIFs: splash → main → navigate forms via c2vb → About → FRX art
 - GitHub Pages site generation
 
 ## Environment Setup
@@ -204,9 +209,154 @@ Or just run `screenshot_proggies.py` — it auto-starts everything.
 
 Both prefixes have registered: mscomctl.ocx, comctl32.ocx, mswinsck.ocx, Comdlg32.ocx, richtx32.ocx, Tabctl32.ocx, Msinet.ocx, ssa3d30.ocx, threed32.ocx, msvbvm50.dll, msvbvm60.dll.
 
+## c2vb.dll — In-Process VB6 Control Enumeration (PLANNED)
+
+### Problem
+
+VB6 lightweight controls (Label, Image, CommandButton, Shape, Line, Frame) have
+**no HWND**. They are drawn by the VB6 runtime and invisible to `EnumChildWindows`.
+Our external C2 (`c2host.exe`) can only see windowed controls like TextBox and
+PictureBox. This means we can't find buttons to click for navigating between forms.
+
+Tested and confirmed:
+- `ENUMCHILDREN` on a VB6 form with 53 CommandButtons returned only 7 PictureBoxDC children
+- `PostMessage WM_LBUTTONDOWN/UP` to the form does NOT trigger lightweight control clicks
+- `WM_COMMAND` brute force does NOT work on VB6 (unlike Delphi — VB6 uses internal dispatch)
+- `xdotool` clicks DO work (real X11 input → Wine → VB6 hit-testing) but we don't know coordinates
+- `Tab+Space` keyboard navigation is dangerous — can hit Exit buttons and kill the app
+
+### Solution: In-Process COM Enumeration
+
+All VB6 objects are COM objects supporting `IDispatch`. From inside the process,
+we can walk the `Forms` collection and each form's `Controls` collection to get
+**every** control including lightweight ones, with full properties:
+
+```
+Forms(i).Controls → IEnumVARIANT → for each control:
+  .Name     (via GetIDsOfNames)
+  .Caption  (DISPID -518)
+  .Left     (via GetIDsOfNames, in twips)
+  .Top      (via GetIDsOfNames, in twips)
+  .Width    (via GetIDsOfNames, in twips)
+  .Height   (via GetIDsOfNames, in twips)
+  .Visible  (via GetIDsOfNames)
+  .Enabled  (DISPID -514)
+  .HWND     (DISPID -515, 0 for lightweight)
+  TypeName  (from IDispatch::GetTypeInfo)
+```
+
+With coordinates known, we send `WM_LBUTTONDOWN`/`WM_LBUTTONUP` to the form
+at the control's center point — the VB6 runtime does hit-testing and fires `_Click`.
+
+### Research Sources
+
+- **GenDigital/Avast "Scripting Arbitrary VB6 Applications" (2023)** — David Zimmer (dzzie/sandsprite).
+  Proved that injecting a DLL at process startup, hooking `CVBApplication::Init`,
+  patching `ObjectType` bit 0x800 to make classes public, and registering `Forms`
+  in the Running Object Table (ROT) gives full scripting access to any VB6 exe.
+  Forms, controls, public members — all accessible via IDispatch from Python/JS.
+  Source: https://www.gendigital.com/blog/insights/research/scripting-arbitrary-vb6-applications
+
+- **Karl E. Peterson "Subclassing the XP Way" (2009)** — `SetWindowSubclass` from
+  comctl32.dll (ordinal 410, named export from XP SP1). Safe multi-hook subclassing
+  with `RemoveWindowSubclass` (412) and `DefSubclassProc` (413). No teardown-order
+  issues. Available since Win98/IE4 by ordinal, confirmed working in Wine.
+  Source: https://visualstudiomagazine.com/articles/2009/07/16/subclassing-the-xp-way.aspx
+
+- **Geoff Chappell comctl32 history** — Documents ordinals 410-413 as existing since
+  IE 4.0 / Win98, exported by name from XP SP1.
+  Source: https://www.geoffchappell.com/studies/windows/shell/comctl32/history/ords472.htm
+
+- **Wine API** — `SetWindowSubclass` implemented in Wine's comctl32.
+  Source: https://source.winehq.org/WineAPI/SetWindowSubclass.html
+
+- **Microsoft OLE Standard DISPIDs** (olectl.h, confirmed in mingw-w64 headers):
+  ```
+  DISPID_BACKCOLOR  = -501    DISPID_FONT       = -512
+  DISPID_FORECOLOR  = -513    DISPID_ENABLED    = -514
+  DISPID_HWND       = -515    DISPID_TABSTOP    = -516
+  DISPID_TEXT        = -517    DISPID_CAPTION    = -518
+  DISPID_NEWENUM    = -4      DISPID_VALUE      = 0
+  ```
+
+### Architecture
+
+```
+inject.exe → CreateRemoteThread + LoadLibraryA → c2vb.dll loaded in proggie
+
+c2vb.dll DllMain:
+  1. Start polling thread (reads C:\c2v_cmd.txt, writes C:\c2v_res.txt)
+  2. PostMessage(WM_USER+99) to main form → executes on VB6 STA thread
+
+On WM_USER+99 (main thread, safe for COM):
+  3. AccessibleObjectFromWindow(hwnd, OBJID_NATIVEOM) → form IDispatch
+     OR walk VBHeader → ObjectTable → Forms (GenDigital technique)
+  4. form->Invoke("Controls", DISPATCH_PROPERTYGET) → controls IDispatch
+  5. controls->Invoke(DISPID_NEWENUM) → IEnumVARIANT
+  6. IEnumVARIANT::Next() → each control's IDispatch
+  7. GetIDsOfNames("Name","Left","Top","Width","Height","Visible","Caption")
+  8. Invoke each → report name|type|caption|left|top|width|height|visible
+```
+
+### Planned Commands
+
+| Command | Description |
+|---------|-------------|
+| ENUMCONTROLS | Walk all forms/controls, report name/type/caption/coordinates |
+| CLICKCONTROL name | Find control by name, click at its center coordinates |
+| SHOWFORM name | Call formname.Show via IDispatch |
+| GETPROPERTY ctrl.prop | Read any property via GetIDsOfNames + Invoke |
+
+### Build (planned)
+
+```bash
+i686-w64-mingw32-gcc -shared -O2 -o c2vb.dll c2vb.c -luser32 -lgdi32 -loleaut32 -lole32 -luuid
+```
+
+### STA Threading Constraint
+
+VB6 uses single-threaded apartment (STA). All COM/runtime calls MUST happen on
+the main VB6 thread. The injected DLL's polling thread cannot call IDispatch
+directly. Instead:
+- Use `SetWindowSubclass` (comctl32 ordinal 410) to hook the form's wndproc
+- Or `PostMessage` a custom `WM_USER+N` to the form, handle it in the subclass proc
+- The subclass proc runs on the main thread → safe to call IDispatch
+
+### VB6 Control Visibility Summary
+
+| Control Type | Has HWND | Visible to EnumChildWindows | Visible to COM Controls collection |
+|---|---|---|---|
+| TextBox | Yes | Yes (ThunderRT6TextBox) | Yes |
+| CommandButton | Sometimes | Sometimes (ThunderRT6CommandButton) | **Yes** |
+| Label | No | No | **Yes** |
+| Image | No | No | **Yes** |
+| PictureBox | Yes | Yes (ThunderRT6PictureBoxDC) | Yes |
+| Frame | No | No | **Yes** |
+| Shape/Line | No | No | **Yes** |
+| SSTab | Yes | Yes | Yes |
+| ListBox/ComboBox | Yes | Yes | Yes |
+
+### Coordinate System
+
+VB6 uses **twips** (1 twip = 1/1440 inch, 15 twips = 1 pixel at 96 DPI).
+Convert: `pixels = twips / 15` (at standard 96 DPI).
+The control's Left/Top are relative to its container (form client area).
+
+### App Navigation Stats (from metadata analysis)
+
+- 2152 apps with metadata extracted
+- 77 apps have explicit `_Click` → `.Show` form navigation in decompiled source
+- 144 apps have detected About/Credits/Splash forms
+- 1632 apps are multi-form (but most extra "forms" are shared modules like dos32, monkefade)
+- 491 apps are single-form
+- 20 apps use SSTab tabbed controls
+- Control types used as buttons: CommandButton, Label (54 instances), Image (4), Menu (25), custom-named (124)
+
 ## Known Issues
 
 - **16-bit NE executables** (VB3, .VBX) crash Wine and can take down Xvfb. Both scripts detect and skip them.
 - **Non-VB exes** produce empty decompile output (34 "Output file is empty" errors). These are Delphi/C++ apps that VB Decompiler can't handle.
 - **PrintWindow** doesn't work under Wine — windows return black. Using BitBlt from desktop DC with SetForegroundWindow instead.
 - **Cross-process WM_SETTEXT** doesn't work under Wine — must use DLL injection.
+- **VB6 lightweight controls invisible to Win32 API** — Labels, Images, CommandButtons (sometimes) have no HWND. Must use in-process COM enumeration via c2vb.dll.
+- **Animated GIFs currently broken** — TCM_SETCURSEL doesn't repaint VB6 SSTab under Wine. WM_COMMAND brute force doesn't work on VB6. Needs c2vb.dll for source-aware navigation.
