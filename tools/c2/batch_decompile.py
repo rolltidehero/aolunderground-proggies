@@ -8,7 +8,7 @@ Usage:
 Outputs decompiled .bas next to each .exe. Tracks progress in a JSON
 checkpoint file so it can be stopped and resumed.
 
-Requires: C2 DLL injected into running VB Decompiler.
+Auto-recovers: if Xvfb, VB Decompiler, or C2 die, spins them back up.
 """
 import sys, os, time, json, subprocess, argparse, logging, re
 from datetime import datetime
@@ -25,6 +25,7 @@ STAGING = os.path.join(C_DRIVE, 'vbdec_input.exe')
 SAVE_TMP = os.path.join(C_DRIVE, 'vbdec_output.bas')
 
 BREAKGLASS_SECS = 300
+MAX_RECOVERY_ATTEMPTS = 3
 
 INSTALLER_NAME_RE = re.compile(
     r'(^setup\.exe$|^install\.exe$|setup\.exe$|install\.exe$'
@@ -49,19 +50,117 @@ def setup_logging():
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-# ── FreeProcess — the proggie yield pattern ──
-# VB6 original: Do: DoEvents: Process=Process+1: If Process=50 Then Exit Do: Loop
-# Python equivalent: yield timeslice 100 times with no minimum delay.
-# time.sleep(0) yields the GIL + OS timeslice without any minimum wait.
-
 def free_process():
     for _ in range(100):
         time.sleep(0)
 
-# ── C2 comms — all use free_process polling, no arbitrary sleeps ──
+# ── Environment management ──
+
+def _run(cmd, timeout=30):
+    """Run a shell command, return (exit_code, stdout)."""
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+    return r.returncode, r.stdout.strip()
+
+def _pgrep(pattern):
+    """Return list of PIDs matching pattern."""
+    _, out = _run(f'pgrep -a {pattern}')
+    return [line.split()[0] for line in out.split('\n') if line.strip()] if out else []
+
+def ensure_xvfb():
+    """Make sure Xvfb :99 is running."""
+    if _pgrep('"Xvfb.*:99"'):
+        return True
+    logger.info('RECOVERY: Starting Xvfb :99')
+    subprocess.Popen(['sudo', 'Xvfb', ':99', '-screen', '0', '1024x768x24', '-ac'],
+                     stdout=open('/tmp/xvfb.log', 'w'), stderr=subprocess.STDOUT,
+                     stdin=subprocess.DEVNULL)
+    time.sleep(2)
+    return bool(_pgrep('"Xvfb.*:99"'))
+
+def ensure_metacity():
+    """Make sure metacity is running on :99."""
+    if _pgrep('metacity'):
+        return True
+    logger.info('RECOVERY: Starting metacity on :99')
+    subprocess.Popen(['metacity', '--display=:99', '--replace'],
+                     stdout=open('/tmp/metacity.log', 'w'), stderr=subprocess.STDOUT,
+                     stdin=subprocess.DEVNULL)
+    time.sleep(2)
+    return True
+
+def ensure_vbdecompiler():
+    """Make sure VB Decompiler is running. Returns True if it's up."""
+    _, out = _run('pgrep -u wineuser -a')
+    if 'VB Decompiler' in out:
+        return True
+    logger.info('RECOVERY: Launching VB Decompiler')
+    subprocess.Popen(
+        ['sudo', '-u', 'wineuser', 'env', 'DISPLAY=:99',
+         'wine', 'C:\\Program Files\\VB Decompiler Pro\\VB Decompiler.exe'],
+        stdout=open('/tmp/vbdec.log', 'w'), stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL)
+    # Wait for it to appear
+    deadline = time.time() + 20
+    while time.time() < deadline:
+        time.sleep(2)
+        _, out = _run('pgrep -u wineuser -a')
+        if 'VB Decompiler' in out:
+            return True
+    return False
+
+def ensure_c2():
+    """Make sure C2 DLL is injected and responding. Returns True if healthy."""
+    if c2_healthy():
+        return True
+    logger.info('RECOVERY: Injecting C2 DLL')
+    subprocess.Popen(
+        ['sudo', '-u', 'wineuser', 'env', 'DISPLAY=:99',
+         'wine', 'C:\\inject.exe'],
+        stdout=open('/tmp/inject.log', 'w'), stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL)
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        time.sleep(2)
+        if c2_healthy():
+            return True
+    return False
+
+def ensure_environment():
+    """Spin up the full environment if anything is down. Returns (ok, hmain)."""
+    for attempt in range(MAX_RECOVERY_ATTEMPTS):
+        logger.info(f'RECOVERY: Attempt {attempt+1}/{MAX_RECOVERY_ATTEMPTS}')
+
+        if not ensure_xvfb():
+            logger.error('RECOVERY: Xvfb failed to start')
+            time.sleep(5)
+            continue
+
+        ensure_metacity()
+
+        if not ensure_vbdecompiler():
+            logger.error('RECOVERY: VB Decompiler failed to start')
+            time.sleep(5)
+            continue
+
+        if not ensure_c2():
+            logger.error('RECOVERY: C2 injection failed')
+            time.sleep(5)
+            continue
+
+        hmain = c2('FINDWINDOW TfrmMain *')
+        if hmain and hmain != '0':
+            logger.info(f'RECOVERY: Environment ready, hMain={hmain}')
+            return True, hmain
+
+        logger.error('RECOVERY: Could not find VB Decompiler main window')
+        time.sleep(5)
+
+    logger.error('RECOVERY: All attempts failed')
+    return False, None
+
+# ── C2 comms ──
 
 def c2(cmd, timeout=10):
-    """Send command to C2, poll for response with FreeProcess yield."""
     try: os.remove(RES_FILE)
     except: pass
     with open(CMD_FILE, 'w') as f:
@@ -82,7 +181,6 @@ def c2_healthy():
     return r is not None and ('PONG' in r or 'INJECTED' in r)
 
 def wait_window(cls, title, timeout=15):
-    """Poll for a window to appear using FreeProcess yield."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         free_process()
@@ -148,7 +246,6 @@ def save_checkpoint(ckpt):
 # ── decompile one file ──
 
 def decompile_one(exe_path, output_path, hmain):
-    """Returns (success: bool, detail: str). All waits use FreeProcess polling."""
     start = time.time()
     dismiss_dialogs()
 
@@ -157,7 +254,6 @@ def decompile_one(exe_path, output_path, hmain):
     subprocess.run(['sudo', 'chown', 'wineuser:nonet', STAGING], check=True,
                    capture_output=True)
 
-    # Open file dialog
     c2(f'WMCOMMAND {hmain} 2')
     dlg = wait_window('#32770', 'Open EXE File')
     if not dlg:
@@ -169,11 +265,9 @@ def decompile_one(exe_path, output_path, hmain):
         return False, 'Edit control not found in Open dialog'
 
     c2(f'SETTEXT {edit} C:\\vbdec_input.exe')
-    free_process()  # yield, not sleep — let SETTEXT land
-    c2(f'SENDMSG {dlg} 273 1 0')  # IDOK
+    free_process()
+    c2(f'SENDMSG {dlg} 273 1 0')
 
-    # Poll for info dialog OR tree population — no fixed sleep
-    # VB Decompiler shows TfrmMessageDialog after opening, then populates tree
     deadline = time.time() + 30
     dismissed_info = False
     while time.time() < deadline:
@@ -184,7 +278,6 @@ def decompile_one(exe_path, output_path, hmain):
                 c2(f'POSTMSG {d} 16 0 0')
                 dismissed_info = True
                 continue
-        # Check if tree is populated
         break_out = False
         children = c2(f'ENUMCHILDREN {hmain}', timeout=3)
         if children:
@@ -197,12 +290,10 @@ def decompile_one(exe_path, output_path, hmain):
                     break
         if break_out:
             break
-        # Also check for info dialog we might have missed
         if not dismissed_info:
             dismiss_dialogs()
             dismissed_info = True
 
-    # Save
     try: os.remove(SAVE_TMP)
     except: pass
 
@@ -217,10 +308,9 @@ def decompile_one(exe_path, output_path, hmain):
         return False, 'Edit control not found in Save dialog'
 
     c2(f'SETTEXT {sedit} C:\\vbdec_output.bas')
-    free_process()  # yield, let SETTEXT land
-    c2(f'SENDMSG {sdlg} 273 1 0')  # IDOK
+    free_process()
+    c2(f'SENDMSG {sdlg} 273 1 0')
 
-    # Poll for output file — no fixed sleep
     deadline = time.time() + 15
     while time.time() < deadline:
         free_process()
@@ -373,17 +463,11 @@ def main():
         print_stats(ckpt)
         return
 
-    r = c2('PING')
-    if not r or ('PONG' not in r and 'INJECTED' not in r):
-        logger.error(f'C2 not responding ({r}). Inject c2dll.dll first.')
+    # Auto-spin-up environment
+    ok, hmain = ensure_environment()
+    if not ok:
+        logger.error('Could not start environment after all retries. Exiting.')
         sys.exit(1)
-
-    hmain = c2('FINDWINDOW TfrmMain *')
-    if not hmain or hmain == '0':
-        logger.error('VB Decompiler main window not found')
-        sys.exit(1)
-
-    logger.info(f'C2 OK, hMain={hmain}')
 
     last_success_time = time.time()
 
@@ -414,7 +498,6 @@ def main():
             logger.info(f'  SKIP (permission)')
             continue
 
-        # Installer detection
         inst = is_installer(exe_path)
         if inst:
             ckpt['files'][rel] = {
@@ -425,12 +508,19 @@ def main():
             logger.info(f'  SKIP (installer: {inst})')
             continue
 
-        # Breakglass
+        # Breakglass — but try recovery first
         if time.time() - last_success_time > BREAKGLASS_SECS:
-            logger.error(f'BREAKGLASS: No success in {BREAKGLASS_SECS}s. Exiting.')
-            save_checkpoint(ckpt)
-            print_stats(ckpt)
-            sys.exit(2)
+            logger.warning(f'BREAKGLASS: No success in {BREAKGLASS_SECS}s. Attempting recovery...')
+            ok, hmain_new = ensure_environment()
+            if ok:
+                hmain = hmain_new
+                last_success_time = time.time()
+                logger.info('BREAKGLASS: Recovery succeeded, continuing.')
+            else:
+                logger.error('BREAKGLASS: Recovery failed. Saving and exiting.')
+                save_checkpoint(ckpt)
+                print_stats(ckpt)
+                sys.exit(2)
 
         try:
             success, detail = decompile_one(exe_path, output_path, hmain)
@@ -461,10 +551,16 @@ def main():
             dismiss_dialogs()
 
             if not c2_healthy():
-                logger.error('FATAL: C2 died. Saving and exiting.')
-                save_checkpoint(ckpt)
-                print_stats(ckpt)
-                sys.exit(1)
+                logger.warning('C2 died. Attempting recovery...')
+                ok, hmain_new = ensure_environment()
+                if ok:
+                    hmain = hmain_new
+                    logger.info('Recovery succeeded, continuing.')
+                else:
+                    logger.error('Recovery failed. Saving and exiting.')
+                    save_checkpoint(ckpt)
+                    print_stats(ckpt)
+                    sys.exit(1)
 
         save_checkpoint(ckpt)
 
