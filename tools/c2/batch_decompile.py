@@ -63,16 +63,16 @@ def _run(cmd, timeout=30):
 
 def _pgrep(pattern):
     """Return list of PIDs matching pattern."""
-    _, out = _run(f'pgrep -a {pattern}')
-    return [line.split()[0] for line in out.split('\n') if line.strip()] if out else []
+    r = subprocess.run(['pgrep', '-f', pattern], capture_output=True, text=True)
+    return [p for p in r.stdout.strip().split('\n') if p.strip()] if r.stdout.strip() else []
 
 def ensure_xvfb():
     """Make sure Xvfb :99 is running."""
-    if _pgrep('"Xvfb.*:99"'):
+    if _pgrep('Xvfb.*:99'):
         return True
     logger.info('RECOVERY: Starting Xvfb :99')
     subprocess.Popen(['sudo', 'Xvfb', ':99', '-screen', '0', '1024x768x24', '-ac'],
-                     stdout=open('/tmp/xvfb.log', 'w'), stderr=subprocess.STDOUT,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      stdin=subprocess.DEVNULL)
     time.sleep(2)
     return bool(_pgrep('"Xvfb.*:99"'))
@@ -83,7 +83,7 @@ def ensure_metacity():
         return True
     logger.info('RECOVERY: Starting metacity on :99')
     subprocess.Popen(['metacity', '--display=:99', '--replace'],
-                     stdout=open('/tmp/metacity.log', 'w'), stderr=subprocess.STDOUT,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      stdin=subprocess.DEVNULL)
     time.sleep(2)
     return True
@@ -97,7 +97,7 @@ def ensure_vbdecompiler():
     subprocess.Popen(
         ['sudo', '-u', 'wineuser', 'env', 'DISPLAY=:99',
          'wine', 'C:\\Program Files\\VB Decompiler Pro\\VB Decompiler.exe'],
-        stdout=open('/tmp/vbdec.log', 'w'), stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL)
     # Wait for it to appear
     deadline = time.time() + 20
@@ -116,7 +116,7 @@ def ensure_c2():
     subprocess.Popen(
         ['sudo', '-u', 'wineuser', 'env', 'DISPLAY=:99',
          'wine', 'C:\\inject.exe'],
-        stdout=open('/tmp/inject.log', 'w'), stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL)
     deadline = time.time() + 15
     while time.time() < deadline:
