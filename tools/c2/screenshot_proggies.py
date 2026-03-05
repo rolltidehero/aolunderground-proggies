@@ -41,7 +41,7 @@ STAGE = os.path.join(C_DRIVE, 'progstage')
 BMP_TMP = os.path.join(C_DRIVE, 'screenshot_tmp.bmp')
 
 MIN_WIDTH = 400
-GIF_DELAY = 200  # centiseconds between frames (2 seconds)
+GIF_DELAY = 100  # centiseconds between frames (1 second)
 MAX_RECOVERY = 3
 
 VB_CLASSES = [
@@ -365,8 +365,24 @@ def make_animated_gif(png_paths, gif_path):
 
 # ── Screenshot one proggie ──
 
+def kill_all_proggies():
+    """Kill ALL non-infrastructure wineshot processes to clear the desktop."""
+    result = subprocess.run(['pgrep', '-u', WINE_USER, '-a'],
+                           capture_output=True, text=True)
+    safe = {'wineserver', 'services.exe', 'winedevice', 'explorer.exe',
+            'plugplay', 'svchost', 'c2host.exe', 'dbus'}
+    for line in result.stdout.strip().split('\n'):
+        if not line.strip(): continue
+        pid = line.split()[0]
+        if any(x in line for x in safe): continue
+        subprocess.run(['sudo', 'kill', pid], capture_output=True)
+
 def screenshot_one(exe_path, output_path):
     """Full screenshot pipeline. Returns (success, detail, file_list)."""
+    # Clean slate — kill any leftover proggies from previous run
+    kill_all_proggies()
+    time.sleep(0.5)
+
     proc, basename = stage_and_launch(exe_path)
 
     # Wait for VB window
@@ -435,8 +451,8 @@ def screenshot_one(exe_path, output_path):
     if about_shot:
         all_files.append(('about', about_shot[0], about_shot[1]))
 
-    # 5. Animated GIF from all frames
-    if len(all_pngs) >= 2:
+    # 5. Animated GIF from all frames (need 3+ for it to be worthwhile)
+    if len(all_pngs) >= 3:
         gif_path = output_path.replace('.screenshot.png', '.animated.gif')
         if make_animated_gif(all_pngs, gif_path):
             all_files.append(('gif', gif_path, f'{len(all_pngs)} frames'))
