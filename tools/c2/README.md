@@ -139,6 +139,43 @@ Features:
 - ~83% of VB exes have extractable images
 - Outputs: `<name>.frx_0.png`, `<name>.frx_1.png`, ... next to each exe
 
+## extract_metadata.py
+
+Parses `.decompiled.bas` files to extract structured metadata. No Wine needed.
+
+```bash
+python3 extract_metadata.py                    # Batch all → metadata.json
+python3 extract_metadata.py --one /path/to.bas # Single file (prints JSON)
+python3 extract_metadata.py --one /path/to.exe # Finds matching .bas automatically
+```
+
+Extracts per app:
+- **name**: from `App.Title`, form captions, version strings
+- **author**: from "by <name>", "coded by", "created by" patterns in string literals
+- **version**: from "v1.0", "Version 2.5" patterns
+- **forms**: all `'Object:` entries (form and module names)
+- **about_form**: detected About/Credits/Splash/Greetz forms
+- **dependencies**: OCX/DLL references found in source
+- **features**: inferred from keywords (punt, crack, flood, fade, chat, IM, idle, etc.)
+- **ui_elements**: buttons (from `_Click` handlers), captions, text controls
+
+Tests: `python3 test_metadata.py` (52 tests)
+
+## Pipeline Status
+
+### Completed
+- **Decompile**: 2258/2328 exes processed (1549 success, 70 errors, 35 skipped, 674 remaining)
+- **FRX extraction**: 2328/2328 done — **14,852 images** extracted from 1978 exes
+- **Metadata**: 2152 apps parsed — 362 authors, 144 About forms, 1467 with features
+
+### In Progress
+- **Screenshots**: 81/2328 processed, running on `:98`
+
+### TODO
+- Smart screenshot script using metadata (About form targeting, menu/button text from source)
+- Animated GIFs from FRX images + window screenshot per app
+- GitHub Pages site generation
+
 ## Environment Setup
 
 ### Decompile environment (`:99` / `wineuser`)
