@@ -138,6 +138,29 @@ static void handle_cmd(char *line) {
         }
     } else if (!stricmp(verb,"SLEEP")) {
         Sleep(atoi(rest)); res_printf("OK\n");
+    } else if (!stricmp(verb,"ENUMMENUS")) {
+        /* ENUMMENUS <hwnd> — enumerate all menu items with their command IDs */
+        HWND hw = (HWND)(UINT_PTR)strtoul(rest, NULL, 0);
+        HMENU hMenu = GetMenu(hw);
+        if (!hMenu) { res_printf("ERR: no menu\n"); }
+        else {
+            int topN = GetMenuItemCount(hMenu);
+            for (int i = 0; i < topN && i < 20; i++) {
+                char topName[256] = {0};
+                GetMenuStringA(hMenu, i, topName, 255, MF_BYPOSITION);
+                HMENU hSub = GetSubMenu(hMenu, i);
+                if (!hSub) continue;
+                int subN = GetMenuItemCount(hSub);
+                for (int j = 0; j < subN && j < 30; j++) {
+                    char subName[256] = {0};
+                    GetMenuStringA(hSub, j, subName, 255, MF_BYPOSITION);
+                    int id = GetMenuItemID(hSub, j);
+                    if (id > 0)
+                        res_printf("%s|%s|%d\n", topName, subName, id);
+                }
+            }
+            if (rlen == 0) res_printf("EMPTY\n");
+        }
     } else {
         res_printf("ERR: unknown: %s\n",verb);
     }
