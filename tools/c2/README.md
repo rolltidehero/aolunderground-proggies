@@ -57,3 +57,41 @@ sleep 1; sudo cat /home/wineuser/.wine/drive_c/c2_res.txt
 | WMCOMMAND | hwnd id | PostMessage WM_COMMAND |
 | SLEEP | ms | Sleep |
 | EXIT | | Terminate C2 thread |
+
+## Automation Scripts
+
+### vbdecompile.py — Single-file decompile
+
+Decompiles one VB5/VB6 exe via C2. Used by batch_decompile.py internally.
+
+### batch_decompile.py — Batch decompile all proggies
+
+Walks `programs/` tree, decompiles every `.exe`, saves `.decompiled.bas` next to each.
+
+```bash
+# Run (requires C2 injected into running VB Decompiler)
+sudo python3 batch_decompile.py
+
+# Check progress
+sudo python3 batch_decompile.py --stats
+
+# Full report (success/error/skipped lists)
+sudo python3 batch_decompile.py --report
+
+# Retry failed files
+sudo python3 batch_decompile.py --reset-errors
+
+# Retry skipped files (e.g. after improving detection)
+sudo python3 batch_decompile.py --reset-skipped
+
+# Preview what would be processed
+sudo python3 batch_decompile.py --dry-run
+```
+
+Features:
+- **JSON checkpoint** (`decompile_checkpoint.json`) — resumable, saves after every file
+- **Installer detection** — auto-skips setup.exe, install.exe, and files containing NSIS/InnoSetup/InstallShield signatures. Logged as `skipped:installer:*` for later review.
+- **Breakglass** — if no successful decompile in 5 minutes, exits gracefully (C2 may be stuck)
+- **Log file** (`batch_decompile.log`) — full debug log alongside stdout
+- **Error recovery** — dismisses stuck dialogs after errors, verifies C2 health
+- **Stats** — success rate, output size, time estimates, error/skip breakdown by type
