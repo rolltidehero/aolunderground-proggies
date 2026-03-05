@@ -322,6 +322,36 @@ is incompatible with Wine 9.0's memory management. The crash corrupts the
 decompilation engine initialization while leaving the GUI and project parser
 functional.
 
+**IMPORTANT — Likely contributing factor discovered (2026-03-04 22:19):**
+
+Another Kiro agent added `/usr/NX/lib` to `/etc/ld.so.conf.d/nomachine.conf`,
+causing NoMachine's bundled libraries to override system libraries system-wide:
+
+```
+$ ldconfig -p | grep libcrypt.so.1
+  libcrypt.so.1 => /usr/NX/lib/libcrypt.so.1      ← WRONG, takes priority
+  libcrypt.so.1 => /lib/x86_64-linux-gnu/libcrypt.so.1  ← correct system lib
+```
+
+**Known damage from this ldconfig change:**
+1. `sudo` broken — PAM uses `libcrypt.so.1` for password hashing; NoMachine's
+   version is incompatible → "account validation failure" on all sudo calls
+2. ImageMagick `import`/`convert` and `tesseract` crash — NoMachine's
+   `libstdc++.so.6` is missing `GLIBCXX_3.4.30` required by system `libicuuc.so.74`
+3. **Enigma Protector crash in Wine is POSSIBLY caused by this** — Wine loads
+   shared libraries from the system ldconfig cache. If Wine or its child
+   processes loaded NoMachine's incompatible `libcrypt.so.1` or `libstdc++.so.6`,
+   this would cause memory corruption in exactly the kind of dynamically
+   allocated region where the crash occurs (`0E23045C`).
+
+**Action required:** Fix ldconfig from physical console, then re-test VB
+Decompiler Pro. The Enigma crash may disappear entirely.
+
+```bash
+sudo rm /etc/ld.so.conf.d/nomachine.conf
+sudo ldconfig
+```
+
 ### GUI Automation Notes
 
 - **Error dialog dismissal:** The access violation produces a dialog titled

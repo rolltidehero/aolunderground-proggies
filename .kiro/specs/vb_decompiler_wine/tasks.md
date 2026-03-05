@@ -76,13 +76,26 @@
 
 ### Possible resolutions
 
-1. **Run on real Windows** — Enigma Protector works correctly on native Windows.
+1. **FIX LDCONFIG FIRST (likely root cause)** — Another Kiro agent added
+   `/usr/NX/lib` to `/etc/ld.so.conf.d/nomachine.conf`, causing NoMachine's
+   bundled `libcrypt.so.1` and `libstdc++.so.6` to override system libraries.
+   This broke PAM authentication (sudo), ImageMagick/tesseract, and very
+   likely caused the Enigma Protector crash in Wine (corrupted library loads
+   in dynamically allocated memory). **Must fix from physical console:**
+   ```bash
+   sudo rm /etc/ld.so.conf.d/nomachine.conf
+   sudo ldconfig
+   ```
+   Then re-test VB Decompiler Pro — the crash may disappear entirely.
+   Evidence: `ldconfig -p | grep libcrypt.so.1` shows `/usr/NX/lib/libcrypt.so.1`
+   listed FIRST, before the system library.
+2. **Run on real Windows** — Enigma Protector works correctly on native Windows.
    Need a Windows VM or bare metal machine.
-2. **Find unprotected build** — A build without Enigma wrapping would bypass
+3. **Find unprotected build** — A build without Enigma wrapping would bypass
    the crash entirely.
-3. **Newer Wine version** — Wine 9.0 is current Ubuntu package. WineHQ staging
+4. **Newer Wine version** — Wine 9.0 is current Ubuntu package. WineHQ staging
    or newer releases may have better Enigma compatibility.
-4. **Use alternative decompilers** — Semi-VB-Decompiler (open source, GitHub),
+5. **Use alternative decompilers** — Semi-VB-Decompiler (open source, GitHub),
    VBReFormer, or p32dasm for VB5/VB6 targets.
 
 ## Task 2: Install VB6 compiler under Wine
