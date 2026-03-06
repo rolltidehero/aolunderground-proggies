@@ -433,16 +433,19 @@ def run_poc(exe_path):
     if nav_menu_count > 0 or menus:
         log.info('--- Phase 1: WM_COMMAND brute-force (%d nav graph menus, '
                  '%d Win32 menus) ---', nav_menu_count, len(menus))
-        step = _bruteforce_wmcommand(
+        step, hwnd = _bruteforce_wmcommand(
             hwnd, step, out_dir, frames, nav_graph,
-            max_id=max(nav_menu_count * 3, 50))
+            max_id=max(nav_menu_count * 3, 50), exe_path=exe_path)
 
     # Check main window still alive before continuing
-    if hwnd not in find_all_vb_windows():
+    if not hwnd or hwnd not in find_all_vb_windows():
         log.warning('Main window died during Phase 1, skipping remaining phases')
         _assemble_gif(exe_name, frames, out_dir)
         kill_all_proggies()
         return
+
+    # Re-enumerate children (hwnd may have changed after relaunch)
+    children = c2_enum_children(hwnd)
 
     # Phase 2: Tab cycling — SSTabControl, SysTabControl32, etc.
     tab_classes = {'sstabctlwndclass', 'systabcontrol32', 'thunderrt6tabstrip'}
@@ -578,14 +581,14 @@ def _xkey(hwnd, key):
 
 
 def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
-                          max_id=200):
+                          max_id=200, exe_path=None):
     """Brute-force WM_COMMAND IDs 1..max_id. Screenshot any new windows.
 
     VB6 menu item IDs are assigned sequentially by MSVBVM60 at runtime.
     GetMenu() returns 0 cross-process under Wine, but WM_COMMAND still works
     because the VB6 runtime dispatches it internally.
 
-    Returns next step number.
+    Returns (next_step, main_hwnd) — hwnd may change if app was relaunched.
     """
     # Build danger words from nav graph
     danger_words = {'exit', 'quit', 'close', 'end', 'unload', 'terminate',
@@ -608,8 +611,13 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
     discovered = []  # list of (id, title, class)
     consecutive_noop = 0
     seen_hwnds = set(baseline_vb | baseline_dlg)  # track all known windows
+    skip_ids = set()  # IDs that killed the app
+    max_deaths = 3  # don't relaunch forever
 
     for cmd_id in range(1, max_id + 1):
+        if cmd_id in skip_ids:
+            continue
+
         # Send WM_COMMAND (0x111 = 273)
         c2_wmcommand(main_hwnd, cmd_id)
         time.sleep(0.8)
@@ -617,9 +625,25 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         # Check main window alive (fast: single GETCLASS on known hwnd)
         alive_r = c2('GETCLASS %d' % main_hwnd, timeout=3)
         if not alive_r or not alive_r.strip() or alive_r.strip() == '0':
-            log.warning('Main window died at WM_COMMAND id=%d (likely exit)',
+            skip_ids.add(cmd_id)
+            log.warning('Main window died at WM_COMMAND id=%d, relaunching',
                         cmd_id)
-            return step
+            if not exe_path or len(skip_ids) > max_deaths:
+                return step, 0
+            stage_and_launch(exe_path)
+            main_hwnd = find_vb_window(timeout=10)
+            if not main_hwnd:
+                log.error('Failed to relaunch after id=%d', cmd_id)
+                return step, 0
+            time.sleep(1.5)
+            # Reset baselines for new process
+            baseline_vb = set(find_all_vb_windows())
+            baseline_dlg = set(c2_find_all('#32770'))
+            seen_hwnds = set(baseline_vb | baseline_dlg)
+            main_cls_r = c2('GETCLASS %d' % main_hwnd)
+            main_cls = main_cls_r.strip() if main_cls_r else VB_CLASSES[0]
+            consecutive_noop = 0
+            continue
 
         # Check for new windows: main class + #32770 (covers most cases)
         new_hwnd = None
@@ -651,9 +675,6 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         title_lower = title.lower() if title else ''
         if any(w in title_lower for w in danger_words):
             log.info('  id=%d title matches danger word, dismissing', cmd_id)
-        elif cls == '#32770':
-            # Common dialog (InputBox/MsgBox/FileDialog) — dismiss, don't screenshot
-            log.debug('  id=%d is #32770 dialog, dismissing', cmd_id)
         else:
             # Screenshot it
             safe = re.sub(r'[^\w\-]', '_', title or 'cmd_%d' % cmd_id)[:30]
@@ -683,7 +704,7 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         for cid, t, c in discovered:
             log.info('  id=%d "%s" (%s)', cid, t, c)
 
-    return step
+    return step, main_hwnd
 
 
 def _walk_menus_keyboard(main_hwnd, step, out_dir, frames, danger_words,
