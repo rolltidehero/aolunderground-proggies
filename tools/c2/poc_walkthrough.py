@@ -154,17 +154,50 @@ def c2_enum_menus(hwnd):
 
 
 def c2_screenshot(hwnd, path, client=True):
-    """Screenshot a window, save as BMP. client=True crops title bar."""
-    win_path = 'C:\\screenshots\\' + os.path.basename(path)
-    cmd = 'SCREENSHOT %d %s%s' % (hwnd, win_path, ' client' if client else '')
-    r = c2(cmd, timeout=10)
-    if r and r.startswith('OK'):
-        src = os.path.join(WINE_PREFIX, 'drive_c', 'screenshots',
-                           os.path.basename(path))
-        if os.path.exists(src):
-            shutil.move(src, path)
-            return True
-    return False
+    """Screenshot via xwd full-screen capture + auto-crop to content.
+    BitBlt and GETRECT coordinates are unreliable under Wine, so we
+    capture the full X11 screen and crop to the non-black content region."""
+    from PIL import Image
+    import subprocess
+    try:
+        proc = subprocess.run(
+            ['sudo', '-u', 'wineshot', 'env', 'DISPLAY=:98',
+             'xwd', '-root', '-silent'],
+            capture_output=True, timeout=10)
+        if proc.returncode != 0:
+            log.error('xwd failed: %s', proc.stderr[:200])
+            return False
+        tmp_png = path + '.tmp.png'
+        proc2 = subprocess.run(
+            ['convert', 'xwd:-', tmp_png],
+            input=proc.stdout, capture_output=True, timeout=10)
+        if proc2.returncode != 0:
+            log.error('convert failed: %s', proc2.stderr[:200])
+            return False
+        img = Image.open(tmp_png).convert('RGB')
+        os.remove(tmp_png)
+    except Exception as e:
+        log.error('Screenshot capture failed: %s', e)
+        return False
+
+    # Crop to non-black content region
+    w, h = img.size
+    pixels = img.load()
+    top, bottom, left, right = h, 0, w, 0
+    for y in range(0, h, 2):
+        for x in range(0, w, 2):
+            r, g, b = pixels[x, y]
+            if r > 10 or g > 10 or b > 10:
+                top = min(top, y)
+                bottom = max(bottom, y)
+                left = min(left, x)
+                right = max(right, x)
+    if right <= left or bottom <= top:
+        return False
+    cropped = img.crop((max(0, left-1), max(0, top-1),
+                        min(w, right+2), min(h, bottom+2)))
+    cropped.save(path)
+    return True
 
 
 def c2_wmcommand(hwnd, cmd_id):
@@ -312,7 +345,7 @@ def run_poc(exe_path):
         log.error('No VB window appeared')
         proc.kill()
         return
-    time.sleep(1.5)  # let it render
+    time.sleep(2.5)  # let it render (Wine needs time to paint)
 
     title = get_window_title(hwnd)
     log.info('Found window: hwnd=%d title="%s"', hwnd, title)
@@ -884,9 +917,11 @@ def _assemble_gif(exe_name, frames, out_dir):
         else:
             normalized.append(img)
 
-    normalized[0].save(
-        gif_path, save_all=True, append_images=normalized[1:],
-        duration=2000, loop=0, optimize=True
+    # Convert to palette with full 256 colors to avoid aggressive quantization
+    palettized = [img.quantize(colors=256, method=2) for img in normalized]
+    palettized[0].save(
+        gif_path, save_all=True, append_images=palettized[1:],
+        duration=2000, loop=0
     )
     log.info('GIF: %s (%d frames, %d KB)',
              gif_path, len(normalized),
