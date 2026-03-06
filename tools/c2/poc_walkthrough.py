@@ -83,13 +83,32 @@ def c2_find(cls, title='*'):
     r = c2('FINDWINDOW %s %s' % (cls, title))
     if not r:
         return 0
-    # Response is just the hwnd number (no prefix)
     r = r.strip().split('\n')[0].strip()
     try:
         val = int(r)
         return val if val > 0 else 0
     except ValueError:
         return 0
+
+
+def c2_find_all(cls):
+    """Find ALL top-level windows of a given class using FindWindowEx chain."""
+    found = []
+    after = 0
+    for _ in range(50):  # safety limit
+        r = c2('FINDWINDOWEX 0 %d %s *' % (after, cls), timeout=3)
+        if not r:
+            break
+        r = r.strip().split('\n')[0].strip()
+        try:
+            hwnd = int(r)
+        except ValueError:
+            break
+        if hwnd <= 0:
+            break
+        found.append(hwnd)
+        after = hwnd
+    return found
 
 
 def c2_enum_children(hwnd):
@@ -228,12 +247,12 @@ def find_vb_window(timeout=12):
 
 
 def find_all_vb_windows():
-    """Find all VB windows currently open."""
+    """Find all VB windows currently open (all instances per class)."""
     found = []
     for cls in VB_CLASSES:
-        hwnd = c2_find(cls)
-        if hwnd and hwnd not in found:
-            found.append(hwnd)
+        for hwnd in c2_find_all(cls):
+            if hwnd not in found:
+                found.append(hwnd)
     return found
 
 
@@ -339,22 +358,23 @@ def run_poc(exe_path):
 
     step = 2
 
-    # Dangerous menu names to skip
-    danger_menu_words = {'exit', 'quit', 'close', 'end', 'unload', 'terminate',
-                         'shutdown', 'kill'}
-    danger_menu_words.update(d.replace('mnu', '').lower() for d in danger_names
-                             if d.startswith('mnu'))
-
-    # Phase 1: Keyboard menu walk
-    # VB6 menus are internal (ENUMMENUS returns 0 for most apps).
-    # F10 activates menu bar, arrow keys navigate, Enter clicks.
+    # Phase 1: Brute-force WM_COMMAND menu scan
+    # VB6 menus are internal (ENUMMENUS returns 0 for most apps under Wine).
+    # Keyboard walk (F10) is unreliable. WM_COMMAND brute-force works.
     nav_menu_count = len(nav_graph.get('menus', []))
     if nav_menu_count > 0 or menus:
-        log.info('--- Phase 1: keyboard menu walk (%d nav graph menus, '
+        log.info('--- Phase 1: WM_COMMAND brute-force (%d nav graph menus, '
                  '%d Win32 menus) ---', nav_menu_count, len(menus))
-        step = _walk_menus_keyboard(
-            hwnd, step, out_dir, frames, danger_menu_words,
-            max_top=6, max_sub=10)
+        step = _bruteforce_wmcommand(
+            hwnd, step, out_dir, frames, nav_graph,
+            max_id=max(nav_menu_count * 3, 50))
+
+    # Check main window still alive before continuing
+    if hwnd not in find_all_vb_windows():
+        log.warning('Main window died during Phase 1, skipping remaining phases')
+        _assemble_gif(exe_name, frames, out_dir)
+        kill_all_proggies()
+        return
 
     # Phase 2: Tab cycling — SSTabControl, SysTabControl32, etc.
     tab_classes = {'sstabctlwndclass', 'systabcontrol32', 'thunderrt6tabstrip'}
@@ -489,9 +509,118 @@ def _xkey(hwnd, key):
             env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
 
 
+def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
+                          max_id=200):
+    """Brute-force WM_COMMAND IDs 1..max_id. Screenshot any new windows.
+
+    VB6 menu item IDs are assigned sequentially by MSVBVM60 at runtime.
+    GetMenu() returns 0 cross-process under Wine, but WM_COMMAND still works
+    because the VB6 runtime dispatches it internally.
+
+    Returns next step number.
+    """
+    # Build danger words from nav graph
+    danger_words = {'exit', 'quit', 'close', 'end', 'unload', 'terminate',
+                    'shutdown', 'kill'}
+    if nav_graph:
+        for d in nav_graph.get('dangerous', []):
+            ctrl = d['control'].lower()
+            if ctrl.startswith('mnu'):
+                danger_words.add(ctrl[3:].lower())
+            danger_words.add(ctrl.lower())
+
+    # Snapshot existing windows before we start
+    baseline_vb = set(find_all_vb_windows())
+    baseline_dlg = set(c2_find_all('#32770'))
+
+    # Determine main window's class for faster per-iteration checks
+    main_cls_r = c2('GETCLASS %d' % main_hwnd)
+    main_cls = main_cls_r.strip() if main_cls_r else VB_CLASSES[0]
+
+    discovered = []  # list of (id, title, class)
+    consecutive_noop = 0
+    seen_hwnds = set(baseline_vb | baseline_dlg)  # track all known windows
+
+    for cmd_id in range(1, max_id + 1):
+        # Send WM_COMMAND (0x111 = 273)
+        c2_wmcommand(main_hwnd, cmd_id)
+        time.sleep(0.8)
+
+        # Check main window alive (fast: single GETCLASS on known hwnd)
+        alive_r = c2('GETCLASS %d' % main_hwnd, timeout=3)
+        if not alive_r or not alive_r.strip() or alive_r.strip() == '0':
+            log.warning('Main window died at WM_COMMAND id=%d (likely exit)',
+                        cmd_id)
+            return step
+
+        # Check for new windows: main class + #32770 (covers most cases)
+        new_hwnd = None
+        for h in c2_find_all(main_cls):
+            if h not in seen_hwnds:
+                new_hwnd = h
+                break
+        if not new_hwnd:
+            for h in c2_find_all('#32770'):
+                if h not in seen_hwnds:
+                    new_hwnd = h
+                    break
+
+        if not new_hwnd:
+            consecutive_noop += 1
+            if consecutive_noop > 50:
+                log.info('50 consecutive no-ops after id=%d, stopping', cmd_id)
+                break
+            continue
+
+        consecutive_noop = 0
+        seen_hwnds.add(new_hwnd)
+        title = get_window_title(new_hwnd)
+        cls_r = c2('GETCLASS %d' % new_hwnd)
+        cls = cls_r.strip() if cls_r else '?'
+        log.info('  id=%d -> new window: "%s" (%s)', cmd_id, title, cls)
+
+        # Check if this looks dangerous by title
+        title_lower = title.lower() if title else ''
+        if any(w in title_lower for w in danger_words):
+            log.info('  id=%d title matches danger word, dismissing', cmd_id)
+        else:
+            # Screenshot it
+            safe = re.sub(r'[^\w\-]', '_', title or 'cmd_%d' % cmd_id)[:30]
+            shot_path = os.path.join(out_dir, '%02d_menu_%s.bmp' % (step, safe))
+            if c2_screenshot(new_hwnd, shot_path):
+                if not frames or not _frames_identical(frames[-1], shot_path):
+                    frames.append(shot_path)
+                    log.info('Frame %d: WM_COMMAND id=%d -> "%s"', step, cmd_id, title)
+                    step += 1
+                else:
+                    os.remove(shot_path)
+
+        discovered.append((cmd_id, title, cls))
+
+        # Dismiss: blast all methods without checking (fast, no c2 round-trips).
+        # Sending to a dead/closed window is harmless.
+        if cls == '#32770':
+            c2('POSTMSG %d 273 2 0' % new_hwnd, timeout=3)  # WM_COMMAND IDCANCEL
+            time.sleep(0.3)
+        c2('POSTMSG %d 16 0 0' % new_hwnd, timeout=3)  # WM_CLOSE
+        time.sleep(0.3)
+        _xkey(new_hwnd, 'Escape')
+        time.sleep(0.3)
+
+    if discovered:
+        log.info('WM_COMMAND scan found %d windows:', len(discovered))
+        for cid, t, c in discovered:
+            log.info('  id=%d "%s" (%s)', cid, t, c)
+
+    return step
+
+
 def _walk_menus_keyboard(main_hwnd, step, out_dir, frames, danger_words,
                          max_top=6, max_sub=10):
     """Walk VB6 menus via keyboard: F10, arrows, Enter. Screenshot new forms.
+
+    NOTE: This is unreliable under Wine for VB6 apps. Prefer
+    _bruteforce_wmcommand() instead. Kept as fallback.
 
     Returns next step number.
     """

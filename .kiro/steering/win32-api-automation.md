@@ -52,6 +52,19 @@ But prefer `WM_SETTEXT` via DllCall for consistency.
 | ControlClick (AHK) | TButton1 (Decompile) | FAILS |
 | Send/ControlSend keyboard shortcuts | Main window | FAILS |
 
+### VERIFIED RESULTS (VB6 apps under Wine 9.0 via c2host.exe)
+
+| Method | Target | Result |
+|--------|--------|--------|
+| WM_COMMAND brute-force (PostMessage) | VB6 menu items | **WORKS** — discovered dialogs on Emoghoster 3 (3 dialogs), aimClone (7 dialogs) |
+| GetMenu cross-process | VB6 ThunderRT6FormDC | **FAILS** — returns 0 (Wine doesn't expose VB6 menus cross-process) |
+| F10/Alt keyboard via xdotool | VB6 menu bar | **FAILS** — no #32768 popup appears |
+| FindWindowEx chain enumeration | Multiple VB6 windows | **WORKS** — correctly finds all instances of same class |
+| WM_COMMAND IDCANCEL to #32770 | Common dialogs from menus | **WORKS** — dismisses modal dialogs |
+| GETCLASS on dead hwnd | Closed VB6 window | **WORKS** — returns empty, reliable death detection |
+| enumerate_controls.py (static) | Decompiled source + exe binary | **WORKS** — 1,369 apps, 39,240 controls, 100% match vs nav_graphs (1,225 apps) |
+| ENUMCHILDREN + source combined | Windowed + lightweight controls | **WORKS** — runtime finds TextBoxes/Frames source misses; source finds menus runtime misses |
+
 ### CRITICAL: Cross-process WM_SETTEXT does NOT work under Wine
 
 Wine does not marshal `WM_SETTEXT` string pointers across process boundaries.

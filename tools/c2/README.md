@@ -31,6 +31,8 @@ Two isolated Wine environments run in parallel:
 - **`extract_frx.py`** — Extract embedded images (BMP/PNG/JPEG/GIF/ICO) from VB exe FRX resources. Pure Python, no Wine needed.
 - **`extract_metadata.py`** — Extract app name, author, version, forms, features, UI elements from decompiled .bas files. 52 tests passing.
 - **`parse_nav_graph.py`** — Parse decompiled .bas files to extract navigation graphs: which controls navigate to which forms, which are dangerous (exit/unload), which are menu items. Zero-cost static analysis for screenshot navigation planning.
+- **`enumerate_controls.py`** — Full control inventory from decompiled source + exe binary scanning. Extracts every control name, type, and caption including lightweight controls (Labels, Images) and menus invisible to Win32 API. Batch mode: 1,369 apps, 39,240 controls.
+- **`poc_walkthrough.py`** — End-to-end screenshot walkthrough POC. Launches app, discovers controls, navigates forms via nav graph, assembles animated GIF. See POC section below.
 
 ## Build
 
@@ -59,13 +61,14 @@ i686-w64-mingw32-gcc -shared -O2 -o c2vb.dll c2vb.c -luser32 -lgdi32 -loleaut32 
 | GETCLASS | hwnd | GetClassNameW (UTF-8) |
 | SETTEXT | hwnd text | WM_SETTEXT in-process (works under Wine!) |
 | SENDMSG | hwnd msg wp lp | SendMessageA |
+| GETRECT | hwnd | GetWindowRect → `x y w h` screen coordinates |
 | POSTMSG | hwnd msg wp lp | PostMessageA |
 | GETDLGITEM | hwnd id | GetDlgItem |
 | CLICK | hwnd | BM_CLICK |
 | LCLICK | hwnd | WM_LBUTTONDOWN+UP |
 | ENUMCHILDREN | hwnd | EnumChildWindows (hwnd\|class\|ctrlid\|text) |
 | WMCOMMAND | hwnd id | WM_COMMAND |
-| SCREENSHOT | hwnd path | BitBlt window capture to BMP (SetForegroundWindow first) |
+| SCREENSHOT | hwnd path [client] | BitBlt capture to BMP. `client` flag = client area only (no WM title bar) |
 | SLEEP | ms | Sleep |
 | EXIT | | Terminate C2 thread |
 
@@ -405,6 +408,149 @@ The control's Left/Top are relative to its container (form client area).
 - 20 apps use SSTab tabbed controls
 - Control types used as buttons: CommandButton, Label (54 instances), Image (4), Menu (25), custom-named (124)
 
+## enumerate_controls.py
+
+Full control inventory extracted statically from decompiled source and exe binaries.
+No Wine/runtime needed.
+
+```bash
+python3 enumerate_controls.py path/to/app.decompiled.bas   # single app
+python3 enumerate_controls.py --batch                       # all 1,369 apps
+```
+
+### Data Sources
+
+1. **Decompiled source** — event handler names (`cmdPunt_Click`, `mnuExit_Click`) reveal control names and types. Works for native code and p-code decompiled output.
+2. **Exe binary** — raw string scanning finds menu names (`mnu*` prefixed null-terminated strings) and their captions. Catches parent menu containers and items without click handlers.
+
+### Batch Results (1,369 apps, 39,240 controls)
+
+| Type | Count | Notes |
+|---|---|---|
+| Menu | 13,507 | Includes parent containers + leaf items |
+| CommandButton | 11,937 | Most common interactive control |
+| Unknown | 4,856 | Non-standard naming (no recognized prefix) |
+| Label | 2,674 | Lightweight — invisible to Win32 API |
+| Timer | 1,935 | No UI, but has event handlers |
+| Form | 1,128 | Form_Load, Form_Unload handlers |
+| TextBox | 941 | |
+| ListBox | 478 | |
+| Image | 468 | Lightweight — invisible to Win32 API |
+| CheckBox | 421 | |
+| PictureBox | 267 | |
+| OptionButton | 263 | |
+| ComboBox | 105 | |
+
+### Verified Against Source
+
+| App | Decompiled handlers | Binary menus | Total | Source match |
+|---|---|---|---|---|
+| Emoghoster 3 | 14 (9 menu + 5 other) | +2 parent menus | 25 | ✓ all 9 mnuXxx_Click found |
+| aimClone | 18 (11 menu + 7 other) | +8 parent menus | 29 | ✓ all 11 mnuXxx_Click found |
+| ScrollMoreShit | 9 (4 menu + 5 other) | +17 binary menus | 30 | ✓ all 4 mnuXxx_Click found |
+
+## poc_walkthrough.py
+
+Proof-of-concept screenshot walkthrough. Launches a single app, navigates its
+forms, and assembles an animated GIF showing different views.
+
+```bash
+sudo python3 poc_walkthrough.py /path/to/app.exe
+```
+
+### Walkthrough Phases
+
+1. **Main window screenshot** — client area only (no WM title bar)
+2. **WM_COMMAND brute-force** — sends `PostMessage(hwnd, WM_COMMAND, id, 0)` for IDs 1..N, screenshots any new windows that appear, dismisses them, stops if main window dies. Replaces the unreliable keyboard menu walk.
+3. **Tab cycling** — Ctrl+PageDown to cycle SSTabControl/SysTabControl32 tabs
+4. **Nav-graph button clicks** — ONLY clicks CommandButtons that the nav graph says open another form. Avoids API-calling buttons (Start, Crack, Punt, etc.) that would crash/hang.
+
+### Features
+
+- **WM_COMMAND brute-force** — discovers VB6 menu actions by sending sequential command IDs. Works even though `GetMenu()` returns 0 cross-process under Wine.
+- **Danger word filter** — skips menu windows whose titles contain exit/quit/close/end/send/kill/unload/terminate. Also skips nav graph dangerous controls.
+- **Frame dedup** — identical consecutive screenshots discarded
+- **c2host auto-recovery** — starts c2host.exe if not running
+- **X11 window mapping** — resolves Wine hwnds to X11 window IDs for xdotool
+- **Client-area capture** — SCREENSHOT `client` flag crops WM title bar ("as wineshot")
+- **Nearest-neighbor upscale** — images < 400px wide get 2x+ upscaled
+- **Early exit detection** — stops brute-force and skips remaining phases if main window dies
+
+### Tested Results
+
+| App | Frames | What happened |
+|---|---|---|
+| Emoghoster 3 | 4 | Main → WM_COMMAND found Load dialog (id=3), EG3/About (id=6), Screenname input (id=7). Exit at id=10. |
+| aimClone | 6 | Main → WM_COMMAND found Enter Room (id=7), Leave All (id=9), Format (id=14), Encryption (id=16), About (id=17). Danger-filtered: Send IM (id=4), How Many To Send (id=5). Exit at id=18. |
+| cools cracker helper | 3 | Main → clicked "Sns" CommandButton → "Cool Collect" form → clicked "Passwords" |
+| gta's nauti tools | 2 | Main → Alt key menu activation (VB6 menus invisible to Win32 API) |
+| ScrollMoreShit | 1 | 4 menus but all toggles (no visible windows opened). 0 ENUMCHILDREN (all lightweight). |
+| Viking Toolz | 1 | All controls lightweight (0 ENUMCHILDREN), no navigation possible |
+
+### Output
+
+`tools/c2/poc_output/<app_name>/` — contains `01_main.bmp`, `02_*.bmp`, ..., `<app_name>.gif`
+
+## VB6 Menu Problem — CRITICAL FINDING
+
+### The Problem
+
+VB6 menus don't respond to keyboard input (F10/Alt) via xdotool under Wine,
+and `GetMenu()` returns NULL from c2host.exe (cross-process).
+
+### Root Cause Analysis
+
+1. **GetMenu returns 0 cross-process under Wine.** VB6's MSVBVM60.DLL creates
+   real Win32 menus internally (`GetMenu(Me.hwnd)` works from INSIDE the process
+   per vbforums.com). But Wine doesn't properly expose them via cross-process
+   GetMenu for VB6 windows. Our c2host ENUMMENUS calls `GetMenu(hw)` → returns 0.
+
+2. **F10/keyboard doesn't activate VB6 menus under Wine.** xdotool sends X11 key
+   events, but Wine's VB6 runtime doesn't process F10/Alt for menu activation
+   correctly. Tested on Emoghoster 3 (ThunderRT6FormDC) — F10 + Down produced
+   identical screenshots, no `#32768` popup menu window appeared.
+
+3. **VB6 menus ARE real Win32 menus.** The VB Decompiler article on form binary
+   format (vb-decompiler.org/forms_editing.htm) confirms menus are stored as
+   `Begin VB.Menu` objects with Caption, Enabled, Name properties, using `FF 05`
+   (vbFormMenu) markers in the binary form data. MSVBVM60 creates them via
+   CreateMenu/SetMenu at form load time.
+
+### Solution: Brute-Force WM_COMMAND (IMPLEMENTED)
+
+Implemented in `_bruteforce_wmcommand()` in poc_walkthrough.py. The approach:
+
+1. Send `PostMessage(hwnd, WM_COMMAND, id, 0)` for IDs 1 through `max(menu_count * 3, 50)`
+2. After each, check if a new VB window or `#32770` dialog appeared (using `FindWindowEx` chain to enumerate all instances)
+3. Screenshot new windows, skip if title matches danger words
+4. Dismiss via WM_COMMAND IDCANCEL → WM_CLOSE → Escape
+5. Stop if main window dies (hit exit) or 50 consecutive no-ops
+
+Key findings from testing:
+- VB6 assigns WM_COMMAND IDs non-contiguously — gaps between menu IDs are normal (toolbar buttons, form controls also get IDs)
+- Most menu items are toggles/actions that don't open windows — only ~30-50% produce visible dialogs
+- `#32770` (common dialog) is the most common class for menu-triggered windows
+- Danger word filter on titles ("send", "exit", "quit", "kill", etc.) effectively avoids harmful actions
+- IDs are stable across launches but may shift slightly between runs
+
+### Impact
+
+- **237 apps** have real VB Menu objects (3,570 total menu items, avg 15.1 per app)
+- **159 apps** have 5+ menu items
+- Distribution: 55 apps with 1-3 menus, 84 with 4-10, 62 with 11-30, 36 with 31+
+- All menu entries in nav graph start with `mnu` prefix (confirmed 237/237)
+- Top menu actions: exit (76 apps), about (57), show (32), clear (27), save (21), load (15)
+- **344 dangerous-sounding menu names** across all apps (exit, quit, close, kill, send, stop, unload variants)
+- 13 apps have menus that navigate to other forms (nav graph `is_menu` entries)
+- Only ~30-50% of menu IDs produce visible windows — rest are toggles, state changes, or AOL API calls
+
+### Alternative: Extract Menu IDs from EXE Binary
+
+VB6 form binary data (inside the exe) contains the full menu structure with
+names and captions. The VB Decompiler can parse this. We could extract menu
+item order statically, predict WM_COMMAND IDs (sequential), and only send
+IDs for safe menu items. This avoids blind brute-force.
+
 ## Known Issues
 
 - **16-bit NE executables** (VB3, .VBX) crash Wine and can take down Xvfb. Both scripts detect and skip them.
@@ -412,4 +558,4 @@ The control's Left/Top are relative to its container (form client area).
 - **PrintWindow** doesn't work under Wine — windows return black. Using BitBlt from desktop DC with SetForegroundWindow instead.
 - **Cross-process WM_SETTEXT** doesn't work under Wine — must use DLL injection.
 - **VB6 lightweight controls invisible to Win32 API** — Labels, Images, CommandButtons (sometimes) have no HWND. Must use in-process COM enumeration via c2vb.dll.
-- **Animated GIFs currently broken** — TCM_SETCURSEL doesn't repaint VB6 SSTab under Wine. WM_COMMAND brute force doesn't work on VB6. Needs c2vb.dll for source-aware navigation.
+- **VB6 menus invisible to cross-process GetMenu** — `GetMenu()` returns 0 for VB6 apps under Wine. Solved with WM_COMMAND brute-force (see above).
