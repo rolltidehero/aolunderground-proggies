@@ -180,9 +180,14 @@ def c2_screenshot(hwnd, path, client=True):
         log.error('Screenshot capture failed: %s', e)
         return False
 
-    # Crop to non-black content region
+    # Crop to non-black content region, ignoring Wine desktop label.
+    # Wine draws a small label in upper-left. We detect it as an isolated
+    # cluster: if content in the first 20 rows doesn't connect to content
+    # below row 25, it's the label — exclude it.
     w, h = img.size
     pixels = img.load()
+
+    # First pass: find full content bounds
     top, bottom, left, right = h, 0, w, 0
     for y in range(0, h, 2):
         for x in range(0, w, 2):
@@ -192,6 +197,36 @@ def c2_screenshot(hwnd, path, client=True):
                 bottom = max(bottom, y)
                 left = min(left, x)
                 right = max(right, x)
+    if right <= left or bottom <= top:
+        return False
+
+    # Check if there's a gap between the label region and the main window.
+    # If rows 21-25 are all black across the content width, the top content
+    # is just the Wine label — start from below it.
+    if top < 5:
+        gap_rows = range(21, 26)
+        gap_is_black = True
+        for y in gap_rows:
+            for x in range(left, right + 1, 4):
+                r, g, b = pixels[x, y]
+                if r > 10 or g > 10 or b > 10:
+                    gap_is_black = False
+                    break
+            if not gap_is_black:
+                break
+        if gap_is_black:
+            # Re-scan starting below the label
+            top, left, right = h, w, 0
+            for y in range(26, h, 2):
+                for x in range(0, w, 2):
+                    r, g, b = pixels[x, y]
+                    if r > 10 or g > 10 or b > 10:
+                        top = min(top, y)
+                        bottom = max(bottom, y)
+                        left = min(left, x)
+                        right = max(right, x)
+            if top >= h:
+                return False
     if right <= left or bottom <= top:
         return False
     cropped = img.crop((max(0, left-1), max(0, top-1),
@@ -616,6 +651,9 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         title_lower = title.lower() if title else ''
         if any(w in title_lower for w in danger_words):
             log.info('  id=%d title matches danger word, dismissing', cmd_id)
+        elif cls == '#32770':
+            # Common dialog (InputBox/MsgBox/FileDialog) — dismiss, don't screenshot
+            log.debug('  id=%d is #32770 dialog, dismissing', cmd_id)
         else:
             # Screenshot it
             safe = re.sub(r'[^\w\-]', '_', title or 'cmd_%d' % cmd_id)[:30]
@@ -733,18 +771,20 @@ def _walk_menus_keyboard(main_hwnd, step, out_dir, frames, danger_words,
                 new_hwnd = dlg
 
             if new_hwnd:
-                # Screenshot the new form
                 new_title = get_window_title(new_hwnd)
-                safe = re.sub(r'[^\w\-]', '_', new_title or 'menu_%d_%d' % (top_idx, sub_idx))[:30]
-                shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
-                if c2_screenshot(new_hwnd, shot_path):
-                    if not frames or not _frames_identical(frames[-1], shot_path):
-                        frames.append(shot_path)
-                        log.info('Frame %d: menu %d.%d -> "%s"',
-                                 step, top_idx, sub_idx, new_title)
-                        step += 1
-                    else:
-                        os.remove(shot_path)
+                new_cls = (c2('GETCLASS %d' % new_hwnd) or '').strip()
+                # Only screenshot real VB6 forms, not #32770 dialogs
+                if new_cls != '#32770':
+                    safe = re.sub(r'[^\w\-]', '_', new_title or 'menu_%d_%d' % (top_idx, sub_idx))[:30]
+                    shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
+                    if c2_screenshot(new_hwnd, shot_path):
+                        if not frames or not _frames_identical(frames[-1], shot_path):
+                            frames.append(shot_path)
+                            log.info('Frame %d: menu %d.%d -> "%s"',
+                                     step, top_idx, sub_idx, new_title)
+                            step += 1
+                        else:
+                            os.remove(shot_path)
 
                 # Dismiss the new window
                 _xkey(new_hwnd, 'Escape')
