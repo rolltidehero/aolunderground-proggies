@@ -409,7 +409,7 @@ def run_poc(exe_path):
         log.error('No VB window appeared')
         proc.kill()
         return
-    time.sleep(2.5)  # let it render (Wine needs time to paint)
+    time.sleep(1.5)  # let it render
 
     title = get_window_title(hwnd)
     log.info('Found window: hwnd=%d title="%s"', hwnd, title)
@@ -503,7 +503,9 @@ def run_poc(exe_path):
             nav_command_targets[ctrl.lower()] = nav['to_form']
 
     clickable_children = [c for c in children
-                          if 'CommandButton' in c['class'] and c['text']]
+                          if ('CommandButton' in c['class'] or
+                              'PictureBox' in c['class']) and
+                          c['hwnd'] != hwnd]
     danger_captions = {'exit', 'quit', 'close', 'end', 'x', 'cancel',
                        'start', 'stop', 'connect', 'send', 'crack',
                        'punt', 'flood', 'attack', 'run', 'go', 'begin'}
@@ -519,12 +521,14 @@ def run_poc(exe_path):
             log.info('  Nav match by caption: "%s"', child['text'])
 
     # If nav graph has generic "Command*" entries and we have unmatched buttons,
-    # try them if they're not dangerous
-    if nav_command_targets and not nav_buttons:
+    # try them if they're not dangerous. Also try PictureBoxes when nav graph
+    # has navigation but no caption matches (proggies use images as buttons).
+    if nav_names and not nav_buttons:
         for child in clickable_children:
             caption = child['text'].lower().strip().replace('&', '')
-            if caption not in danger_captions:
-                nav_buttons.append(child)
+            if caption and caption in danger_captions:
+                continue
+            nav_buttons.append(child)
 
     if nav_buttons:
         log.info('--- Phase 3: clicking %d nav-graph buttons ---',
@@ -650,7 +654,7 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
 
         # Send WM_COMMAND (0x111 = 273)
         c2_wmcommand(main_hwnd, cmd_id)
-        time.sleep(0.8)
+        time.sleep(0.6)
 
         # Check main window alive (fast: single GETCLASS on known hwnd)
         alive_r = c2('GETCLASS %d' % main_hwnd, timeout=3)
@@ -689,8 +693,8 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
 
         if not new_hwnd:
             consecutive_noop += 1
-            if consecutive_noop > 50:
-                log.info('50 consecutive no-ops after id=%d, stopping', cmd_id)
+            if consecutive_noop > 30:
+                log.info('30 consecutive no-ops after id=%d, stopping', cmd_id)
                 break
             continue
 
