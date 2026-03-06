@@ -13,7 +13,7 @@ Demonstrates the full Tier 1+2 pipeline on a single app:
 Usage:
     python3 poc_walkthrough.py <exe_path>
 """
-import sys, os, re, json, time, struct, subprocess, shutil, logging
+import sys, os, re, json, time, struct, subprocess, shutil, logging, glob
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -355,6 +355,35 @@ def run_poc(exe_path):
     if not nav_graph:
         log.info('No nav graph found, will do blind screenshot only')
 
+    # Load enumerate_controls data for danger caption filtering
+    dangerous_captions = set()
+    ec_menu_count = 0
+    DANGER_CAPTION_WORDS = {'exit', 'quit', 'close', 'send', 'punt', 'boot',
+                            'kill', 'bomb', 'flood', 'nuke', 'disconnect',
+                            'terminate', 'shutdown', 'unload', 'destroy',
+                            'attack', 'scroll', 'mass', 'spam', 'kick'}
+    bas_path = os.path.join(os.path.dirname(exe_path),
+                            exe_name + '.decompiled.bas')
+    if os.path.exists(bas_path):
+        try:
+            sys.path.insert(0, os.path.join(REPO_ROOT, 'tools/c2'))
+            from enumerate_controls import enumerate_app
+            ec = enumerate_app(bas_path, exe_path)
+            for name, ctrl in ec.get('controls', {}).items():
+                if ctrl['type'] != 'Menu':
+                    continue
+                ec_menu_count += 1
+                cap = (ctrl.get('caption') or '').lower().strip()
+                if cap and cap != '?' and cap != '-':
+                    if any(w in cap for w in DANGER_CAPTION_WORDS):
+                        dangerous_captions.add(cap)
+            log.info('enumerate_controls: %d menus, %d dangerous captions',
+                     ec_menu_count, len(dangerous_captions))
+            if dangerous_captions:
+                log.info('  dangerous: %s', dangerous_captions)
+        except Exception as e:
+            log.warning('enumerate_controls failed: %s', e)
+
     # Setup output
     out_dir = os.path.join(REPO_ROOT, 'tools/c2/poc_output', exe_name)
     os.makedirs(out_dir, exist_ok=True)
@@ -407,10 +436,9 @@ def run_poc(exe_path):
         log.info('  id=%d %s > %s', m['id'], m['top'], m['sub'])
 
     if not nav_graph:
-        log.info('No nav graph — done with blind screenshot')
-        proc.kill()
-        _assemble_gif(exe_name, frames, out_dir)
-        return
+        log.info('No nav graph found')
+        nav_graph = {'navigation': [], 'dangerous': [], 'menus': [],
+                     'clickable': [], 'forms': []}
 
     # Build danger set
     danger_names = {d['control'].lower() for d in nav_graph['dangerous']}
@@ -430,12 +458,14 @@ def run_poc(exe_path):
     # VB6 menus are internal (ENUMMENUS returns 0 for most apps under Wine).
     # Keyboard walk (F10) is unreliable. WM_COMMAND brute-force works.
     nav_menu_count = len(nav_graph.get('menus', []))
-    if nav_menu_count > 0 or menus:
-        log.info('--- Phase 1: WM_COMMAND brute-force (%d nav graph menus, '
-                 '%d Win32 menus) ---', nav_menu_count, len(menus))
+    has_menus = nav_menu_count > 0 or menus or ec_menu_count > 0
+    if has_menus:
+        max_id = max(nav_menu_count * 3, ec_menu_count * 2, 50)
+        log.info('--- Phase 1: WM_COMMAND brute-force (max_id=%d) ---', max_id)
         step, hwnd = _bruteforce_wmcommand(
             hwnd, step, out_dir, frames, nav_graph,
-            max_id=max(nav_menu_count * 3, 50), exe_path=exe_path)
+            max_id=max_id, exe_path=exe_path,
+            dangerous_captions=dangerous_captions)
 
     # Check main window still alive before continuing
     if not hwnd or hwnd not in find_all_vb_windows():
@@ -581,7 +611,7 @@ def _xkey(hwnd, key):
 
 
 def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
-                          max_id=200, exe_path=None):
+                          max_id=200, exe_path=None, dangerous_captions=None):
     """Brute-force WM_COMMAND IDs 1..max_id. Screenshot any new windows.
 
     VB6 menu item IDs are assigned sequentially by MSVBVM60 at runtime.
@@ -669,12 +699,26 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         title = get_window_title(new_hwnd)
         cls_r = c2('GETCLASS %d' % new_hwnd)
         cls = cls_r.strip() if cls_r else '?'
-        log.info('  id=%d -> new window: "%s" (%s)', cmd_id, title, cls)
 
-        # Check if this looks dangerous by title
+        # Read dialog body text for #32770 (InputBox/MsgBox static labels)
+        body_text = ''
+        if cls == '#32770':
+            children = c2_enum_children(new_hwnd)
+            body_text = ' '.join(
+                c['text'] for c in children
+                if c['class'] == 'Static' and c['text'].strip()
+            ).lower()
+
+        log.info('  id=%d -> new window: "%s" (%s) body="%s"',
+                 cmd_id, title, cls, body_text[:60])
+
+        # Check if this looks dangerous by title or body text
         title_lower = title.lower() if title else ''
-        if any(w in title_lower for w in danger_words):
-            log.info('  id=%d title matches danger word, dismissing', cmd_id)
+        is_dangerous = any(w in title_lower for w in danger_words)
+        if not is_dangerous and dangerous_captions and body_text:
+            is_dangerous = any(cap in body_text for cap in dangerous_captions)
+        if is_dangerous:
+            log.info('  id=%d matches danger filter, dismissing', cmd_id)
         else:
             # Screenshot it
             safe = re.sub(r'[^\w\-]', '_', title or 'cmd_%d' % cmd_id)[:30]
@@ -703,6 +747,15 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         log.info('WM_COMMAND scan found %d windows:', len(discovered))
         for cid, t, c in discovered:
             log.info('  id=%d "%s" (%s)', cid, t, c)
+        # Save ID→caption mapping as metadata
+        meta = {str(cid): {'title': t, 'class': c} for cid, t, c in discovered}
+        if skip_ids:
+            for sid in skip_ids:
+                meta[str(sid)] = {'title': '(killed app)', 'class': 'DEAD'}
+        meta_path = os.path.join(out_dir, 'wmcommand_map.json')
+        with open(meta_path, 'w') as f:
+            json.dump(meta, f, indent=2)
+        log.info('Saved %s', meta_path)
 
     return step, main_hwnd
 
