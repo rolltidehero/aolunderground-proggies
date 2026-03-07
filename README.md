@@ -25,6 +25,7 @@ Currently looking for these proggies
 * Reset 1.0 by skribe (TOSers/termer/account reseter)
 * 1-888'd by skribe (TOSers/termer/account reseter)
 * Macro studio by i88i (level9.zip ?)
+* Chain Reaction
 * Gemini Macro by anubis
 * Macro house
 * Pup Tool by Pen (puptool.zip)
