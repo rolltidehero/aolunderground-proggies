@@ -134,6 +134,9 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 # Launch decompiler VM
 tools/vm/scripts/launch-decompiler.sh run
 
+# Browse proggie HTML pages (nginx on port 8088)
+# http://192.168.5.175:8088/programs/AOL/proggies-sorted-deduped/4.0/anexbust.html
+
 # Query proggies DB (metadata, VB versions, deps, decompile status)
 python3 tools/query_proggies.py --stats
 python3 tools/query_proggies.py --vb VB5,VB6
@@ -146,6 +149,23 @@ python3 tools/query_strings.py --stats
 python3 tools/query_strings.py "AOL Frame25"
 python3 tools/query_strings.py "FindWindow" --exe "anexbust"
 
-# Build/rebuild the proggie DB (once script exists)
+# Build/rebuild the proggie DB
 python3 tools/build_proggie_db.py --extract --import-metadata --index
 ```
+
+## File Layout Per Proggie (after decompile)
+
+```
+programs/AOL/proggies-sorted-deduped/<ver>/<stem>.html     # analysis page (committed)
+programs/AOL/proggies-sorted-deduped/<ver>/<stem>/         # images dir (committed)
+  vbd_decompiled.png                                        # VBD screenshot
+  screenshot.png                                            # (future) app screenshot
+  animated.gif                                              # (future) navigation GIF
+
+decompiled/<stem>/<exe>/                                    # decompiled output (gitignored)
+  info.txt, project.vbp, extract.log, metadata.json
+  forms/*.frm
+  modules/*_funcs/*.vb, *.strings
+```
+
+Nginx config: `/etc/nginx/sites-enabled/proggies.conf` → port 8088, root = repo
