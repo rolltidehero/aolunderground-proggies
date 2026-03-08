@@ -59,6 +59,7 @@ static void dbglog(const char *fmt, ...) {
 #define API_GET_FUNC_COUNT      48
 #define API_GET_ACTIVE_TEXT     50
 #define API_GET_ACTIVE_DISASM   52
+#define API_GET_FUNC_CODE_FAST  57
 #define API_GET_FRX_ICON_COUNT  60
 #define API_GET_FRX_ICON_OFF    61
 #define API_GET_FRX_ICON_SIZE   62
@@ -252,6 +253,11 @@ static void do_extract(void) {
                     fsafe[sizeof(fsafe) - 1] = 0; sanitize(fsafe);
 
                     data = cb_call(API_GET_FUNC, m, f);
+                    if (!data[0] || (data[0] == '@' && data[1] == 'V')) {
+                        /* ID 44 returned stub — try ID 57 (fast decompile) */
+                        free(data);
+                        data = cb_call(API_GET_FUNC_CODE_FAST, m, f);
+                    }
                     if (data[0]) {
                         snprintf(path, MAX_PATH, "%s\\%s.vb", funcdir, fsafe);
                         write_file(path, data);
