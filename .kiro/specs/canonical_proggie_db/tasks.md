@@ -88,6 +88,52 @@
 - [ ] Screenshot automation: use form dimensions + navigation graph + password data
 - [ ] Animated GIF generation: step through navigation graph, capture each state
 
+### T7.8: HTML Analysis Page Overhaul
+Redesign `tools/generate_analysis.py` per HCI best practices (progressive disclosure,
+visual hierarchy, data-ink ratio). Current page is a raw data dump. New design:
+
+**Layout & Visual Hierarchy:**
+- [ ] Hero section: large program name, author, AOL version badge, category badge
+- [ ] Screenshot gallery: form screenshots (future), VBD screenshot, animated GIF (future)
+- [ ] Metadata card: VB version, compile type, packed status, dependency count
+
+**Forms & Controls (structured cards, not raw text):**
+- [ ] One card per form with form name as header
+- [ ] Controls as a clean table (type, name, caption) — no raw JSON
+- [ ] Menu tree rendered as indented hierarchy (not comma-separated dump)
+- [ ] Timers listed separately with interval if available
+
+**Functions (progressive disclosure):**
+- [ ] Grouped by module/form with count badge
+- [ ] Each function is a collapsible `<details>` — shows signature, expands to show code
+- [ ] Strip redundant "Private Sub" prefix from display — show just the meaningful name
+- [ ] Code shown in `<pre><code>` with monospace styling
+- [ ] Function size shown as badge (bytes)
+
+**AOL API References (version-annotated):**
+- [ ] Map each API string to AOL version range using docs/old-plans/AOL_VERSION_DETECTION.md
+- [ ] Show version badge next to each API reference (e.g., "AOL Frame25" → "2.5-3.0")
+- [ ] Group by version specificity (high/medium/low confidence)
+
+**String Filtering (eliminate PE/compiler artifacts):**
+- [ ] Filter out: "This program cannot be run in DOS mode", VB6.OLB paths,
+      VS_VERSION_INFO, VarFileInfo, StringFileInfo, Translation, ProductName,
+      InternalName, OriginalFilename, _adj_fp*, _CI*, __vba*, EVENT_SINK_*,
+      DllFunctionCall, _allmul, Rich, .text, .data, .rsrc, VB5!
+- [ ] Filter out: any string that's a raw hex address pattern
+- [ ] Deduplicate strings across sections (don't show same string in both
+      "Interesting" and "Decompiled Strings")
+
+**Greets & Author (surfaced, not buried):**
+- [ ] Greet names extracted from decompiled strings shown as tags/badges
+- [ ] Author name from "About" dialog text surfaced to hero section
+- [ ] "About" and "Help" text shown as blockquotes (these are the proggie's own words)
+
+**CSS/Styling:**
+- [ ] Max data-ink ratio: remove decorative borders, reduce color noise
+- [ ] Responsive: works on mobile
+- [ ] Print-friendly: `@media print` styles
+
 ### Expected End State Per Exe (after full pipeline)
 After decompilation + metadata parsing, each proggie should have:
 
