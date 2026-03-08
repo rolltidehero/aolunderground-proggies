@@ -112,6 +112,14 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 - [ ] T7.5: Progress tracking via DB (resume-on-crash)
 - [ ] T7.6: Build metadata parser (host-side, no VM) — minimal version proven inline
 - [ ] T7.7: Then decompile ~470 VB3/VB4-32 exes (partial results)
+- [x] T7.8: HTML analysis page overhaul (HCI best practices)
+      - Hero: program name + author inline, AOL version/VB/compile badges, PE compile date
+      - API refs split: AOL Window Classes (version-annotated) vs Win32 API Calls
+      - SVG form layouts from .frm control positions (twips→pixels)
+      - Structured deps from DB: VB Runtime / System DLLs / Bundled
+      - Progressive disclosure: functions collapsed, expand to show code
+      - String frequency badges, PE artifact filtering, greet name tags
+      - DB-based metadata, single-file mode, responsive dark theme
 - Full design: see docs/2026-03-07-pla.md Phase 7
 - Task breakdown: see .kiro/specs/canonical_proggie_db/tasks.md
 
