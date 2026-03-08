@@ -87,3 +87,42 @@
 - [ ] Website: browsable proggie catalog with metadata, screenshots, animated GIFs
 - [ ] Screenshot automation: use form dimensions + navigation graph + password data
 - [ ] Animated GIF generation: step through navigation graph, capture each state
+
+### Expected End State Per Exe (after full pipeline)
+After decompilation + metadata parsing, each proggie should have:
+
+```
+programs/AOL/proggies-sorted-deduped/proggies-by-version/<ver>/<zip_stem>.zip   # original
+programs/AOL/proggies-sorted-deduped/<ver>/<zip_stem>.html                      # analysis page
+
+decompiled/<zip_stem>/<exe_name>/          # decompiled output (gitignored, local only)
+  info.txt                                 # native/compiler/packed flags
+  project.vbp                              # VB project structure
+  extract.log                              # extraction summary
+  forms/<FormName>.frm                     # form properties + controls + menus
+  modules/<ModName>_funcs/<addr>_<name>.vb # decompiled function code
+  modules/<ModName>_funcs/<addr>_<name>.strings  # per-function string refs
+  frx_info.txt                             # FRX resource metadata (if present)
+  metadata.json                            # parsed metadata (see schema below)
+
+metadata.json schema:
+{
+  "exe_name": "anexbust.exe",
+  "zip_stem": "anexbust",
+  "vb_version": "VB6",
+  "compile_type": "native",
+  "is_packed": false,
+  "project": { "startup": "Form1", "icon_form": "Form1", "company": "?", "version": "1.0.0" },
+  "forms": [
+    { "name": "Form1", "controls": [...], "menus": [...], "timers": [...] }
+  ],
+  "modules": [ { "name": "modAnexBust", "functions": [...] } ],
+  "strings": { "interesting": [...], "api_refs": [...], "greets": [...] },
+  "passwords": [],
+  "aol_version_signals": [],
+  "author_evidence": []
+}
+```
+
+DB fields updated: exes.decompile_status, exes.decompile_output, exes.decompile_file_count
+HTML file updated: enriched with forms, controls, menus, code snippets from decompile
