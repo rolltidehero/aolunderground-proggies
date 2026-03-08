@@ -149,17 +149,40 @@ def get_meta_from_db(zip_stem):
     if not db.exists(): return None
     conn = sqlite3.connect(str(db))
     row = conn.execute(
-        "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type "
+        "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path "
         "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? LIMIT 1",
         (zip_stem,)
     ).fetchone()
     conn.close()
     if not row: return None
-    return {
+    meta = {
         'program': row[0] or zip_stem, 'author': row[1] or 'Unknown',
         'aol_version': row[2] or '?', 'category': row[3] or '?',
         'exe': row[4] or '?', 'vb': row[5] or '?', 'compile': row[6] or '?',
     }
+    # Read PE timestamp for compile date
+    if row[7]:
+        exe_path = SORTED_DIR / '_extracted' / zip_stem / row[4]
+        if exe_path.exists():
+            meta['compile_date'] = _read_pe_timestamp(exe_path)
+    return meta
+
+
+def _read_pe_timestamp(exe_path):
+    """Read compile date from PE header TimeDateStamp field."""
+    import struct, datetime
+    try:
+        with open(exe_path, 'rb') as f:
+            f.seek(0x3C)
+            pe_off = struct.unpack('<I', f.read(4))[0]
+            f.seek(pe_off + 8)
+            ts = struct.unpack('<I', f.read(4))[0]
+            if ts < 631152000 or ts > 1893456000:  # 1990-2030 sanity check
+                return None
+            dt = datetime.datetime.fromtimestamp(ts, datetime.UTC)
+            return dt.strftime('%Y-%m-%d')
+    except Exception:
+        return None
 
 
 def get_strings_from_db(conn, exe_path):
@@ -215,8 +238,8 @@ CSS = """<style>
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
 .container{max-width:960px;margin:0 auto}
 .hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
-.hero h1{margin:0 0 4px;font-size:1.8em;color:#58a6ff}
-.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
 .hero .author b{color:#f0883e}
 .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
@@ -291,15 +314,18 @@ def render_hero(meta, archive_name, decomp):
                 break
 
     lines = [f'<div class="hero">']
-    lines.append(f'<h1>{e(program)}</h1>')
-    lines.append(f'<div class="author">by <b>{e(author)}</b></div>')
-    lines.append(f'<div class="badges">')
+    lines.append(f'<div><h1>{e(program)}</h1><span class="author">by <b>{e(author)}</b></span></div>')
+    lines.append(f'<div class="badges" style="margin-top:10px">')
     if version != '?':
         lines.append(f'<span class="badge badge-ver">AOL {e(version)}</span>')
     lines.append(f'<span class="badge badge-vb">{e(vb)}</span>')
     if compile_type != '?':
-        lines.append(f'<span class="badge badge-compile">{e(compile_type)}</span>')
+        ct_label = {'native': 'Native Code', 'p-code': 'P-Code'}.get(compile_type, compile_type)
+        lines.append(f'<span class="badge badge-compile">{e(ct_label)}</span>')
     lines.append(f'<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">{e(exe)}</span>')
+    compile_date = meta.get('compile_date')
+    if compile_date:
+        lines.append(f'<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled {e(compile_date)}</span>')
     lines.append('</div></div>')
     return '\n'.join(lines)
 
