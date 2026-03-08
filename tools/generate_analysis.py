@@ -331,8 +331,9 @@ def render_screenshots(zip_stem, html_path):
         return ''
     lines = ['<section class="screenshot">']
     found = False
+    # Main screenshot and animated walkthrough first
     for name, caption in [
-        ('screenshot.png', 'Program running in Windows'),
+        ('screenshot.png', 'Main window'),
         ('animated.gif', 'Navigation walkthrough'),
     ]:
         img = img_dir / name
@@ -340,6 +341,15 @@ def render_screenshots(zip_stem, html_path):
             lines.append(f'<img src="{zip_stem}/{name}" alt="{caption}">')
             lines.append(f'<div class="caption">{caption}</div>')
             found = True
+    # Individual screen captures
+    screens = sorted(img_dir.glob('screen_*.png'))
+    if screens:
+        lines.append('<details><summary style="color:#8b949e;font-size:0.85em;margin-top:8px">Individual screenshots</summary>')
+        for img in screens:
+            label = img.stem.replace('screen_', '').replace('_', ' ').title()
+            lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
+        lines.append('</details>')
+        found = True
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 
