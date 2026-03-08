@@ -334,7 +334,6 @@ def render_screenshots(zip_stem, html_path):
     for name, caption in [
         ('screenshot.png', 'Program running in Windows'),
         ('animated.gif', 'Navigation walkthrough'),
-        ('vbd_decompiled.png', 'VB Decompiler Pro — decompiled project view'),
     ]:
         img = img_dir / name
         if img.exists():
