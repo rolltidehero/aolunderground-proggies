@@ -4,49 +4,83 @@
 - [x] Created `tools/build_proggie_db.py`
 - [x] Extracts all 2,138 deduped zips (zero failures)
 - [x] VB version detection, SHA256 hashes, dependency detection
-- [x] PE import parsing + string scan for OCX/DLL/VBX refs
-- [x] System DLL and VB runtime classification
-- [x] Primary exe selection, file cataloging
 - [x] DB: 2,138 proggies, 1,706 exes, 8,475 deps, 9,395 files
 
 ## Task 2: Import existing metadata ✅ DONE
-- [x] Imported 2,169 entries from proggie-index.txt (name, author, category)
-- [x] Matched 865 exes from metadata.json (author/name enrichment)
-- [x] Imported 43 passwords from passwords.json
+- [x] Imported 2,169 from proggie-index.txt, 865 from metadata.json, 43 passwords
 - [x] Result: 2,138 named, 1,198 with author, 36 with password
-- [ ] TODO: Import nav_graphs.json and decompile_checkpoint.json (deferred)
 
 ## Task 3: Fix deduped zips ✅ DONE
-- [x] Created `tools/repack_zips.py`
-- [x] Built repo-wide DLL/OCX inventory (525 files from required_files/ + extracted dirs)
-- [x] Repacked 1,402 zips with missing deps
-- [x] Recovered 12 DLLs from old unsorted zips and AIM dirs
-- [x] Reclassified 368 false-positive deps (system DLLs, prefixed VBX garbage)
-- [x] Searched LensHell Wayback Machine archive — same DLL set, no bubble.dll
+- [x] 1,402 zips repacked, 12 DLLs recovered, 368 false positives reclassified
 - [x] 274 string-scan deps still missing (zero PE import deps missing)
-- [x] bubble.dll (86 refs) genuinely not in archive or anywhere online
+- [x] bubble.dll (86 refs) genuinely lost — not in archive or LensHell
 
-## Task 4: Regenerate index files
-- [ ] Implement `--index` in build_proggie_db.py
-- [ ] Generate proggie-index.txt with real FILE paths
-- [ ] Generate proggie-index.md
+## Task 4: Regenerate index files ✅ DONE
+- [x] proggie-index.txt (2,138 entries, all FILE paths valid)
+- [x] proggie-index.md (grouped by AOL version)
 
-## Task 5: Query tool
-- [x] Created `tools/query_proggies.py` (skeleton, needs testing with populated DB)
-- [ ] Test all flags against populated DB
+## Task 5: Query tool ✅ DONE
+- [x] --stats, --search, --vb, --deps, --missing-deps, --format json/tsv all working
 
-## Task 6: Gitignore + docs
-- [x] _extracted/ already in .gitignore
-- [x] Updated REORGANIZATION.md
-- [ ] Commit proggie_db.sqlite
-- [ ] Update README.md with query tool usage
+## Task 6: Commit ✅ DONE
+- [x] Committed DB + 3 scripts + 1,397 repacked zips + updated indexes
 
-## Task 7: Extract real names/authors from decompiled output (NEW — post-decompile)
-After batch decompilation, parse the output to get authoritative metadata:
-- [ ] Parse VBP files for `Title=`, `Description=` (App.Title, App.ProductName)
-- [ ] Parse FRM files for About form labels/captions containing author names
-- [ ] Parse .bas module headers for author comments (common pattern: `' Author: ...`)
-- [ ] Scan string constants for author handles, crew names, greet lists
-- [ ] Update proggies.name and proggies.author in DB with decompiled values
-- [ ] Flag entries where decompiled name differs from proggie-index.txt name
-- [ ] Current name/author data is suspect — scraped from filenames and old metadata
+## Task 7: Batch decompilation pipeline (Phase 7)
+
+### T7.1: Build VB Decompiler plugin DLL ✅ DONE
+- [x] C plugin, cross-compiled with i686-w64-mingw32-gcc
+- [x] Correct API: exports are void __stdcall (HWND, HWND, char*, void*)
+      NOT wchar_t* __stdcall (callback) — VBD passes (mainWnd, richEditWnd, buffer, engine)
+- [x] Engine pointer is 4th param of PluginLoad, not 1st (1st is main window HWND)
+- [x] Poll thread starts in DllMain (runs immediately on DLL load)
+- [x] Engine set when plugin activated from Plugins menu (WM_COMMAND ID 60)
+- [x] Tested: 58 files extracted from anexbust.exe (4 forms, 5 modules, 44 functions)
+- [x] Output: project.vbp, info.txt, forms/*.frm, modules/*/{declarations,strings,funcs/*.vb}
+- [x] API reference: https://www.vb-decompiler.org/plugins_sdk.htm
+
+### T7.2: Deploy plugin + configure VM
+- [x] Plugin DLL deployed to C:\Tools\VBDecompiler\Plugins\vbd_extract.dll
+- [x] Dual C2 agents working (SYSTEM + GUI session 1)
+- [x] Plugin activation: WM_COMMAND ID 60 to TfrmMain after file loaded
+- [ ] Set remaining VB Decompiler options (most set by plugin via cb_set)
+- [ ] Take new production-clean snapshot with fixed plugin + dual agents
+
+### T7.3: Build batch_decompile.py orchestrator
+- [ ] Query DB for pending VB5/VB6 exes (1,141 total)
+- [ ] Per exe: push exe + deps to VM, open in VB Decompiler (GUI automation)
+- [ ] Wait for full decompile (poll tree view count)
+- [ ] Trigger plugin → dumps all API data to files
+- [ ] GUI saves: project (ID 10), procedures TXT+MAP (ID 8), all-in-one (ID 9), database (ID 7)
+- [ ] Pull output to host, update DB decompile_status
+
+### T7.4: Snapshot rotation
+- [ ] Restore production-clean snapshot every 50 exes
+
+### T7.5: Progress tracking
+- [ ] Resume-on-crash via DB decompile_status field
+
+### T7.6: Build metadata parser (host-side, no VM)
+- [ ] Parse .vbp: Title, Description, Company, Version, Startup, IconForm, References
+- [ ] Parse .frm: form dimensions, controls (type/name/caption/position/size/tabindex/
+      enabled/visible/events), menus (hierarchy with captions/shortcuts), timers
+- [ ] Parse decompiled code: navigation graph (Form.Show/Load/Unload/MsgBox/InputBox/Shell)
+- [ ] Extract passwords from source:
+      - Plaintext comparisons: If txtPass.Text = "secret" Then
+      - Chr() concatenation: Chr(83) & Chr(117) → resolve to string
+      - XOR cipher patterns: flag with key if visible
+      - Registry/INI stored: GetSetting/GetPrivateProfileString
+      - Variable tracing: follow assignment chain to literal
+- [ ] Extract AOL version signals: window classes, API imports, protocol strings
+- [ ] Extract author info: About form labels, module header comments, greet lists
+- [ ] Extract identity verification: greet lists (author SNs), enemy lists,
+      crew/group tags, greet messages, registration systems, lockout behavior
+- [ ] Build metadata.json per exe
+- [ ] Update DB: proggies.name, proggies.author, proggies.password
+
+### T7.7: VB3/VB4-32 decompilation
+- [ ] ~470 exes (partial results — VB Decompiler has limited VB3/VB4 support)
+
+### Downstream (after decompile)
+- [ ] Website: browsable proggie catalog with metadata, screenshots, animated GIFs
+- [ ] Screenshot automation: use form dimensions + navigation graph + password data
+- [ ] Animated GIF generation: step through navigation graph, capture each state

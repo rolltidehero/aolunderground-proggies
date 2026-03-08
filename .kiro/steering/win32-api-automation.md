@@ -327,6 +327,7 @@ change between launches. Once discovered, hardcode them.
 | 22 | Tools > Search string | "Search string (Decompiler)" | TfrmSearch |
 | 25 | Help > About | "VB Decompiler" | #32770 |
 | 28 | Help > Help | "VB Decompiler" | HH Parent |
+| **60** | **Plugins > Full Data Extractor** | **(calls VBDecompilerPluginLoad)** | **none** |
 
 IDs 3-5, 11 show "Info" dialogs (TfrmMessageDialog). IDs 12-18, 20-21, 23-24,
 26-27, 29-30 produce no visible window (likely Options toggles, Exit, etc.).

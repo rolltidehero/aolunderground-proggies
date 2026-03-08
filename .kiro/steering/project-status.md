@@ -35,8 +35,9 @@ tools/
     scripts/launch-vm.sh               # VM launcher (QMP + QGA + C2 channels)
     scripts/launch-decompiler.sh       # Decompiler VM wrapper
   detect_vb_version.py                 # VB version detection (PE/NE analysis)
-  build_proggie_db.py                  # TODO: canonical DB builder
-  query_proggies.py                    # TODO: DB query tool
+  build_proggie_db.py                  # Canonical DB builder (--extract --import-metadata --index)
+  repack_zips.py                       # Repack zips with missing DLLs/OCXs
+  query_proggies.py                    # DB query tool (--stats --search --vb --deps etc.)
 
 docs/
   old-plans/REORGANIZATION.md          # Original 8-task reorg plan (Tasks 1-3 done)
@@ -48,8 +49,8 @@ docs/
   specs/vb_decompiler_wine/            # Spec: old Wine-based decompiler (superseded)
   steering/                            # Always-loaded rules (qemu, win32, ahk, etc.)
 
-proggie_db.sqlite                      # TODO: THE database (all metadata)
-proggie-index.txt                      # ⚠ BROKEN: FILE column points to nonexistent paths
+proggie_db.sqlite                      # THE database (2,138 proggies, 1,706 exes, 8,475 deps)
+proggie-index.txt                      # Tab-delimited index (2,138 entries, all paths valid)
 proggie-index.md                       # Browsable version of index
 ```
 
@@ -90,15 +91,27 @@ Decompile proven working: sends exe via C2 → GUI automation → saves .frm/.ba
 
 ## Current Tasks
 
-### Active: Batch Decompilation (Phase 7)
-DB is built. Next: batch decompile 1,141 VB5/VB6 exes via the VM pipeline.
-- [ ] T7.1: Build batch_decompile.py orchestrator
-- [ ] T7.2: Push exe + deps to VM, decompile via C2, pull output
-- [ ] T7.3: Restore production-clean snapshot every 50 exes
-- [ ] T7.4: Progress tracking via DB (resume-on-crash)
-- [ ] T7.5: Extract real names/authors from decompiled VBP/FRM/BAS output
-- [ ] Then: 470 VB3/VB4-32 exes (partial results)
-- Time estimate: ~47 hours for VB5/VB6 at 147s/exe
+### Active: Batch Decompilation Pipeline (Phase 7)
+DB is built. Next: build the decompile pipeline and batch process ~1,496 VB5/VB6 exes.
+- [x] T7.1: Build VB Decompiler plugin DLL (C, cross-compiled with mingw-w64)
+      - Correct API: exports take (HWND, HWND, char*, void*), return void
+      - Engine pointer is 4th param of PluginLoad, not 1st
+      - Poll thread starts in DllMain, engine set when plugin activated (menu ID 60)
+      - Tested: 58 files extracted from anexbust.exe (4 forms, 5 modules, 44 functions)
+- [ ] T7.2: Deploy plugin to VM, configure VB Decompiler settings
+      - Plugin DLL deployed, dual C2 working, plugin activation via WM_COMMAND ID 60
+      - Need: new production-clean snapshot with fixed plugin
+- [ ] T7.3: Build batch_decompile.py orchestrator
+      - Push exe + deps → open in VBD → activate plugin (ID 60) → trigger extraction → GUI saves → pull output
+- [ ] T7.4: Snapshot rotation (every 50 exes)
+- [ ] T7.5: Progress tracking via DB (resume-on-crash)
+- [ ] T7.6: Build metadata parser (host-side, no VM)
+      - Parse .vbp/.frm for app info, forms, controls, menus
+      - Extract navigation graph, passwords, AOL version signals
+      - Build metadata.json per exe
+- [ ] T7.7: Then decompile ~470 VB3/VB4-32 exes (partial results)
+- Full design: see docs/2026-03-07-pla.md Phase 7
+- Task breakdown: see .kiro/specs/canonical_proggie_db/tasks.md
 
 ### Done
 - [x] Reorganization Tasks 1-3 (git infra, passwords, analysis engine)
