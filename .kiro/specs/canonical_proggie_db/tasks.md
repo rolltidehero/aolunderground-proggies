@@ -34,8 +34,11 @@
 - [x] Engine pointer is 4th param of PluginLoad, not 1st (1st is main window HWND)
 - [x] Poll thread starts in DllMain (runs immediately on DLL load)
 - [x] Engine set when plugin activated from Plugins menu (WM_COMMAND ID 60)
-- [x] Tested: 58 files extracted from anexbust.exe (4 forms, 5 modules, 44 functions)
-- [x] Output: project.vbp, info.txt, forms/*.frm, modules/*/{declarations,strings,funcs/*.vb}
+- [x] API ID 57 (GetModuleFunctionCode) for real decompiled output — ID 44 returns stubs
+- [x] Validated on native code (anexbust.exe): 25 funcs, 61KB code, 9 string ref files
+- [x] Validated on p-code (noted1.exe): 20 funcs, near-original VB source
+- [x] Output per exe: project.vbp, info.txt, forms/*.frm, modules/*_funcs/*.vb + *.strings
+- [x] Known gaps: .asm (ID 70) and .declarations (ID 32) return empty — acceptable
 - [x] API reference: https://www.vb-decompiler.org/plugins_sdk.htm
 
 ### T7.2: Deploy plugin + configure VM
