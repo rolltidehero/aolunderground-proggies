@@ -166,9 +166,11 @@ python3 tools/build_proggie_db.py --extract --import-metadata --index
 ```
 programs/AOL/proggies-sorted-deduped/<ver>/<stem>.html     # analysis page (committed)
 programs/AOL/proggies-sorted-deduped/<ver>/<stem>/         # images dir (committed)
-  vbd_decompiled.png                                        # VBD screenshot
-  screenshot.png                                            # (future) app screenshot
-  animated.gif                                              # (future) navigation GIF
+  screenshot.png                                            # main form screenshot
+  animated.gif                                              # walkthrough GIF (menu→about→help→greets)
+  screen_menu.png                                           # options menu screenshot
+  screen_about.png                                          # about dialog screenshot
+  screen_help.png                                           # help dialog screenshot
 
 decompiled/<stem>/<exe>/                                    # decompiled output (gitignored)
   info.txt, project.vbp, extract.log, metadata.json
