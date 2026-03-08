@@ -186,15 +186,9 @@ def _read_pe_timestamp(exe_path):
 
 
 def get_strings_from_db(conn, exe_path):
+    """Return all strings (with duplicates for frequency counting)."""
     rows = conn.execute("SELECT value FROM strings WHERE exe_path = ? ORDER BY id", (exe_path,)).fetchall()
-    seen = set()
-    result = []
-    for (v,) in rows:
-        v = v.strip()
-        if v and v not in seen:
-            seen.add(v)
-            result.append(v)
-    return result
+    return [v.strip() for (v,) in rows if v.strip()]
 
 
 def find_exe_in_db(conn, exe_name, archive_base):
@@ -351,8 +345,8 @@ def render_screenshots(zip_stem, html_path):
     return '\n'.join(lines) if found else ''
 
 
-def render_forms(decomp):
-    """Render forms as structured cards with control tables and menu trees."""
+def render_forms(decomp, zip_stem=None, exe_name=None):
+    """Render forms as structured cards with control tables, menu trees, and SVG layouts."""
     if not decomp or not decomp.get('forms'):
         return ''
     e = H.escape
@@ -360,6 +354,13 @@ def render_forms(decomp):
     for form in decomp['forms']:
         lines.append('<div class="card">')
         lines.append(f'<h3>{e(form["name"])}</h3>')
+        # SVG layout from .frm file
+        if zip_stem and exe_name:
+            frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form["name"]}.frm'
+            if frm_path.exists():
+                svg = render_form_layout(form['name'], frm_path)
+                if svg:
+                    lines.append(svg)
         controls = [c for c in form.get('controls', []) if c.get('type') not in ('Shape', 'Line')]
         if controls:
             lines.append('<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption</th></tr>')
@@ -444,36 +445,161 @@ def render_functions(decomp):
 
 
 def render_api_refs(api_strings):
-    """Render API references with version badges."""
+    """Render API references split into AOL Classes vs Win32 Calls."""
     if not api_strings:
         return ''
     e = H.escape
-    lines = [f'<h2>&#x2699; AOL API References ({len(api_strings)})</h2>']
+    aol_classes = []
+    win32_calls = []
+    other_api = []
     for s in api_strings:
         ver = AOL_API_VERSIONS.get(s, '')
-        badge = f' <span class="badge-api">{e(ver)}</span>' if ver else ''
-        lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span>{badge}</div>')
+        if ver and ver != 'Win32 API' and ver != 'Multimedia':
+            aol_classes.append((s, ver))
+        elif ver in ('Win32 API', 'Multimedia'):
+            win32_calls.append((s, ver))
+        else:
+            other_api.append((s, ''))
+
+    lines = [f'<h2>&#x2699; API References ({len(api_strings)})</h2>']
+    if aol_classes:
+        lines.append('<div class="card"><h3>AOL Window Classes</h3>')
+        for s, ver in aol_classes:
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span> <span class="badge-api">{e(ver)}</span></div>')
+        lines.append('</div>')
+    if win32_calls:
+        lines.append('<div class="card"><h3>Win32 API Calls</h3>')
+        for s, ver in win32_calls:
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
+        lines.append('</div>')
+    if other_api:
+        lines.append('<div class="card"><h3>Other</h3>')
+        for s, ver in other_api:
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
+        lines.append('</div>')
     return '\n'.join(lines)
 
 
 def render_greets(greet_names, greet_text):
-    """Render greet names as tags and greet text as blockquote."""
+    """Render greet names as tags and closing text."""
     if not greet_names and not greet_text:
         return ''
     e = H.escape
     lines = ['<h2>&#x1f91d; Greets &amp; Shoutouts</h2>']
-    if greet_text:
-        for t in greet_text:
-            lines.append(f'<blockquote>{e(t)}</blockquote>')
     if greet_names:
         lines.append('<div class="greet-tags">')
         for name in greet_names:
             lines.append(f'<span class="greet-tag">{e(name)}</span>')
         lines.append('</div>')
+    # Only show closing text (not "Greets to..." headers)
+    for t in greet_text:
+        if not re.match(r'^greets?\s*(?:to)?\.{0,3}$', t, re.I):
+            lines.append(f'<div style="color:#8b949e;font-size:0.85em;margin-top:6px;font-style:italic">{e(t)}</div>')
     return '\n'.join(lines)
 
 
-def render_about_text(decomp):
+def render_deps_from_db(zip_stem):
+    """Render structured dependencies from proggie_db."""
+    db = Path("proggie_db.sqlite")
+    if not db.exists(): return ''
+    conn = sqlite3.connect(str(db))
+    rows = conn.execute('''
+        SELECT d.dep_name, d.dep_type, d.source, d.in_zip, d.system_dll, d.vb_runtime
+        FROM deps d JOIN exes e ON d.exe_id = e.id JOIN proggies p ON e.proggie_id = p.id
+        WHERE p.zip_stem = ?
+    ''', (zip_stem,)).fetchall()
+    conn.close()
+    if not rows: return ''
+    e = H.escape
+    runtime = [(r[0], r[1]) for r in rows if r[5]]  # vb_runtime
+    system = [(r[0], r[1]) for r in rows if r[4] and not r[5]]  # system_dll
+    bundled = [(r[0], r[1]) for r in rows if r[3] and not r[4] and not r[5]]  # in_zip, not system
+    other = [(r[0], r[1]) for r in rows if not r[3] and not r[4] and not r[5]]
+
+    lines = [f'<h2>&#x1f4e6; Dependencies ({len(rows)})</h2>']
+    for label, deps in [('VB Runtime', runtime), ('System DLLs', system),
+                        ('Bundled in Archive', bundled), ('Other', other)]:
+        if not deps: continue
+        lines.append(f'<div class="card"><h3>{label}</h3>')
+        for name, dtype in deps:
+            badge = f' <span style="color:#484f58;font-size:0.75em">({dtype})</span>' if dtype != 'dll' else ''
+            lines.append(f'<div style="padding:2px 0"><span class="api-name">{e(name)}</span>{badge}</div>')
+        lines.append('</div>')
+    return '\n'.join(lines)
+
+
+def _parse_frm_controls(frm_path):
+    """Parse .frm file to extract control positions and sizes."""
+    text = frm_path.read_text(encoding='utf-8-sig', errors='ignore')
+    controls = []
+    form_w = form_h = 0
+    # Get form dimensions
+    m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
+    if m: form_w = int(m.group(1))
+    m = re.search(r'ClientHeight\s*=\s*(\d+)', text)
+    if m: form_h = int(m.group(1))
+
+    # Parse controls
+    for block in re.finditer(r'Begin\s+(\w+(?:\.\w+)?)\s+(\w+)\s*\r?\n(.*?)End\r?\n', text, re.S):
+        ctrl_type = block.group(1).split('.')[-1] if '.' in block.group(1) else block.group(1)
+        ctrl_name = block.group(2)
+        body = block.group(3)
+        props = {}
+        for pm in re.finditer(r'(\w+)\s*=\s*(.+)', body):
+            props[pm.group(1)] = pm.group(2).strip().strip('"')
+        if 'Left' in props and 'Top' in props:
+            controls.append({
+                'type': ctrl_type, 'name': ctrl_name,
+                'caption': props.get('Caption', ''),
+                'left': int(props.get('Left', 0)),
+                'top': int(props.get('Top', 0)),
+                'width': int(props.get('Width', 600)),
+                'height': int(props.get('Height', 300)),
+            })
+    return controls, form_w, form_h
+
+
+def render_form_layout(form_name, frm_path):
+    """Render SVG visual layout of a form from .frm control positions."""
+    controls, form_w, form_h = _parse_frm_controls(frm_path)
+    if not controls or not form_w: return ''
+    e = H.escape
+    # Convert twips to pixels (15 twips ≈ 1 pixel)
+    scale = 1.0 / 15.0
+    svg_w = max(int(form_w * scale), 100)
+    svg_h = max(int(form_h * scale), 60)
+
+    # Color map for control types
+    colors = {
+        'TextBox': '#264f78', 'Label': '#3b3b3b', 'PictureBox': '#1a3a1a',
+        'CommandButton': '#4a3060', 'Timer': '#3a3a0a', 'Shape': '#2a2a2a',
+        'ComboBox': '#264f78', 'ListBox': '#264f78', 'CheckBox': '#3a3a0a',
+        'Frame': '#2a2a3a', 'Image': '#1a3a1a', 'OptionButton': '#3a3a0a',
+    }
+    border_colors = {
+        'TextBox': '#58a6ff', 'Label': '#8b949e', 'PictureBox': '#3fb950',
+        'CommandButton': '#bc8cff', 'Timer': '#e3b341', 'Shape': '#484f58',
+        'ComboBox': '#58a6ff', 'ListBox': '#58a6ff', 'CheckBox': '#e3b341',
+        'Frame': '#8b949e', 'Image': '#3fb950', 'OptionButton': '#e3b341',
+    }
+
+    lines = [f'<svg width="{svg_w}" height="{svg_h}" style="background:#161b22;border:1px solid #30363d;border-radius:4px;margin:8px 0">']
+    for c in controls:
+        x = int(c['left'] * scale)
+        y = int(c['top'] * scale)
+        w = max(int(c['width'] * scale), 4)
+        h = max(int(c['height'] * scale), 4)
+        fill = colors.get(c['type'], '#2a2a2a')
+        stroke = border_colors.get(c['type'], '#484f58')
+        cap = c['caption'][:20] if c['caption'] else c['name'][:15]
+        lines.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
+        # Only add text if control is big enough
+        if w > 20 and h > 10:
+            tx = x + 3
+            ty = y + min(h, 12)
+            lines.append(f'<text x="{tx}" y="{ty}" fill="{stroke}" font-size="8" font-family="monospace">{e(cap)}</text>')
+    lines.append('</svg>')
+    return '\n'.join(lines)
     """Extract and render About/Help dialog text as blockquotes."""
     if not decomp:
         return ''
@@ -499,6 +625,27 @@ def render_about_text(decomp):
     return '\n'.join(out)
 
 
+def render_about_text(decomp):
+    """Extract and render About/Help dialog text as blockquotes."""
+    if not decomp: return ''
+    funcs = decomp.get('_funcs_by_module', {})
+    lines = []
+    for mod_name, fn_list in funcs.items():
+        for f in fn_list:
+            if not re.search(r'about|help', f['name'], re.I): continue
+            texts = re.findall(r'"([^"]{20,})"', f['code'])
+            for t in texts:
+                t = t.replace('vbCrLf', '\n').strip()
+                if len(t) > 30 and not t.startswith('loc_'):
+                    lines.append(t)
+    if not lines: return ''
+    e = H.escape
+    out = ['<h2>&#x1f4ac; About This Program</h2>']
+    for t in lines:
+        out.append(f'<blockquote>{e(t)}</blockquote>')
+    return '\n'.join(out)
+
+
 def generate_html(meta, strings, archive_name, html_path):
     """Generate the full HTML page."""
     e = H.escape
@@ -508,29 +655,21 @@ def generate_html(meta, strings, archive_name, html_path):
     # Load decompile data if available
     decomp = load_decompile_data(zip_stem, exe_name) if exe_name != '?' else None
 
-    # Classify strings
+    # Build string frequency map (count before dedup)
+    str_freq = {}
+    for s in strings:
+        s = s.strip()
+        str_freq[s] = str_freq.get(s, 0) + 1
+
+    # Classify strings (deduplicated)
+    seen = set()
     categorized = {'phishing': [], 'author': [], 'credits': [], 'api': [], 'form': [], 'dep': []}
     interesting = []
     other = []
     junk = []
-    all_shown = set()  # track what we show to avoid duplication
 
-    for s in strings:
-        if is_pe_artifact(s):
-            junk.append(s)
-        elif is_phishing(s):
-            categorized['phishing'].append(s)
-        elif classify(s):
-            categorized[classify(s)].append(s)
-        elif is_junk(s):
-            junk.append(s)
-        elif is_interesting(s):
-            interesting.append(s)
-        else:
-            other.append(s)
-
-    # Extract greet names from decompiled strings
-    greet_names = []
+    # Collect greet names early so we can filter them from other sections
+    greet_names = set()
     greet_text = []
     SKIP_GREET = {'Greets', 'greets', 'Tahoma', 'Arial', 'Verdana', 'Times New Roman',
                   'Courier New', 'MS Sans Serif', 'Comic Sans MS', 'Microsoft Sans Serif'}
@@ -544,21 +683,58 @@ def generate_html(meta, strings, archive_name, html_path):
                 greet_text.append(s)
                 continue
             if in_greets:
-                if s in SKIP_GREET:
-                    continue
+                if s in SKIP_GREET: continue
                 if len(s) < 30 and not re.search(r'[.!?]$', s):
-                    greet_names.append(s)
+                    greet_names.add(s)
                 else:
                     in_greets = False
-                    if len(s) > 5:
-                        greet_text.append(s)
+                    if len(s) > 5: greet_text.append(s)
 
-    # Deduplicate: if decompiled strings exist, remove them from "interesting"
+    # Decompiled string set for dedup
+    decomp_str_set = set()
     if decomp:
-        decomp_str_set = set()
         for ds in decomp.get('strings', []):
             decomp_str_set.add(ds if isinstance(ds, str) else ds.get('value', ''))
-        interesting = [s for s in interesting if s not in decomp_str_set]
+
+    for s in strings:
+        s = s.strip()
+        if not s or s in seen: continue
+        seen.add(s)
+        if is_pe_artifact(s):
+            junk.append(s)
+        elif s in greet_names:
+            continue  # shown in greet tags
+        elif is_phishing(s):
+            categorized['phishing'].append(s)
+        elif classify(s):
+            cls = classify(s)
+            # DLLs go to dep, not interesting
+            if cls == 'dep':
+                categorized['dep'].append(s)
+            else:
+                categorized[cls].append(s)
+        elif is_junk(s):
+            junk.append(s)
+        elif s in decomp_str_set:
+            continue  # shown in decompile sections
+        elif is_interesting(s):
+            # Filter DLL-like strings from interesting
+            if re.match(r'^[\w.-]+\.(dll|ocx|vbx|tlb|olb)$', s, re.I):
+                categorized['dep'].append(s)
+            else:
+                interesting.append(s)
+        else:
+            other.append(s)
+
+    # Filter author evidence: remove help text, keep only real author signals
+    real_author = []
+    for s in categorized.get('author', []):
+        # Skip generic help/instruction text
+        if re.search(r'you can|click on|going to|options>', s, re.I) and not re.search(r'coded by|made by|programmed by|written by|by\s*:', s, re.I):
+            interesting.append(s)  # move to interesting instead
+        else:
+            real_author.append(s)
+    categorized['author'] = real_author
 
     # Build page
     lines = [f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>{e(archive_name)} — Analysis</title>{CSS}</head><body><div class="container">']
@@ -568,13 +744,11 @@ def generate_html(meta, strings, archive_name, html_path):
 
     # Screenshots
     ss = render_screenshots(zip_stem, html_path)
-    if ss:
-        lines.append(ss)
+    if ss: lines.append(ss)
 
     # About text from decompiled code
     about = render_about_text(decomp)
-    if about:
-        lines.append(about)
+    if about: lines.append(about)
 
     # Phishing
     if categorized['phishing']:
@@ -582,26 +756,29 @@ def generate_html(meta, strings, archive_name, html_path):
         for s in categorized['phishing']:
             lines.append(f'<span class="s phishing-str">{e(s)}</span>')
 
-    # Author evidence
+    # Author evidence (only real signals)
     if categorized['author']:
         lines.append(f'<h2>&#x1f58a; Author Evidence ({len(categorized["author"])})</h2>')
         for s in categorized['author']:
             lines.append(f'<span class="s author-str">{e(s)}</span>')
 
     # Greets
-    lines.append(render_greets(greet_names, greet_text))
+    lines.append(render_greets(sorted(greet_names), greet_text))
 
-    # API refs with version badges
+    # API refs split into subsections
     lines.append(render_api_refs(categorized['api']))
 
-    # Forms & Controls
-    lines.append(render_forms(decomp))
+    # Forms & Controls with SVG layouts
+    lines.append(render_forms(decomp, zip_stem, exe_name))
 
     # Functions (progressive disclosure)
     lines.append(render_functions(decomp))
 
-    # Dependencies
-    if categorized['dep']:
+    # Dependencies from DB (structured)
+    deps_html = render_deps_from_db(zip_stem)
+    if deps_html:
+        lines.append(deps_html)
+    elif categorized['dep']:
         lines.append(f'<h2>&#x1f4e6; Dependencies ({len(categorized["dep"])})</h2>')
         for s in categorized['dep']:
             lines.append(f'<span class="s dep-str">{e(s)}</span>')
@@ -622,22 +799,26 @@ def generate_html(meta, strings, archive_name, html_path):
         lines.append(' · '.join(info_parts) if info_parts else 'No project info')
         lines.append('</div>')
 
-    # Interesting strings (deduplicated)
+    # Interesting strings with frequency
     if interesting:
         lines.append(f'<h2>&#x2b50; Interesting Strings ({len(interesting)})</h2>')
         for s in interesting:
-            lines.append(f'<span class="s interesting-str">{e(s)}</span>')
+            freq = str_freq.get(s, 1)
+            freq_badge = f' <span style="color:#484f58;font-size:0.75em">×{freq}</span>' if freq > 1 else ''
+            lines.append(f'<span class="s interesting-str">{e(s)}{freq_badge}</span>')
 
     # Other (collapsed)
     if other:
         lines.append(f'<details><summary style="color:#484f58;font-size:0.85em">Other Strings ({len(other)})</summary>')
         for s in other:
-            lines.append(f'<span class="s plain-str">{e(s)}</span>')
+            freq = str_freq.get(s, 1)
+            freq_badge = f' <span style="color:#30363d;font-size:0.75em">×{freq}</span>' if freq > 1 else ''
+            lines.append(f'<span class="s plain-str">{e(s)}{freq_badge}</span>')
         lines.append('</details>')
 
     # Stats footer
-    total = len(strings)
-    lines.append(f'<div class="stats">Total strings: {total} · Interesting: {len(interesting)} · Noise filtered: {len(junk)}</div>')
+    total = len(seen)
+    lines.append(f'<div class="stats">Total unique strings: {total} · Interesting: {len(interesting)} · Noise filtered: {len(junk)}</div>')
     lines.append('</div></body></html>')
     return '\n'.join(lines)
 
