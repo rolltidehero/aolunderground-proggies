@@ -92,23 +92,25 @@ Decompile proven working: sends exe via C2 → GUI automation → saves .frm/.ba
 ## Current Tasks
 
 ### Active: Batch Decompilation Pipeline (Phase 7)
-DB is built. Next: build the decompile pipeline and batch process ~1,496 VB5/VB6 exes.
+DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 - [x] T7.1: Build VB Decompiler plugin DLL (C, cross-compiled with mingw-w64)
-      - Correct API: exports take (HWND, HWND, char*, void*), return void
-      - Engine pointer is 4th param of PluginLoad, not 1st
-      - Poll thread starts in DllMain, engine set when plugin activated (menu ID 60)
-      - Tested: 58 files extracted from anexbust.exe (4 forms, 5 modules, 44 functions)
-- [ ] T7.2: Deploy plugin to VM, configure VB Decompiler settings
-      - Plugin DLL deployed, dual C2 working, plugin activation via WM_COMMAND ID 60
-      - Need: new production-clean snapshot with fixed plugin
+      - Correct API: void __stdcall (HWND, HWND, char*, void*) — engine is 4th param
+      - API ID 57 (GetModuleFunctionCode) for real decompiled output, not ID 44
+      - Poll thread in DllMain, engine set on plugin activation (WM_COMMAND ID 60)
+      - Validated: native (anexbust) + p-code (noted1) — real decompiled code
+- [x] T7.2: Deploy plugin to VM, configure VB Decompiler settings
+      - Plugin DLL deployed, dual C2 (SYSTEM + GUI session 1), plugin activation works
+      - Still need: new production-clean snapshot
+- [x] T7.E2E: End-to-end proven on anexbust.exe
+      - VM extraction → host pull (62 files) → DB update → metadata.json → HTML enrichment
+      - HTML: programs/AOL/proggies-sorted-deduped/4.0/anexbust.html
+      - Decompiled: decompiled/anexbust/anexbust.exe/ (gitignored, local only)
 - [ ] T7.3: Build batch_decompile.py orchestrator
-      - Push exe + deps → open in VBD → activate plugin (ID 60) → trigger extraction → GUI saves → pull output
+      - Push exe + deps → open in VBD → activate plugin (ID 60) → trigger → pull output
+      - Per-exe: open (ID 2) → wait decompile → plugin (ID 60) → cmd file → pull → metadata → HTML
 - [ ] T7.4: Snapshot rotation (every 50 exes)
 - [ ] T7.5: Progress tracking via DB (resume-on-crash)
-- [ ] T7.6: Build metadata parser (host-side, no VM)
-      - Parse .vbp/.frm for app info, forms, controls, menus
-      - Extract navigation graph, passwords, AOL version signals
-      - Build metadata.json per exe
+- [ ] T7.6: Build metadata parser (host-side, no VM) — minimal version proven inline
 - [ ] T7.7: Then decompile ~470 VB3/VB4-32 exes (partial results)
 - Full design: see docs/2026-03-07-pla.md Phase 7
 - Task breakdown: see .kiro/specs/canonical_proggie_db/tasks.md
@@ -118,7 +120,7 @@ DB is built. Next: build the decompile pipeline and batch process ~1,496 VB5/VB6
 - [x] Duplicate detection + merge → 2,138 deduped zips
 - [x] VB version detection for all exes
 - [x] VM setup: Win10 x86 + QGA + C2 agent + VB Decompiler Pro
-- [x] Single-exe decompile proven (anexbust.exe → 6 files)
+- [x] End-to-end decompile proven (anexbust.exe → 62 files, metadata.json, HTML enriched)
 - [x] Gold image + production-clean snapshot
 - [x] Canonical DB built: 2,138 proggies, 1,706 exes, 8,475 deps, 9,395 files
 - [x] Metadata imported: 2,138 named, 1,198 with author, 36 with password
