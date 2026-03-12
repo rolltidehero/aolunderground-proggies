@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import html as H
 from pathlib import Path
@@ -59,9 +60,11 @@ PE_ARTIFACTS = {
 }
 
 PE_ARTIFACT_RE = re.compile(
-    r'^(?:_adj_fp|_CI|__vba|EVENT_SINK_|DllFunctionCall$|_allmul$|'
+    r'^(?:_adj_f|_CI|__vba|EVENT_SINK_|DllFunctionCall$|_allmul$|'
     r'TDESTap|040904B0$|[0-9a-f]{6,}$|'
-    r'C:\\Program Files\\Microsoft Visual Studio\\)'
+    r'MethCallEngine$|ProcCallEngine$|'
+    r'C:\\Program Files\\Microsoft Visual Studio\\|'
+    r'A\*\\A[A-Z]:\\)'
 )
 
 HIGHLIGHT_PATTERNS = [
@@ -110,6 +113,33 @@ def is_junk(s: str) -> bool:
     if len(s) <= 8 and ' ' not in s:
         if sum(1 for c in s if c.isalpha()) / len(s) < 0.7: return True
     if len(s) >= 6 and len(set(s)) <= 3: return True
+    # Binary art: dominated by /oO@`_?PpP0 and spaces
+    art_chars = sum(1 for c in s if c in '/oO@`_?Pp0 ')
+    if len(s) >= 8 and art_chars / len(s) > 0.75: return True
+    # Short fragments with mostly non-alpha
+    if len(s) <= 8:
+        alpha = sum(1 for c in s if c.isalpha())
+        if alpha / len(s) < 0.6: return True
+    # Short asm-like: "Qj h", "jPh R@", "h ]@"
+    if len(s) <= 10 and re.match(r'^[A-Za-z]{1,2}[jhJH ]+[A-Za-z@\[\]\\^ ]*$', s): return True
+    # VB control/menu names: camelCase identifiers like lblStop, options_greets
+    if re.match(r'^(?:lbl|txt|cmd|opt|chk|frm|pic|tmr|lst|cbo|hsb|vsb|img|shp|drv|dir|fil)[A-Z]\w*$', s, re.I): return True
+    if re.match(r'^(?:options|menu|mnu)_\w+$', s, re.I): return True
+    if re.match(r'^(?:mod|cls|bas)\w+$', s) and len(s) <= 20: return True
+    if re.match(r'^(?:Picture|Text|Label|Command|Frame|Timer|Image|List|Combo)\d+$', s): return True
+    if re.match(r'^Project\d*$', s): return True
+    # Font names with trailing junk
+    if re.match(r'^(?:Tahoma|Arial|Verdana|Courier|Times|Comic|Microsoft|MS Sans)\w*\d*$', s, re.I): return True
+    # Path fragments
+    if re.match(r'^[\w]*\\+$', s): return True
+    # Truncated label fragments: "loads [", "tries ["
+    if re.match(r'^\w+\s*\[$', s): return True
+    # Bare internal names (no spaces, short, lowercase)
+    if re.match(r'^[a-z][a-z0-9]+$', s) and len(s) <= 15: return True
+    # Short fragments without full words
+    if len(s) <= 8 and not re.search(r'[A-Za-z]{4}', s): return True
+    # Bare exe/project names
+    if re.match(r'^\w+\.exe$', s, re.I): return True
     return False
 
 def classify(s: str) -> str | None:
@@ -118,10 +148,16 @@ def classify(s: str) -> str | None:
     return None
 
 def is_interesting(s: str) -> bool:
-    if ' ' in s and len(s) >= 8: return True
-    if re.match(r'[\[(*\-~`].*[\])*\-~`]', s) and len(s) >= 6: return True
+    # Must have actual words (3+ alpha chars in a row)
+    if not re.search(r'[A-Za-z]{3}', s): return False
     if re.search(r'v\d|version|\d\.\d', s, re.I): return True
     if re.search(r'\.\w{2,4}$', s) and len(s) >= 6: return True
+    # Sentences / phrases with real words
+    if ' ' in s and len(s) >= 12:
+        alpha = sum(1 for c in s if c.isalpha())
+        if alpha / len(s) > 0.5: return True
+    # Bracketed labels like [Loaded], [stop]
+    if re.match(r'\[.{3,}\]$', s): return True
     return False
 
 
@@ -278,20 +314,60 @@ blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b
 .greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
 .stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
 details{margin:4px 0}
 summary{cursor:pointer}
 summary:hover{color:#58a6ff}
 .screenshot{margin:12px 0}
 .screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
 .screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
 @media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
 @media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
 </style>"""
 
 
+def _extract_program_name(decomp):
+    """Try to extract real program name from decompiled data."""
+    cb = decomp.get('code_breakdown') or {}
+    # Method 1: "About <name>" in decompiled strings
+    for s in decomp.get('strings', []):
+        v = s if isinstance(s, str) else s.get('value', '')
+        m = re.match(r'About\s+(.+?)[\s\-:]*$', v)
+        if m and 4 <= len(m.group(1)) <= 40:
+            return m.group(1).strip()
+    # Method 2: ChatSend announcement in Form_Load
+    for f in cb.get('app_functions', []):
+        if 'Form_Load' not in f.get('name', ''):
+            continue
+        m = re.search(r'(?:ChatSend|Proc_1_36\w*)\("([^"]+)"', f.get('code', ''))
+        if m:
+            raw = m.group(1)
+            clean = re.sub(r'[\u0080-\u00bf\u0095\u0086\u00b7()\[\]]+', ' ', raw).strip()
+            clean = re.sub(r'\s*(Loaded|loaded)\s*$', '', clean).strip()
+            if len(clean) >= 4:
+                return clean
+        break
+    return None
+
+
 def render_hero(meta, archive_name, decomp):
     e = H.escape
     program = meta.get('program', archive_name.replace('.zip', ''))
+    author = meta.get('author', 'Unknown')
+
+    # Try to extract real program name from decompiled source
+    if decomp and program == meta.get('exe', '').replace('.exe', ''):
+        program = _extract_program_name(decomp) or program
     author = meta.get('author', 'Unknown')
     version = meta.get('aol_version', '?')
     cat = meta.get('category', '?')
@@ -320,8 +396,37 @@ def render_hero(meta, archive_name, decomp):
     compile_date = meta.get('compile_date')
     if compile_date:
         lines.append(f'<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled {e(compile_date)}</span>')
+    # Base module badges from decompile data
+    if decomp:
+        for bas in decomp.get('bas_modules', []):
+            known = decomp.get('base_module')
+            if known and known.get('name', '').lower() == bas.lower():
+                # Known shared module — highlight it
+                lines.append(f'<span class="badge" style="background:#2a1a2a;color:#d2a8ff;border:1px solid #8b5cf6" title="Known AOL base module by {e(known.get("author","?"))} ({e(known.get("era","?"))})">{e(bas)}</span>')
+            else:
+                lines.append(f'<span class="badge" style="background:#1a1a2a;color:#79c0ff;border:1px solid #1f6feb">{e(bas)}</span>')
     lines.append('</div></div>')
     return '\n'.join(lines)
+
+
+def _ocr_screenshot(img_path):
+    """OCR a screenshot, upscaling first for better results on small images."""
+    try:
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            tmp_path = tmp.name
+        subprocess.run(
+            ['convert', str(img_path), '-resize', '400%', tmp_path],
+            capture_output=True, timeout=10
+        )
+        r = subprocess.run(
+            ['tesseract', tmp_path, 'stdout', '--psm', '4'],
+            capture_output=True, timeout=10
+        )
+        os.unlink(tmp_path)
+        return r.stdout.decode('utf-8', errors='replace').strip() if r.returncode == 0 else ''
+    except Exception:
+        return ''
 
 
 def render_screenshots(zip_stem, html_path):
@@ -359,6 +464,15 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
     if not decomp or not decomp.get('forms'):
         return ''
     e = H.escape
+
+    # Build OCR caption lookup from code_breakdown
+    ocr_captions = {}
+    cb = decomp.get('code_breakdown') or {}
+    for f in cb.get('app_functions', []):
+        m = re.match(r'(\w+?)_\w+\(', f['name'])
+        if m and f.get('control_caption'):
+            ocr_captions[m.group(1).lower()] = f['control_caption']
+
     lines = ['<h2>&#x1f5bc; Forms &amp; Controls</h2>']
     for form in decomp['forms']:
         lines.append('<div class="card">')
@@ -372,10 +486,14 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
                     lines.append(svg)
         controls = [c for c in form.get('controls', []) if c.get('type') not in ('Shape', 'Line')]
         if controls:
-            lines.append('<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption</th></tr>')
+            lines.append('<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>')
             for c in controls:
-                cap = e(c.get('caption', '')) if c.get('caption') else '<span style="color:#30363d">—</span>'
-                lines.append(f'<tr><td>{e(c["type"])}</td><td>{e(c["name"])}</td><td>{cap}</td></tr>')
+                cap = c.get('caption', '') or c.get('text', '') or ocr_captions.get(c['name'].lower(), '')
+                if cap:
+                    cap_html = e(cap)
+                else:
+                    cap_html = '<span style="color:#30363d">—</span>'
+                lines.append(f'<tr><td>{e(c["type"])}</td><td>{e(c["name"])}</td><td>{cap_html}</td></tr>')
             lines.append('</table>')
         menus = form.get('menus', [])
         if menus:
@@ -453,11 +571,178 @@ def render_functions(decomp):
     return '\n'.join(lines)
 
 
-def render_api_refs(api_strings):
-    """Render API references split into AOL Classes vs Win32 Calls."""
+def render_code_breakdown(decomp):
+    """Render code breakdown: base module vs app code with collapsible source."""
+    if not decomp:
+        return ''
+    cb = decomp.get('code_breakdown')
+    if not cb:
+        return ''
+    e = H.escape
+    bas_modules = decomp.get('bas_modules', [])
+    bas_label = ', '.join(bas_modules) if bas_modules else 'base module'
+
+    # Build proc name replacement: Proc_1_27_420A50 → SendMail
+    proc_names = cb.get('proc_names', {})
+    def _replace_procs(code_text):
+        """Clean decompiler noise and replace Proc_N_M_ADDR with canonical names."""
+        from clean_code import clean_for_display
+        cleaned = clean_for_display(code_text)
+        escaped = e(cleaned)
+        if not proc_names:
+            return escaped
+        def _sub(m):
+            short = f'{m.group(1)}_{m.group(2)}'
+            canon = proc_names.get(short)
+            if canon:
+                return f'<span style="color:#d2a8ff" title="{m.group(0)}">{canon}</span>'
+            return m.group(0)
+        return re.sub(r'(Proc_\d+)_(\d+)_[A-F0-9]+', _sub, escaped)
+
+    lines = ['<h2>&#x1f4ca; Code Breakdown</h2>']
+
+    # Stacked bar
+    app_pct, used_pct, dead_pct = cb['app_pct'], cb['reachable_pct'], cb['dead_pct']
+    cherry = cb.get('cherry_picked', [])
+    cherry_size = sum(f['size'] for f in cherry)
+    total_size = cb.get('total_size', 1)
+    cherry_pct = round(100 * cherry_size / total_size, 1) if total_size and cherry else 0
+    # Adjust: cherry comes out of app_pct (since those funcs were counted as app code)
+    adj_app_pct = round(app_pct - cherry_pct, 1) if cherry_pct else app_pct
+
+    lines.append('<div class="breakdown-bar">')
+    if adj_app_pct > 0:
+        lines.append(f'<div class="bar-app" style="width:{adj_app_pct}%" title="App code: {adj_app_pct}%">{adj_app_pct}%</div>')
+    if cherry_pct > 0:
+        lines.append(f'<div style="width:{cherry_pct}%;background:#1f3a1f;color:#3fb950;text-align:center;font-size:0.75em;line-height:24px" title="Cherry-picked from known modules: {cherry_pct}%">{cherry_pct}%</div>')
+    if used_pct > 0:
+        lines.append(f'<div class="bar-used" style="width:{used_pct}%" title="Used {e(bas_label)}: {used_pct}%">{used_pct}%</div>')
+    if dead_pct > 0:
+        lines.append(f'<div class="bar-dead" style="width:{dead_pct}%" title="Unused {e(bas_label)}: {dead_pct}%">{dead_pct}%</div>')
+    lines.append('</div>')
+
+    # Legend
+    lines.append('<div class="breakdown-legend">')
+    lines.append(f'<span><span class="dot dot-app"></span>Custom code — {cb["app_funcs_count"]} funcs ({adj_app_pct}%)</span>')
+    if cherry_pct > 0:
+        mods = sorted(set(f['matched_module'] for f in cherry))
+        lines.append(f'<span><span class="dot" style="background:#3fb950"></span>Cherry-picked from {", ".join(mods)}.bas — {len(cherry)} funcs ({cherry_pct}%)</span>')
+    if used_pct > 0:
+        remaining_used = cb["reachable_base_funcs"] - len(cherry)
+        if remaining_used > 0:
+            lines.append(f'<span><span class="dot dot-used"></span>Used from {e(bas_label)} — {remaining_used} of {cb["total_base_funcs"]} funcs ({used_pct}%)</span>')
+    if dead_pct > 0:
+        lines.append(f'<span><span class="dot dot-dead"></span>Unused from {e(bas_label)} — {cb["dead_base_funcs"]} funcs ({dead_pct}%)</span>')
+    lines.append('</div>')
+
+    # App functions section (unique code)
+    app_funcs = cb.get('app_functions', [])
+    if app_funcs:
+        lines.append(f'<details open><summary><b>Application Code</b> ({len(app_funcs)} event handlers)</summary>')
+        for f in app_funcs:
+            name = f['name']
+            sz = f['size']
+            sz_label = f'{sz}b' if sz < 1024 else f'{sz/1024:.1f}KB'
+            # Control caption annotation
+            caption = f.get('control_caption', '')
+            ctype = f.get('control_type', '')
+            hint = f.get('code_hint', '')
+            if caption:
+                cap_note = f' <span style="color:#3fb950;font-style:italic">"{e(caption)}"</span>'
+            elif hint:
+                cap_note = f' <span style="color:#484f58;font-style:italic">[{e(ctype)}] {e(hint)}</span>'
+            elif ctype:
+                cap_note = f' <span style="color:#484f58;font-style:italic">[{e(ctype)}]</span>'
+            else:
+                cap_note = ''
+            call_names = f.get('calls_base_names', [])
+            # Resolve any remaining Proc_N_M names via proc_names
+            resolved = []
+            for cn in call_names:
+                if cn.startswith('Proc_'):
+                    short = re.match(r'(Proc_\d+_\d+)', cn)
+                    resolved.append(proc_names.get(short.group(1), cn) if short else cn)
+                else:
+                    resolved.append(cn)
+            call_note = f' → calls: {", ".join(resolved)}' if resolved else ''
+            lines.append(f'<details class="fn-item"><summary>{e(name)}{cap_note} <span class="sz">{sz_label}{call_note}</span></summary>')
+            lines.append(f'<pre>{_replace_procs(f["code"])}</pre>')
+            lines.append('</details>')
+        lines.append('</details>')
+
+    # Cherry-picked functions (matched to known .bas modules)
+    cherry = cb.get('cherry_picked', [])
+    if cherry:
+        # Group by source module
+        by_mod = {}
+        for f in cherry:
+            mod = f['matched_module']
+            by_mod.setdefault(mod, []).append(f)
+        cherry_size = sum(f['size'] for f in cherry)
+        cherry_label = f'{len(cherry)} functions cherry-picked'
+        lines.append(f'<details><summary><b>Cherry-Picked Code</b> ({cherry_label})</summary>')
+        for mod, funcs in sorted(by_mod.items()):
+            lines.append(f'<div style="margin:8px 0 4px;color:#d2a8ff;font-size:0.85em">'
+                         f'From <b>{e(mod)}.bas</b> ({len(funcs)} functions):</div>')
+            for f in funcs:
+                mf = f['matched_func']
+                score = f['match_score']
+                pct = f'{score:.0%}'
+                sz = f['size']
+                sz_label = f'{sz}b' if sz < 1024 else f'{sz/1024:.1f}KB'
+                badge = f'<span style="color:#3fb950">{pct}</span>' if score >= 0.8 else f'<span style="color:#d29922">{pct}</span>'
+                src = f.get('matched_source', '')
+                lines.append(f'<details class="fn-item"><summary>{e(mf)}() '
+                             f'<span class="sz">{badge} match · {sz_label}</span></summary>')
+                if src:
+                    lines.append(f'<pre>{e(src)}</pre>')
+                else:
+                    lines.append(f'<pre>{_replace_procs(f["code"])}</pre>')
+                lines.append('</details>')
+        lines.append('</details>')
+
+    # Reachable base module functions (exclude cherry-picked ones)
+    cherry_names = {f['name'] for f in cherry}
+    reachable = [f for f in cb.get('reachable_functions', []) if f['name'] not in cherry_names]
+    if reachable:
+        lines.append(f'<details><summary><b>Used {e(bas_label)} Functions</b> ({len(reachable)} called)</summary>')
+        for f in reachable:
+            canon = f.get('canonical_name', '')
+            display = f'{canon}()' if canon else f['name']
+            proc_note = f' <span style="color:#484f58">({e(f["name"])})</span>' if canon else ''
+            sz = f['size']
+            sz_label = f'{sz}b' if sz < 1024 else f'{sz/1024:.1f}KB'
+            lines.append(f'<details class="fn-item"><summary>{e(display)}{proc_note} <span class="sz">{sz_label}</span></summary>')
+            lines.append(f'<pre>{_replace_procs(f["code"])}</pre>')
+            lines.append('</details>')
+        lines.append('</details>')
+
+    return '\n'.join(lines)
+
+
+def render_api_refs(api_strings, decomp=None):
+    """Render API references split into AOL Classes vs Win32 Calls.
+    When decomp has code_breakdown, scan reachable code for known API strings."""
     if not api_strings:
         return ''
     e = H.escape
+
+    # When we have code_breakdown, scan reachable code for all known API strings
+    cb = (decomp or {}).get('code_breakdown') or {}
+    if cb:
+        reachable_code = ''
+        for f in cb.get('app_functions', []):
+            reachable_code += f.get('code', '')
+        for f in cb.get('reachable_functions', []):
+            reachable_code += f.get('code', '')
+        if reachable_code:
+            found = set()
+            for name in AOL_API_VERSIONS:
+                if name in reachable_code:
+                    found.add(name)
+            # Use only the found set
+            api_strings = list(found)
+
     aol_classes = []
     win32_calls = []
     other_api = []
@@ -470,8 +755,12 @@ def render_api_refs(api_strings):
         else:
             other_api.append((s, ''))
 
-    lines = [f'<h2>&#x2699; API References ({len(api_strings)})</h2>']
+    total = len(aol_classes) + len(win32_calls) + len(other_api)
+    if not total:
+        return ''
+    lines = [f'<h2>&#x2699; API References ({total})</h2>']
     if aol_classes:
+        aol_classes.sort(key=lambda x: x[0].lstrip('_').lower())
         lines.append('<div class="card"><h3>AOL Window Classes</h3>')
         for s, ver in aol_classes:
             lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span> <span class="badge-api">{e(ver)}</span></div>')
@@ -775,13 +1064,16 @@ def generate_html(meta, strings, archive_name, html_path):
     lines.append(render_greets(sorted(greet_names), greet_text))
 
     # API refs split into subsections
-    lines.append(render_api_refs(categorized['api']))
+    lines.append(render_api_refs(categorized['api'], decomp))
 
     # Forms & Controls with SVG layouts
     lines.append(render_forms(decomp, zip_stem, exe_name))
 
     # Functions (progressive disclosure)
     lines.append(render_functions(decomp))
+
+    # Code breakdown (base module vs app code)
+    lines.append(render_code_breakdown(decomp))
 
     # Dependencies from DB (structured)
     deps_html = render_deps_from_db(zip_stem)
@@ -795,18 +1087,18 @@ def generate_html(meta, strings, archive_name, html_path):
     # Decompiled project info
     if decomp:
         proj = decomp.get('project', {})
-        lines.append('<h2>&#x1f4cb; Project Info</h2>')
-        lines.append('<div class="card">')
         info_parts = []
-        if proj.get('startup'): info_parts.append(f'Startup: {e(proj["startup"])}')
-        ver = '.'.join(filter(None, [proj.get('major_ver'), proj.get('minor_ver'), proj.get('revision_ver')]))
-        if ver: info_parts.append(f'Version: {e(ver)}')
-        if proj.get('company') and proj['company'] != '?': info_parts.append(f'Company: {e(proj["company"])}')
-        ct = decomp.get('compile_type', '')
-        if ct: info_parts.append(f'Compile: {e(ct)}')
+        if proj.get('Startup'): info_parts.append(f'Startup: {e(proj["Startup"].strip(chr(34)))}')
+        ver = '.'.join(filter(None, [proj.get('MajorVer'), proj.get('MinorVer'), proj.get('RevisionVer')]))
+        if ver and ver != '0.00.0': info_parts.append(f'Version: {e(ver)}')
+        co = proj.get('VersionCompanyName', '').strip('"')
+        if co and co != '?': info_parts.append(f'Company: {e(co)}')
         if decomp.get('is_packed'): info_parts.append('Packed: Yes')
-        lines.append(' · '.join(info_parts) if info_parts else 'No project info')
-        lines.append('</div>')
+        if info_parts:
+            lines.append('<h2>&#x1f4cb; Project Info</h2>')
+            lines.append('<div class="card">')
+            lines.append(' · '.join(info_parts))
+            lines.append('</div>')
 
     # Interesting strings with frequency
     if interesting:
