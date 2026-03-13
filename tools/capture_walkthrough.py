@@ -24,6 +24,7 @@ QGA_SOCK = '/tmp/vm-qga.sock'
 SCREEN_W, SCREEN_H = 1280, 800
 GIF_CANVAS = (480, 320)
 TWIPS_PER_PX = 15
+CURSOR_PARK = (SCREEN_W - 1, SCREEN_H - 1)  # bottom-right, out of any crop
 
 
 # ── QMP ──────────────────────────────────────────────────────────────
@@ -964,8 +965,8 @@ def run_walkthrough(zip_stem, exe_name, meta):
             nc_y = max(fh - frm_client_h - nc_x, 0)
             log.info(f'Non-client offset: x={nc_x}, y={nc_y} (client {frm_client_w}x{frm_client_h}, window {fw}x{fh})')
 
-    # Park cursor off the main form before first capture
-    QMP.move(0, 0)
+    # Park cursor in bottom-right corner so it never appears in any screenshot
+    QMP.move(*CURSOR_PARK)
     _free_process(100)
     fc.capture('main', delay_cs=200)
     _free_process(100)
@@ -1159,6 +1160,7 @@ def run_walkthrough(zip_stem, exe_name, meta):
                         _ct = ''
                         if act in ('show_form', 'msgbox'):
                             _ct = move_child_form(main_win['title'], child_tgt_x, child_tgt_y)
+                        QMP.move(*CURSOR_PARK)
                         fc.capture(f'form_{sub.caption}', delay_cs=250)
                         fc.spot_check(sub.caption)
                         log.info(f'  {sub.caption} → captured (child_title={_ct!r})')
@@ -1181,6 +1183,7 @@ def run_walkthrough(zip_stem, exe_name, meta):
                 dismiss_msgboxes()
                 _free_process(100)
                 _ct = move_child_form(main_win['title'], child_tgt_x, child_tgt_y)
+                QMP.move(*CURSOR_PARK)
                 fc.capture(f'form_{item.caption}', delay_cs=250)
                 fc.spot_check(item.caption)
                 log.info(f'  {item.caption} → captured (child_title={_ct!r})')
@@ -1194,6 +1197,7 @@ def run_walkthrough(zip_stem, exe_name, meta):
                 # Capture at 200ms intervals, then re-time the GIF to match Win98 speed
                 # (~960ms per output frame for 47 frames ≈ 45s total scroll).
                 if item.caption.lower() == 'greets':
+                    QMP.move(*CURSOR_PARK)
                     greet_frames = []
                     for gi in range(60):  # ~12s at 200ms intervals
                         time.sleep(0.2)
@@ -1220,6 +1224,7 @@ def run_walkthrough(zip_stem, exe_name, meta):
                     ))
                     log.info(f'  type_secret: {r.get("stdout", "").strip()}')
                     _free_process(100)
+                    QMP.move(*CURSOR_PARK)
                     fc.capture(f'secret_{item.caption}', delay_cs=250)
                     log.info(f'  {item.caption} → secret result captured')
                     cat['items'].append({'caption': f'{item.caption} (unlocked)', 'type': 'secret',
