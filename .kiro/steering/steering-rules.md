@@ -125,6 +125,24 @@ with safety counter. Do NOT `time.sleep(1)` between checks.
 This rule applies to ALL Python code in this project — host-side orchestration,
 guest-side scripts, everything.
 
+## MANDATORY: Post-Generate HTML Validation
+
+After running `generate_analysis.py` on ANY HTML page, you MUST validate the
+output before committing. Never eyeball grep counts and call it done.
+
+**Required checks (run `validate_html.py` or equivalent):**
+1. Every `appCats` menu item with `type: "show_form"` has a non-empty `image` value
+2. Every referenced image file exists on disk at the expected path
+3. No menu item renders as blank (image exists AND is non-zero bytes)
+4. If `screen_greets.gif` is referenced, verify it exists and is > 0 bytes
+5. If `animated.gif` is referenced, verify it exists and is > 0 bytes
+6. The main screenshot (`main_form.png` or `screenshot.png`) exists
+
+**If any check fails, DO NOT COMMIT. Fix the generation pipeline first.**
+
+This rule exists because blank menu items were shipped to production on bodini
+(greets rendered blank) due to skipping validation after HTML regeneration.
+
 ## Error Prevention
 - Verify file/directory exists before reading
 - Check process started before tailing logs
