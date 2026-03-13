@@ -372,7 +372,7 @@ def _ocr_control_crop(screenshot_path, form_w, form_h, left, top, width, height)
 
 def _analyze_call_graph(base, frm_files, meta, zip_stem):
     """Trace which base module functions are actually called from UI event handlers."""
-    _proc_re = re.compile(r'(Proc_(\d+)_(\d+))_[A-F0-9]+')
+    _proc_re = re.compile(r'(?:\d+_)?(Proc_(\d+)_(\d+))(?:_[A-Fa-f0-9]+)?')
     _func_re = re.compile(r'(?:Public |Private )?(?:Sub|Function) (\S+)')
 
     # Determine which module indices are base modules vs forms
@@ -422,11 +422,17 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
     # Parse all functions from all source files
     all_funcs = {}  # full_name -> {calls: set of short_names, size: int, code: str, module_idx: str}
     source_files = list(base.glob('*.bas')) + list(frm_files)
+    # Plugin layout: modules/*_funcs/*.vb
+    modules_dir = base / 'modules'
+    if modules_dir.exists():
+        for func_dir in sorted(modules_dir.iterdir()):
+            if func_dir.is_dir() and func_dir.name.endswith('_funcs'):
+                source_files.extend(sorted(func_dir.glob('*.vb')))
     for sf in source_files:
-        data = sf.read_bytes().decode('latin-1')
+        data = sf.read_bytes().decode('utf-8-sig', errors='replace').replace('\r\n', '\n')
         for m in re.finditer(
-            r'((?:Public |Private )?(?:Sub|Function) (\S+)[^\n]*\n(?:.*?\n)*?)(?=(?:Public |Private )?(?:Sub|Function) |\Z)',
-            data
+            r'((?:Public |Private )?(?:Sub|Function) (\S+).*?End (?:Sub|Function))',
+            data, re.DOTALL
         ):
             block, name = m.group(1), m.group(2)
             # Skip Declare statements (API imports, not real functions)
@@ -438,7 +444,7 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
             calls = set(_proc_re.findall(block))
             call_shorts = {c[0] for c in calls} - {short}
             all_funcs[name] = {
-                'calls': call_shorts, 'size': len(block.encode('latin-1')),
+                'calls': call_shorts, 'size': len(block.encode('utf-8', errors='replace')),
                 'code': block, 'module_idx': mod_idx, 'short': short,
                 'source_file': sf.name,
             }
