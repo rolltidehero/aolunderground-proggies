@@ -1190,11 +1190,14 @@ def run_walkthrough(zip_stem, exe_name, meta):
                     fc.set_reference(f'form_{item.caption}')
 
                 # Greets: capture multiple frames for animated GIF of scrolling names
+                # VB6 Timer Interval=1 fires at ~15ms on modern Windows, ~55ms on Win98.
+                # Capture at 200ms intervals, then re-time the GIF to match Win98 speed
+                # (~960ms per output frame for 47 frames ≈ 45s total scroll).
                 if item.caption.lower() == 'greets':
                     greet_frames = []
                     for gi in range(60):  # ~12s at 200ms intervals
                         time.sleep(0.2)
-                        gf = fc.capture(f'greets_{gi:02d}', delay_cs=20)
+                        gf = fc.capture(f'greets_{gi:02d}', delay_cs=96)
                         greet_frames.append(gf)
                     log.info(f'  Greets: captured {len(greet_frames)} animation frames')
 
@@ -1324,9 +1327,12 @@ def save_outputs(fc, form_rect, popup_rect, zip_stem, exe_name=None, menu_map=No
             cropped = full.crop((cx, cy, cx + cw, cy + ch))
             imgs.append(cropped)
         if imgs:
+            # Use 960ms/frame to match original Win98 VB6 Timer Interval=1 scroll speed
+            delays = [960] * len(imgs)
+            delays[-1] = 3000  # pause before loop
             imgs_p = [im.convert('P', palette=_PILImage.ADAPTIVE) for im in imgs]
             imgs_p[0].save(out_dir / 'screen_greets.gif', save_all=True,
-                         append_images=imgs_p[1:], duration=200, loop=0)
+                         append_images=imgs_p[1:], duration=delays, loop=0)
             log.info(f'Greets GIF: {len(imgs)} frames → screen_greets.gif')
         elif label.startswith('submenu_'):
             name = label.replace('submenu_', '').replace(' ', '_').lower()
