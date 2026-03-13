@@ -33,70 +33,28 @@
 - **Version:** VB Decompiler Pro v9.8 build 5389.64863 (DotFix Software)
 - **Protection:** Enigma Protector (patched/cracked build)
 
-### BLOCKER: Enigma Protector crashes under Wine 9.0
+### RESOLVED: Enigma Protector crash under Wine 9.0
 
-- **Symptom:** `EXCEPTION_ACCESS_VIOLATION (code=c0000005)` at address `0E23045C`
-  during Enigma Protector runtime initialization on every launch
-- **Effect:** GUI loads, project structure is recovered (forms, modules, control
-  names, API declares), status shows "Decompiled OK" — but the p-code/native
-  code decompilation engine never initializes. All procedure bodies are empty
-  `'Data Table: XXXXXX` stubs.
-- **Tested on:**
-  - `VBDIS3.exe` (VB6 native code, protected header) — empty bodies
-  - `BuddyMax.exe` (VB6 native code, unprotected) — got x86 disassembly but
-    NOT decompiled VB code (disassembly is Lite-level output)
-  - `Wild Tools 2.exe` (VB6 p-code, unprotected) — empty bodies
-- **Root cause:** Enigma Protector's unpacking/decryption layer uses memory
-  operations incompatible with Wine 9.0. The crash is non-fatal to the GUI
-  but corrupts the decompilation engine initialization.
-- **Confirmed NOT the issue:** Licensing (patched build), file format (tested
-  multiple VB versions), checkboxes (Parse stack parameters / Procedure
-  analyzer), export method (tested Save decompiled project AND Save all in
-  one module — both produce empty bodies)
-- **No CLI workaround:** VB Decompiler has no headless/batch mode. "Command
-  line support" only means accepting a filename argument to auto-open in GUI.
-  No `/save`, `/export`, or `/batch` flags exist.
-
-### What VB Decompiler Pro CAN do under Wine (Lite-level features only)
-
-- Parse VB5/VB6 PE headers and project structure
-- Recover form layouts, control names, menu structures
-- List module names and procedure addresses
-- Recover API Declare statements (without parameters)
-- Generate VBP project files with correct module/form references
-- Save to single .bas file via "Save all in one module" (to Z:\tmp\ path)
-- Save decompiled project via "Save decompiled project" (Browse for Folder)
-
-### What it CANNOT do under Wine (broken by Enigma crash)
-
-- P-code decompilation (recovery to VB source — the main feature)
-- Native code decompilation (via code emulation engine)
-- String reference recovery
-- Stack parameter parsing
-
-### Possible resolutions
-
-1. **FIX LDCONFIG FIRST (likely root cause)** — Another Kiro agent added
-   `/usr/NX/lib` to `/etc/ld.so.conf.d/nomachine.conf`, causing NoMachine's
-   bundled `libcrypt.so.1` and `libstdc++.so.6` to override system libraries.
-   This broke PAM authentication (sudo), ImageMagick/tesseract, and very
-   likely caused the Enigma Protector crash in Wine (corrupted library loads
-   in dynamically allocated memory). **Must fix from physical console:**
-   ```bash
-   sudo rm /etc/ld.so.conf.d/nomachine.conf
-   sudo ldconfig
-   ```
-   Then re-test VB Decompiler Pro — the crash may disappear entirely.
-   Evidence: `ldconfig -p | grep libcrypt.so.1` shows `/usr/NX/lib/libcrypt.so.1`
-   listed FIRST, before the system library.
-2. **Run on real Windows** — Enigma Protector works correctly on native Windows.
-   Need a Windows VM or bare metal machine.
-3. **Find unprotected build** — A build without Enigma wrapping would bypass
-   the crash entirely.
-4. **Newer Wine version** — Wine 9.0 is current Ubuntu package. WineHQ staging
-   or newer releases may have better Enigma compatibility.
-5. **Use alternative decompilers** — Semi-VB-Decompiler (open source, GitHub),
-   VBReFormer, or p32dasm for VB5/VB6 targets.
+- **Symptom:** `EXCEPTION_ACCESS_VIOLATION (code=c0000005)` at `0E23045C`
+  when a file is passed as a command-line argument.
+- **Root cause:** Enigma Protector's unpacking layer crashes specifically on
+  the command-line file loading code path. The GUI startup path is unaffected.
+- **Fix (2026-03-04):** Nuked Wine prefix, reinstalled fresh (wineboot +
+  winetricks vb6run + Inno Setup /VERYSILENT + patched exe copy). Launch
+  VB Decompiler with NO arguments, then open files via File > Open in the GUI.
+- **Confirmed working:** BuddyMax.exe opened via File > Open — full
+  decompilation with procedure bodies, VBP structure, OCX refs, compiler
+  settings all recovered.
+- **Automation approach:** Use xdotool to drive File > Open dialog instead
+  of passing filename on command line. Copy target exes to C:\ drive since
+  Z:\ not visible in file dialog.
+- **Snapshot:** `~/wineuser_prefix_snapshot_20260304.tar.gz` (202MB) —
+  clean working state, restore with:
+  ```bash
+  sudo rm -rf /home/wineuser/.wine
+  sudo tar xzf ~/wineuser_prefix_snapshot_20260304.tar.gz -C /home/wineuser
+  sudo chown -R wineuser:nonet /home/wineuser/.wine
+  ```
 
 ## Task 2: Install VB6 compiler under Wine
 

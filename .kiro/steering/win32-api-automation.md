@@ -27,6 +27,10 @@ are BANNED — they are proven failures (diag3, diag4):
 - `Send` — FAILS (unreliable under Wine, especially headless)
 - `WinMenuSelectItem` — FAILS (Delphi TMainMenu is not a real Win32 menu)
 - `ControlGet` — UNRELIABLE (ClassNN numbering may not match)
+- `SendInput` / `SendKeys` — BANNED. Hardware-level input injection is
+  non-deterministic, focus-dependent, and violates the core principle of
+  targeting specific hWnds. Never use it to work around message delivery
+  failures — find the real root cause instead.
 
 **USE ONLY:**
 - `DllCall("FindWindow", ...)` / `DllCall("FindWindowEx", ...)`

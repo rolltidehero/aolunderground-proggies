@@ -1,6 +1,6 @@
 ---
-inclusion: auto
-description: Enforces branch-based git workflow with auto-push and manual merges for the AOL Underground proggies archive.
+inclusion: always
+description: Enforces branch-based git workflow with manual merges for the AOL Underground proggies archive.
 ---
 
 # Git Workflow — AOL Underground Proggies Archive
@@ -24,15 +24,9 @@ description: Enforces branch-based git workflow with auto-push and manual merges
 7. **ALWAYS pass `-m "message"` to `git merge`** — never let git open an interactive editor.
 8. After merging, delete the branch locally. If pushed to remote, delete there too: `git push origin --delete <branch-name>`
 
-## AUTO-PUSH (via post-commit hook)
+## PUSH RULES (MANDATORY)
 
-A git post-commit hook automatically pushes the current branch to remote after every local commit. No manual `git push` needed.
-
-To install/reinstall the hook:
-```bash
-cp .github/hooks/post-commit .git/hooks/post-commit
-chmod +x .git/hooks/post-commit
-```
+**NEVER push to remote unless the user explicitly says to.** All commits stay local until told otherwise. No auto-push hooks, no implicit pushes.
 
 ## COMMIT MESSAGE FORMAT
 

@@ -207,48 +207,96 @@ When Python code generates scripts in another language:
   and `finally` closes in another, add prominent comments in BOTH templates documenting
   the dependency, AND add a brace-balance assertion in the Python assembly function.
 
+## Exception Discipline
+
+- No bare `except:` — always catch specific exceptions
+- Every `except` block must log what it caught and why — no silent swallowing
+- All file writes must specify `encoding='utf-8'`
+
 ## Thread Safety
 
 - Use `concurrent.futures.ThreadPoolExecutor` for multithreading
 - All shared state must use `threading.Lock` or `queue.Queue`
-- HTTP client instances must be thread-safe or per-thread
 - No daemon threads without proper cleanup in `finally` or `atexit`
+- SQLite connections are NOT thread-safe — use one connection per thread or serialize with a lock
+
+## SQLite (MANDATORY)
+
+- Always use `PRAGMA journal_mode=WAL` for concurrent read performance
+- Always use parameterized queries (`?` placeholders) — never f-strings in SQL
+- Always close connections — use context managers or explicit `conn.close()` in `finally`
+- Create indexes after bulk inserts, not before
+- Use `conn.executemany()` for batch inserts
+- Set `PRAGMA busy_timeout=5000` to handle lock contention gracefully
 
 ```python
-from concurrent.futures import ThreadPoolExecutor, as_completed
+# REQUIRED pattern:
+conn = sqlite3.connect(str(db_path))
+try:
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    # ... work ...
+    conn.commit()
+finally:
+    conn.close()
 
-with ThreadPoolExecutor(max_workers=threads) as pool:
-    futures = {pool.submit(scan_host, ip): ip for ip in targets}
-    for future in as_completed(futures):
-        ip = futures[future]
-        try:
-            result = future.result(timeout=30)
-            logger.debug("Completed %s: %s", ip, result)
-        except Exception:
-            logger.exception("Failed scanning %s", ip)
+# FORBIDDEN:
+conn.execute(f"SELECT * FROM t WHERE name = '{user_input}'")  # SQL injection
 ```
 
-## Network Operations
+## Wine / Subprocess (MANDATORY)
 
-- Configurable timeouts (default: 10s connect, 30s read)
-- TLS verification configurable (default: enabled, flag to disable for pentesting)
-- Retry logic for transient failures (connection reset, timeout)
-- Log connection attempts at DEBUG level with timing
+When running Windows executables under Wine:
+
+- **NEVER run Wine as root** — it gives files root permissions
+- **Always use a dedicated WINEPREFIX** to isolate from user's default Wine config:
+  ```python
+  env = {**os.environ, "WINEPREFIX": str(prefix_path), "WINEDEBUG": "-all"}
+  subprocess.run(["wine", exe_path], env=env, timeout=30)
+  ```
+- **Always set `WINEDEBUG=-all`** to suppress Wine debug noise unless debugging
+- **Always set a timeout** on `subprocess.run()` — VB programs may hang or show dialogs
+- **Use Xvfb** for headless execution (no display server needed):
+  ```bash
+  xvfb-run wine program.exe
+  ```
+- **Check Wine is installed** before attempting to use it:
+  ```python
+  if shutil.which("wine") is None:
+      logger.error("Wine not found — install with: sudo apt install wine")
+      return 1
+  ```
+- Use `subprocess.run()` with argument lists — never `shell=True`
+
+## Checkpointing (MANDATORY for 20+ items)
+
+Any script that processes 20 or more items must support checkpointing:
+
+1. **Checkpoint file**: JSON in `logs/<script_name>.checkpoint` with last-processed item and count
+2. **Default**: start fresh (no resume). Pass `--resume` to resume from checkpoint.
+3. **Interactive mode** (`sys.stdin.isatty()` is True): prompt the user to resume if a checkpoint exists. Example: `"Resume from checkpoint? (300/1800 done) [y/N]"`
+4. **Non-interactive mode** (nohup / piped stdin): never prompt. Use `--resume` flag explicitly.
+5. **Write checkpoint every N items** (e.g., every 50 or every 10% of total) — not after every single item.
+6. **Delete checkpoint on successful completion.**
 
 ```python
-import socket
+CHECKPOINT = Path(f"logs/{Path(__file__).stem}.checkpoint")
 
-def check_port(ip: str, port: int, timeout: float = 5.0) -> bool:
-    """Check if a TCP port is open."""
-    logger.debug("Checking %s:%d (timeout=%.1fs)", ip, port, timeout)
-    try:
-        with socket.create_connection((ip, port), timeout=timeout):
-            logger.debug("Port %d open on %s", port, ip)
-            return True
-    except (socket.timeout, ConnectionRefusedError, OSError) as e:
-        logger.debug("Port %d closed/filtered on %s: %s", port, ip, e)
-        return False
+def load_checkpoint(resume: bool) -> set[str]:
+    if not resume or not CHECKPOINT.exists():
+        return set()
+    data = json.loads(CHECKPOINT.read_text(encoding="utf-8"))
+    logger.info("Resuming from checkpoint: %d items done", data["count"])
+    return set(data["done"])
+
+def save_checkpoint(done: set[str]) -> None:
+    CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT.write_text(json.dumps({"count": len(done), "done": sorted(done)}), encoding="utf-8")
 ```
+
+When launching via nohup:
+- Fresh: `nohup python3 script.py < /dev/null > logs/script.log 2>&1 &`
+- Resume: `nohup python3 script.py --resume < /dev/null > logs/script.log 2>&1 &`
 
 ## Output & Reporting
 

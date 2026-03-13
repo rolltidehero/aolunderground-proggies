@@ -430,31 +430,200 @@ def _ocr_screenshot(img_path):
 
 
 def render_screenshots(zip_stem, html_path):
-    """Render screenshot gallery from images directory."""
+    """Render interactive app simulator or fallback screenshot gallery."""
     img_dir = html_path.parent / zip_stem
     if not img_dir.exists():
         return ''
     lines = ['<section class="screenshot">']
     found = False
-    # Main screenshot and animated walkthrough first
-    for name, caption in [
-        ('screenshot.png', 'Main window'),
-        ('animated.gif', 'Navigation walkthrough'),
-    ]:
-        img = img_dir / name
-        if img.exists():
-            lines.append(f'<img src="{zip_stem}/{name}" alt="{caption}">')
-            lines.append(f'<div class="caption">{caption}</div>')
+    import json as _json
+
+    wt_path = img_dir / 'walkthrough.json'
+    if wt_path.exists():
+        wt = _json.loads(wt_path.read_text())
+        if isinstance(wt, list):
+            categories, form_info, label_info = wt, None, None
+        else:
+            categories = wt.get('categories', [])
+            form_info, label_info = wt.get('form'), wt.get('labels', {})
+
+        if form_info and label_info and (img_dir / form_info.get('image', '')).exists():
+            fw, fh = form_info['width'], form_info['height']
+            nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
+            form_img = f'{zip_stem}/{form_info["image"]}'
+            main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
+            sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
+
+            cat_data = []
+            for ci, cat in enumerate(categories):
+                items_js = []
+                for item in cat['items']:
+                    img_name = item.get('image', '')
+                    exists = (img_dir / img_name).exists() if img_name else False
+                    d = {'caption': item['caption'],
+                         'image': f'{zip_stem}/{img_name}' if exists else '',
+                         'type': item.get('type', '')}
+                    if item.get('child_h') and item['child_h'] < 460:
+                        d['ch'] = item['child_h']
+                    if item.get('child_title'):
+                        d['ct'] = item['child_title']
+                    items_js.append(d)
+                lbl = sorted_labels[ci][1] if ci < len(sorted_labels) else None
+                cat_data.append({'name': cat['category'], 'items': items_js, 'label': lbl})
+
+            # Stage: flexbox — main form left, child forms right
+            lines.append(f'<div class="app-sim">')
+            lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
+            lines.append(f'<div class="app-stage" id="app-stage">')
+            lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
+            lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
+            for ci, cd in enumerate(cat_data):
+                if cd['label']:
+                    l = cd['label']
+                    lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
+            lines.append('<div class="app-popup" id="app-popup"></div>')
+            lines.append('</div>')
+            lines.append(f'<div class="app-child" id="app-child" data-cw="{main_in_shot_x - 8}"></div>')
+            lines.append('</div>')
+            gif_path = img_dir / 'animated.gif'
+            if gif_path.exists():
+                lines.append(f'<details class="app-gif-toggle"><summary>&#x25b6; Watch animated walkthrough</summary>'
+                             f'<img src="{zip_stem}/animated.gif" loading="lazy"></details>')
+            lines.append('</div>')
+
+            greets = wt.get('greets', [])
+            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)};')
+            lines.append(r'''
+var openCat=-1,popup=document.getElementById("app-popup"),
+    childEl=document.getElementById("app-child");
+var cw=+childEl.dataset.cw;
+document.querySelectorAll(".app-label").forEach(function(el){
+  el.addEventListener("click",function(e){
+    e.stopPropagation();
+    var ci=+this.dataset.cat;
+    if(openCat===ci){closePopup();return}
+    openCat=ci;
+    var cat=appCats[ci],lbl=cat.label,h="";
+    cat.items.forEach(function(it,i){
+      if(it.type==="secret")return;
+      h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
+        it.caption.replace(/</g,"&lt;")+'</div>';
+    });
+    popup.innerHTML=h;
+    popup.style.left=(lbl.left+3)+"px";
+    popup.style.top=(lbl.top+lbl.height+6)+"px";
+    popup.style.display="block";
+    popup.querySelectorAll(".app-mi").forEach(function(mi){
+      mi.addEventListener("click",function(ev){
+        ev.stopPropagation();
+        showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
+        closePopup();
+      });
+    });
+  });
+});
+document.addEventListener("click",function(){closePopup()});
+function closePopup(){popup.style.display="none";openCat=-1}
+function showChild(it){
+  var cap=it.caption.replace(/</g,"&lt;");
+  var bar='<div class="app-ct">'+cap+' <button onclick="hideChild()" title="Close">✕</button></div>';
+  if(!it.image){
+    childEl.innerHTML=bar+'<div class="app-noshot">&#x1f4f7; Screenshot not captured &mdash; dialog overlapped main form</div>';
+    return;
+  }
+  var h=it.ch?'height:'+it.ch+'px;':'';
+  var bar='<div class="app-ct">'+cap+' <button onclick="hideChild()" title="Close">✕</button></div>';
+  if(it.caption==="Greets"&&greetNames.length){
+    var names=greetNames.map(function(n){return'<span>'+n+'</span>'}).join('');
+    childEl.innerHTML=bar+
+      '<div class="app-cc app-greets" style="max-width:'+cw+'px;'+h+'"><img src="'+it.image+'" style="max-width:none">'+
+      '<div class="greets-scroll"><div class="greets-track">'+names+names+'</div></div></div>';
+  } else {
+    childEl.innerHTML=bar+
+      '<div class="app-cc" style="max-width:'+cw+'px;'+h+'"><img src="'+it.image+'" style="max-width:none"></div>';
+  }
+}
+function hideChild(){childEl.innerHTML=""}
+</script>''')
+            lines.append('''<style>
+.app-sim{margin:16px 0}
+.app-sim-hint{color:#8b949e;font-size:0.8em;margin-bottom:8px}
+.app-stage{display:flex;align-items:flex-start;gap:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px}
+.app-form{user-select:none;position:relative}
+.app-form>img{display:block}
+.app-label{position:absolute;cursor:pointer;border-radius:2px}
+.app-label:hover{background:rgba(255,255,255,0.18)}
+.app-popup{display:none;position:absolute;background:#fff;border:1px solid #999;box-shadow:2px 2px 6px rgba(0,0,0,.3);z-index:20;min-width:140px;padding:2px 0}
+.app-mi{padding:3px 24px 3px 20px;font:13px/1.4 "Segoe UI",Tahoma,sans-serif;color:#000;cursor:default;white-space:nowrap}
+.app-mi:hover{background:#0078d4;color:#fff}
+.app-child{min-width:0;flex:1;overflow:hidden}
+.app-ct{color:#8b949e;font-size:.78em;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.app-ct button{background:none;border:none;color:#8b949e;cursor:pointer;font-size:.95em;padding:0}
+.app-ct button:hover{color:#f85149}
+.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d;max-height:350px}
+.app-noshot{color:#8b949e;font-size:.85em;padding:24px 16px;border:1px dashed #30363d;border-radius:4px}
+.app-cc img{display:block}
+.app-gif-toggle{margin-top:8px;color:#8b949e;font-size:.85em}
+.app-gif-toggle summary{padding:4px 0;cursor:pointer}
+.app-gif-toggle img{max-width:100%;margin-top:6px;border-radius:4px;border:1px solid #30363d}
+.app-greets{position:relative}
+.greets-scroll{position:absolute;bottom:8px;left:0;right:0;overflow:hidden;height:1.4em}
+.greets-track{display:flex;gap:2em;white-space:nowrap;animation:greets-marquee 20s linear infinite;
+  font:bold 13px/1.4 "Tahoma",sans-serif;color:#fff;text-shadow:0 0 6px #000,0 0 3px #900}
+.greets-track span{flex-shrink:0}
+@keyframes greets-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+</style>''')
             found = True
-    # Individual screen captures
-    screens = sorted(img_dir.glob('screen_*.png'))
-    if screens:
-        lines.append('<details><summary style="color:#8b949e;font-size:0.85em;margin-top:8px">Individual screenshots</summary>')
-        for img in screens:
-            label = img.stem.replace('screen_', '').replace('_', ' ').title()
-            lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
-        lines.append('</details>')
-        found = True
+        elif categories:
+            # Fallback: tab-based explorer
+            lines.append('<div class="walkthrough-explorer">')
+            lines.append('<div class="wt-tabs">')
+            for ci, cat in enumerate(categories):
+                active = ' active' if ci == 0 else ''
+                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat["category"])}</button>')
+            lines.append('</div>')
+            for ci, cat in enumerate(categories):
+                vis = '' if ci == 0 else ' style="display:none"'
+                lines.append(f'<div class="wt-panel" id="wt-panel-{ci}"{vis}>')
+                for item in cat['items']:
+                    img_name = item.get('image', '')
+                    cap = H.escape(item['caption'])
+                    lines.append(f'<div class="wt-item" onclick="wtShow(this)"><span class="wt-label">{cap}</span>')
+                    if (img_dir / img_name).exists():
+                        lines.append(f'<img class="wt-img" src="{zip_stem}/{img_name}" alt="{cap}" loading="lazy" style="display:none">')
+                    lines.append('</div>')
+                lines.append('</div>')
+            lines.append('</div>')
+            lines.append('''<script>
+function wtTab(b,ci){b.parentElement.querySelectorAll('.wt-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.wt-panel').forEach((p,i)=>p.style.display=i===ci?'':'none')}
+function wtShow(el){var i=el.querySelector('.wt-img');if(i)i.style.display=i.style.display==='none'?'':'none'}
+</script><style>
+.walkthrough-explorer{margin:12px 0;border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.wt-tabs{display:flex;background:#161b22;border-bottom:1px solid #30363d}
+.wt-tab{background:none;border:none;color:#8b949e;padding:8px 14px;cursor:pointer;font-size:.85em}
+.wt-tab.active{color:#58a6ff;border-bottom:2px solid #58a6ff}
+.wt-panel{padding:8px}
+.wt-item{cursor:pointer;padding:4px 8px;border-radius:4px;margin:2px 0}
+.wt-item:hover{background:#21262d}
+.wt-label{color:#c9d1d9;font-size:.85em}
+.wt-img{margin:8px 0;max-width:100%;border-radius:4px;border:1px solid #30363d}
+</style>''')
+            found = True
+
+    # Static screenshots only if no interactive widget
+    if not found:
+        for name, caption in [('screenshot.png', 'Main window'), ('animated.gif', 'Navigation walkthrough')]:
+            if (img_dir / name).exists():
+                lines.append(f'<img src="{zip_stem}/{name}" alt="{caption}"><div class="caption">{caption}</div>')
+                found = True
+        screens = sorted(img_dir.glob('screen_*.png'))
+        if screens:
+            lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Individual screenshots</summary>')
+            for img in screens:
+                label = img.stem.replace('screen_', '').replace('_', ' ').title()
+                lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
+            lines.append('</details>')
+            found = True
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 
@@ -1092,7 +1261,7 @@ def generate_html(meta, strings, archive_name, html_path):
         ver = '.'.join(filter(None, [proj.get('MajorVer'), proj.get('MinorVer'), proj.get('RevisionVer')]))
         if ver and ver != '0.00.0': info_parts.append(f'Version: {e(ver)}')
         co = proj.get('VersionCompanyName', '').strip('"')
-        if co and co != '?': info_parts.append(f'Company: {e(co)}')
+        if co and co not in ('?', 'None', ''): info_parts.append(f'Company: {e(co)}')
         if decomp.get('is_packed'): info_parts.append('Packed: Yes')
         if info_parts:
             lines.append('<h2>&#x1f4cb; Project Info</h2>')
@@ -1149,14 +1318,16 @@ def main() -> int:
         archive_base = html_path.stem
 
         exe_path = find_exe_in_db(conn, exe_name, archive_base)
-        if not exe_path:
-            skipped += 1
-            continue
+        strings = get_strings_from_db(conn, exe_path) if exe_path else []
 
-        strings = get_strings_from_db(conn, exe_path)
+        # Fall back to metadata.json strings if exe_strings.db doesn't have this exe
         if not strings:
-            skipped += 1
-            continue
+            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+            if decomp and decomp.get('strings'):
+                strings = decomp['strings']
+            elif not exe_path:
+                skipped += 1
+                continue
 
         page = generate_html(meta, strings, archive_name, html_path)
         html_path.write_text(page, encoding='utf-8')

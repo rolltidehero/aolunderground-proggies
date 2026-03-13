@@ -57,11 +57,24 @@ def decompile_exe(zip_stem, exe_name, exe_path):
 
     if result.get('status') != 'ok':
         log.error(f'Decompile failed: {result}')
+        if result.get('missing_forms'):
+            log.error(f'Missing forms: {result["missing_forms"][:10]}')
         return None
 
     log.info(f'Decompile OK, {result.get("count", 0)} files. Pulling output...')
     local_out.mkdir(parents=True, exist_ok=True)
     pull_decompiled(guest_out, local_out)
+
+    # Post-pull validation
+    sys.path.insert(0, str(REPO / 'tools'))
+    from validate_decompile import validate_one
+    vr = validate_one(zip_stem)
+    if vr['status'] == 'FAIL':
+        log.error(f'VALIDATION FAILED after decompile:')
+        for e in vr['errors']:
+            log.error(f'  {e}')
+        return None
+
     return local_out
 
 
@@ -841,39 +854,106 @@ def find_exe(zip_stem):
 
 
 def _write_cleaned_source(zip_stem, exe_name, meta):
-    """Write cleaned .bas/.frm source files alongside raw decompiled output."""
+    """Write cleaned .bas/.frm source files alongside raw decompiled output.
+    Also publishes raw + cleaned source to the committed proggie dir."""
     cb = meta.get('code_breakdown')
-    if not cb:
-        return
     from clean_code import clean_file
     base = DECOMPILED / zip_stem / exe_name
+
+    proc_names = cb.get('proc_names', {}) if cb else {}
+
+    # Collect raw source files (plugin layout: forms/ + modules/*_funcs/*.vb)
+    raw_files = []
+    forms_dir = base / 'forms'
+    if forms_dir.exists():
+        raw_files.extend(forms_dir.glob('*.frm'))
+    else:
+        raw_files.extend(base.glob('*.frm'))
+    mods_dir = base / 'modules'
+    if mods_dir.exists():
+        for func_dir in sorted(mods_dir.iterdir()):
+            if func_dir.is_dir() and func_dir.name.endswith('_funcs'):
+                raw_files.extend(sorted(func_dir.glob('*.vb')))
+    raw_files.extend(base.glob('*.bas'))
+
+    # Write cleaned versions to decompiled/<stem>/<exe>/cleaned/
+    import shutil
     out_dir = base / 'cleaned'
     if out_dir.exists():
-        import shutil
         shutil.rmtree(out_dir)
     out_dir.mkdir(exist_ok=True)
 
-    proc_names = cb.get('proc_names', {})
-
-    # Clean each raw .frm/.bas file, preserving headers and structure
     count = 0
-    for raw in list(base.glob('*.frm')) + list(base.glob('*.bas')):
+    for raw in raw_files:
+        rel = raw.relative_to(base)
+        dest = out_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
         cleaned = clean_file(raw.read_bytes().decode('latin-1'), proc_names)
-        (out_dir / raw.name).write_text(cleaned)
+        dest.write_text(cleaned)
         count += 1
 
-    # Also write cherry-picked source (already clean canonical .bas code)
-    cherry_by_mod = {}
-    for cp in cb.get('cherry_picked', []):
-        src_code = cp.get('matched_source', '')
-        if src_code:
-            mod = cp.get('matched_module', 'unknown')
-            cherry_by_mod.setdefault(mod, []).append(src_code)
-    for mod, blocks in cherry_by_mod.items():
-        (out_dir / f'cherry_{mod}.bas').write_text('\n\n'.join(blocks) + '\n')
-        count += 1
+    # Cherry-picked source (canonical .bas code matched to known modules)
+    if cb:
+        cherry_by_mod = {}
+        for cp in cb.get('cherry_picked', []):
+            src_code = cp.get('matched_source', '')
+            if src_code:
+                mod = cp.get('matched_module', 'unknown')
+                cherry_by_mod.setdefault(mod, []).append(src_code)
+        for mod, blocks in cherry_by_mod.items():
+            (out_dir / f'cherry_{mod}.bas').write_text('\n\n'.join(blocks) + '\n')
+            count += 1
 
     log.info(f'Cleaned source: {count} files → {out_dir}')
+
+    # Publish to committed proggie dir: programs/AOL/proggies-sorted-deduped/<ver>/<stem>/source/
+    pub_dir = _find_proggie_dir(zip_stem)
+    if not pub_dir:
+        log.warning(f'No proggie dir found for {zip_stem}, skipping source publish')
+        return
+
+    src_dir = pub_dir / 'source'
+    raw_pub = src_dir / 'raw'
+    clean_pub = src_dir / 'cleaned'
+    for d in (raw_pub, clean_pub):
+        if d.exists():
+            shutil.rmtree(d)
+        d.mkdir(parents=True, exist_ok=True)
+
+    # Copy raw source
+    for raw in raw_files:
+        rel = raw.relative_to(base)
+        dest = raw_pub / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(raw, dest)
+    # Also copy project.vbp and info.txt
+    for extra in ('project.vbp', 'Project.vbp', 'info.txt'):
+        src = base / extra
+        if src.exists():
+            shutil.copy2(src, raw_pub / extra)
+
+    # Copy cleaned source
+    for f in out_dir.rglob('*'):
+        if f.is_file():
+            rel = f.relative_to(out_dir)
+            dest = clean_pub / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dest)
+
+    log.info(f'Published source → {src_dir}')
+
+
+def _find_proggie_dir(zip_stem):
+    """Find the committed proggie directory under proggies-sorted-deduped."""
+    for ver_dir in SORTED.iterdir():
+        if not ver_dir.is_dir():
+            continue
+        d = ver_dir / zip_stem
+        html = ver_dir / f'{zip_stem}.html'
+        if html.exists():
+            d.mkdir(exist_ok=True)
+            return d
+    return None
 
 
 # ── Main ─────────────────────────────────────────────────────────────

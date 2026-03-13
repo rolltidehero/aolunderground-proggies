@@ -82,6 +82,49 @@ For any non-trivial change, explicitly state:
 
 DeCRiM: after implementing, audit for Duplication, edge Cases, Resource leaks, improper Masking.
 
+## MANDATORY: FreeProcess Polling — NO HARDCODED SLEEPS
+
+**Write all wait/poll code like an AOL proggie.** Use the FreeProcess yield pattern
+from the win32-api-automation steering doc. NEVER use hardcoded `time.sleep(N)`
+to wait for a condition. Instead, poll for the condition in a tight loop with
+`FreeProcess()` yields and a safety counter.
+
+**BANNED in wait loops:**
+- `time.sleep(1)`, `time.sleep(4)`, `time.sleep(5)` — arbitrary delays
+- Any `time.sleep(N)` where N > 0.1 used to "wait for something to happen"
+
+**REQUIRED pattern:**
+```python
+def free_process(n=100):
+    """Yield CPU n times without arbitrary delay."""
+    for _ in range(n):
+        time.sleep(0)  # yield timeslice, no minimum delay
+
+# Poll for a condition
+for attempt in range(safety_max):
+    free_process(100)
+    result = check_condition()
+    if result:
+        break
+else:
+    log.error("Condition never met after %d attempts", safety_max)
+```
+
+**When is `time.sleep(N)` acceptable?**
+- `time.sleep(0)` — always OK (yield timeslice)
+- `time.sleep(0.05)` — OK for QMP socket round-trip (hardware latency)
+- `time.sleep(0.1)` — OK after QMP screendump (file write latency)
+- Animation frame capture (`time.sleep(0.2)`) — intentional frame timing, not waiting
+
+**For QGA guest-exec:** Poll `guest-exec-status` with `exited=True` check in a
+FreeProcess loop. Do NOT hardcode `time.sleep(5)` and hope the command finished.
+
+**For window appearance:** Poll `EnumWindows` / `FindWindow` in a FreeProcess loop
+with safety counter. Do NOT `time.sleep(1)` between checks.
+
+This rule applies to ALL Python code in this project — host-side orchestration,
+guest-side scripts, everything.
+
 ## Error Prevention
 - Verify file/directory exists before reading
 - Check process started before tailing logs

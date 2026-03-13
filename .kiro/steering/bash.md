@@ -49,4 +49,15 @@ cleanup() {
 - Quote all variable expansions
 - Use `local` for function variables
 - Use `readonly` for constants
+- Run `shellcheck script.sh` before delivery (if available)
 - Run `bash -n script.sh` before delivery
+
+## Wine Helpers
+
+When scripting Wine operations:
+
+- Always use a dedicated WINEPREFIX: `export WINEPREFIX="/path/to/prefix"`
+- Suppress debug noise: `export WINEDEBUG="-all"`
+- Use `xvfb-run wine program.exe` for headless execution
+- Set timeouts: `timeout 30 wine program.exe`
+- Never run Wine as root

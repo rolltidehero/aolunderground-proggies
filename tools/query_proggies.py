@@ -12,6 +12,7 @@ def main():
     p.add_argument("--missing-deps", action="store_true", help="Show exes with missing dependencies")
     p.add_argument("--deps", help="Show dependencies for exe (by name or path substring)")
     p.add_argument("--search", help="Search proggies by name")
+    p.add_argument("--base-module", help="Filter by base module (e.g. dos32.bas, jaguar32.bas)")
     p.add_argument("--stats", action="store_true", help="Show database stats")
     p.add_argument("--format", choices=["lines", "json", "tsv"], default="lines", help="Output format")
     p.add_argument("--limit", type=int, default=0, help="Max results (0=all)")
@@ -39,6 +40,10 @@ def main():
 
     if args.search:
         _search(db, args)
+        return
+
+    if args.base_module:
+        _base_module(db, args)
         return
 
     # Default: list exes with filters
@@ -70,6 +75,17 @@ def _stats(db):
         deps_total = db.execute("SELECT count(*) FROM deps WHERE system_dll=0 AND vb_runtime=0").fetchone()[0]
         deps_missing = db.execute("SELECT count(*) FROM deps WHERE system_dll=0 AND vb_runtime=0 AND in_zip=0").fetchone()[0]
         print(f"\nDependencies: {deps_total} total, {deps_missing} missing from zips")
+
+        # Base module stats (if column exists)
+        cols = {r[1] for r in db.execute('PRAGMA table_info(exes)').fetchall()}
+        if 'base_module' in cols:
+            print("\nBase modules (top 20):")
+            for r in db.execute("""
+                SELECT base_module, count(*) c FROM exes
+                WHERE base_module IS NOT NULL AND base_module != ''
+                GROUP BY base_module ORDER BY c DESC LIMIT 20
+            """):
+                print(f"  {r[0]:30s} {r[1]}")
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
 
@@ -107,6 +123,21 @@ def _search(db, args):
         ORDER BY p.name
     """, (f"%{args.search}%",) * 3).fetchall()
     _output(rows, args, ["name", "author", "aol_version", "vb_version", "compile_type", "exe_name", "zip_path"])
+
+def _base_module(db, args):
+    # Check if column exists
+    cols = {r[1] for r in db.execute('PRAGMA table_info(exes)').fetchall()}
+    if 'base_module' not in cols:
+        print("base_module column not yet created. Run single_decompile.py first.", file=sys.stderr)
+        return
+    pattern = args.base_module
+    rows = db.execute("""
+        SELECT p.name, p.author, p.aol_version, e.vb_version, e.exe_name, e.base_module, p.zip_stem
+        FROM exes e JOIN proggies p ON e.proggie_id = p.id
+        WHERE e.base_module LIKE ?
+        ORDER BY p.name
+    """, (f"%{pattern}%",)).fetchall()
+    _output(rows, args, ["name", "author", "aol_version", "vb_version", "exe_name", "base_module", "zip_stem"])
 
 def _list_exes(db, args):
     sql = """SELECT e.exe_path, e.exe_name, e.vb_version, e.compile_type, e.decompile_status, p.zip_stem

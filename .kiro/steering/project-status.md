@@ -165,17 +165,26 @@ python3 tools/build_proggie_db.py --extract --import-metadata --index
 
 ```
 programs/AOL/proggies-sorted-deduped/<ver>/<stem>.html     # analysis page (committed)
-programs/AOL/proggies-sorted-deduped/<ver>/<stem>/         # images dir (committed)
+programs/AOL/proggies-sorted-deduped/<ver>/<stem>/         # assets dir (committed)
   screenshot.png                                            # main form screenshot
   animated.gif                                              # walkthrough GIF (menu→about→help→greets)
   screen_menu.png                                           # options menu screenshot
   screen_about.png                                          # about dialog screenshot
   screen_help.png                                           # help dialog screenshot
+  source/raw/                                               # raw decompiled source (committed)
+    project.vbp, info.txt
+    forms/*.frm
+    modules/*_funcs/*.vb
+  source/cleaned/                                           # deobfuscated source (committed)
+    forms/*.frm                                             #   decompiler noise stripped
+    modules/*_funcs/*.vb                                    #   proc names resolved
+    cherry_<module>.bas                                     #   matched known base module code
 
-decompiled/<stem>/<exe>/                                    # decompiled output (gitignored)
+decompiled/<stem>/<exe>/                                    # working decompile output (gitignored)
   info.txt, project.vbp, extract.log, metadata.json
   forms/*.frm
   modules/*_funcs/*.vb, *.strings
+  cleaned/                                                  # local cleaned copy
 ```
 
 Nginx config: `/etc/nginx/sites-enabled/proggies.conf` → port 8088, root = repo

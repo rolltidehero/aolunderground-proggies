@@ -268,88 +268,50 @@ def get_menu_info(hwnd):
     # Our C2 doesn't have a GETMENU command. Use WM_COMMAND brute force instead.
     return None, 0
 
-def explore_menus(main_hwnd, base_path, frame_idx):
-    """Discover menu items via ENUMMENUS, click About/Help items, try tab cycling.
-    Returns (extra_screenshots, about_shot, next_frame_idx)."""
-    screenshots = []
-    about_shot = None
+def find_about_dialog(main_hwnd, base_path):
+    """Try to find and screenshot an About dialog. Returns (path, desc) or None."""
     known = {main_hwnd}
     for w in find_proggie_windows():
         known.add(w[0])
 
-    # 1. Try ENUMMENUS for real Win32 menus
+    # 1. Try ENUMMENUS for About/Help/Credits menu items
     menus = c2(f'ENUMMENUS {main_hwnd}', timeout=5)
     if menus and menus not in ('EMPTY', 'ERR: no menu'):
         for line in menus.split('\n'):
             parts = line.split('|')
-            if len(parts) != 3: continue
-            top_name, sub_name, cmd_id = parts[0], parts[1], parts[2]
-            if not cmd_id.isdigit(): continue
-            sub_lower = sub_name.lower().replace('&', '')
-            # Screenshot About/Help/Credits
-            if any(x in sub_lower for x in ['about', 'credit', 'help', 'info']):
-                c2(f'WMCOMMAND {main_hwnd} {cmd_id}', timeout=3)
-                time.sleep(0.5)
-                new_h, new_c, new_t = find_any_new_window(known)
+            if len(parts) != 3 or not parts[2].isdigit(): continue
+            sub_lower = parts[1].lower().replace('&', '')
+            if any(x in sub_lower for x in ['about', 'credit']):
+                c2(f'WMCOMMAND {main_hwnd} {parts[2]}', timeout=3)
+                time.sleep(0.8)
+                new_h, _, new_t = find_any_new_window(known)
                 if new_h:
                     about_path = base_path.replace('.screenshot.png', '.about.png')
                     if capture_window(new_h, about_path):
-                        about_shot = (about_path, f'About: {new_t}')
-                    png = base_path.replace('.screenshot.png', f'.screenshot_{frame_idx}.png')
-                    if capture_window(new_h, png):
-                        screenshots.append((png, f'{sub_name}'))
-                        frame_idx += 1
+                        dismiss_window(new_h)
+                        return (about_path, f'About: {new_t}')
                     dismiss_window(new_h)
-                    time.sleep(0.3)
-            if frame_idx > 9: break
+                break
 
-    # 2. Look for About/Credits buttons in main window children
+    # 2. Look for About/Credits buttons
     children = c2(f'ENUMCHILDREN {main_hwnd}', timeout=5)
-    if not about_shot and children:
-            for line in children.split('\n'):
-                parts = line.split('|')
-                if len(parts) < 4: continue
-                child_hwnd, child_cls, child_id, child_text = parts[0], parts[1], parts[2], parts[3]
-                text_lower = child_text.lower()
-                if any(x in text_lower for x in ['about', 'credit', 'help']):
-                    if 'Button' in child_cls or 'Command' in child_cls or 'Thunder' in child_cls:
-                        c2(f'CLICK {child_hwnd}', timeout=3)
-                        time.sleep(0.8)
-                        new_h, new_c, new_t = find_any_new_window(known)
-                        if new_h:
-                            about_path = base_path.replace('.screenshot.png', '.about.png')
-                            if capture_window(new_h, about_path):
-                                about_shot = (about_path, f'About: {new_t}')
-                            png = base_path.replace('.screenshot.png', f'.screenshot_{frame_idx}.png')
-                            if capture_window(new_h, png):
-                                screenshots.append((png, child_text))
-                                frame_idx += 1
-                            dismiss_window(new_h)
-                            time.sleep(0.3)
-                        break
-
-    # 3. Try cycling tabs (SSTab uses TCM_SETCURSEL = 0x130C)
     if children:
         for line in children.split('\n'):
             parts = line.split('|')
-            if len(parts) < 2: continue
-            child_hwnd, child_cls = parts[0], parts[1]
-            if 'Tab' in child_cls or 'SSTab' in child_cls:
-                # Try tabs 1-4 (tab 0 is already visible)
-                for tab_idx in range(1, 5):
-                    c2(f'SENDMSG {child_hwnd} 4876 {tab_idx} 0', timeout=3)  # TCM_SETCURSEL
-                    c2(f'SENDMSG {child_hwnd} 4906 {tab_idx} 0', timeout=3)  # TCM_SETCURFOCUS
-                    time.sleep(0.5)
-                    png = base_path.replace('.screenshot.png', f'.screenshot_{frame_idx}.png')
-                    if capture_window(main_hwnd, png):
-                        screenshots.append((png, f'tab_{tab_idx}'))
-                        frame_idx += 1
-                    if frame_idx > 9: break
-                # Reset to tab 0
-                c2(f'SENDMSG {child_hwnd} 4876 0 0', timeout=3)
+            if len(parts) < 4: continue
+            text_lower = parts[3].lower()
+            if any(x in text_lower for x in ['about', 'credit']):
+                c2(f'CLICK {parts[0]}', timeout=3)
+                time.sleep(0.8)
+                new_h, _, new_t = find_any_new_window(known)
+                if new_h:
+                    about_path = base_path.replace('.screenshot.png', '.about.png')
+                    if capture_window(new_h, about_path):
+                        dismiss_window(new_h)
+                        return (about_path, f'About: {new_t}')
+                    dismiss_window(new_h)
                 break
-
-    return screenshots, about_shot, frame_idx
+    return None
 
 # ── Animated GIF ──
 
@@ -442,20 +404,10 @@ def screenshot_one(exe_path, output_path):
             frame_idx += 1
         if frame_idx > 9: break
 
-    # 4. Explore menus — try WM_COMMAND IDs to find views and About
-    menu_shots, about_shot, frame_idx = explore_menus(
-        main_hwnd, output_path, frame_idx)
-    for png, desc in menu_shots:
-        all_pngs.append(png)
-        all_files.append(('menu', png, desc))
+    # 4. Explore menus for About dialog only
+    about_shot = find_about_dialog(main_hwnd, output_path)
     if about_shot:
         all_files.append(('about', about_shot[0], about_shot[1]))
-
-    # 5. Animated GIF from all frames (need 3+ for it to be worthwhile)
-    if len(all_pngs) >= 3:
-        gif_path = output_path.replace('.screenshot.png', '.animated.gif')
-        if make_animated_gif(all_pngs, gif_path):
-            all_files.append(('gif', gif_path, f'{len(all_pngs)} frames'))
 
     kill_proggie(basename)
     time.sleep(0.5)

@@ -1,5 +1,5 @@
 ---
-inclusion: auto
+inclusion: always
 description: Requires pre-delivery method tracing to prevent breakage and encourages code reuse.
 ---
 
