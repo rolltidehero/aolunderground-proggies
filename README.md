@@ -1,6 +1,6 @@
 # AOL Underground Proggies Archive
 
-Historic vault of ~6,000 AOL/AIM proggie archives (3.1GB) from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole underground scene, preserved and cataloged.
+Historic vault of ~2,800 unique AOL/AIM proggie archives from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole underground scene, preserved and cataloged.
 
 Let's repopulate the Gibson!
 
