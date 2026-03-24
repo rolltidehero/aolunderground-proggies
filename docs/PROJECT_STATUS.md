@@ -1,38 +1,38 @@
-# AOL Underground Proggies — Project Status
+# AOL Underground Proggies - Project Status
 
 **Last Updated:** 2026-03-24
 
 ## What Is This?
 
-We're preserving and reverse-engineering ~2,800 AOL/AIM "proggies" — the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole scene. Most were written in Visual Basic 3–6 and distributed on AOL itself or via html pages.
+We're preserving and reverse-engineering about 2,800 AOL/AIM "proggies," the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders, the whole scene. Most were written in Visual Basic 3-6 and distributed on AOL itself or via web pages.
 
-This repo is the largest known collection. We're building tooling to catalog every program, decompile the source code, and make it all browsable and searchable — a living museum of AOL underground history.
+This repo is the largest known collection. We're building tooling to catalog every program, decompile the source code, and make it all browsable and searchable.
 
 **Podcast:** [AOL Underground](https://aolunderground.com)
 **Live Site:** https://ssstonebraker.github.io/aolunderground-proggies/
 
-## What We've Accomplished
+## What We've Done
 
 ### Archive Organization (Complete)
-- **2,138 deduplicated AOL proggies** cataloged from 6,061 original archives
-- **649 AIM proggies** identified (separate pass coming)
-- Organized by AOL version compatibility: 2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0
-- Duplicate detection via SHA256 — merged archives containing identical executables
-- **1,198 programs** with author attribution recovered
-- **36 password-protected** archives cracked and documented
+- 2,138 deduplicated AOL proggies cataloged from 6,061 original archives
+- 649 AIM proggies identified (separate pass coming)
+- Organized by AOL version: 2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0
+- Duplicate detection via SHA256
+- 1,198 programs with author attribution recovered
+- 36 password-protected archives cracked and documented
 
-### Metadata & Search
-- **SQLite database** with full metadata: program names, authors, VB versions, dependencies, compile dates
-- **1,821 HTML analysis pages** generated — one per proggie with:
+### Metadata and Search
+- SQLite database with names, authors, VB versions, dependencies, compile dates
+- 1,821 HTML analysis pages, one per proggie, with:
   - VB version and compile type badges
   - Dependency listings (VB runtime, system DLLs, bundled files)
   - AOL API references (which window classes and APIs each proggie uses)
-  - String analysis (interesting strings extracted from the binary)
+  - String analysis from the binary
   - SVG form layouts from decompiled .frm control positions
-  - Progressive disclosure: functions collapsed, expand to show code
-- **Interactive search** via [proggie-index.html](../proggie-index.html)
-- **Greppable index** via [proggie-index.txt](../proggie-index.txt)
-- **GitHub Pages** auto-deployed via GitHub Actions on every push to main
+  - Collapsible function listings with decompiled code
+- Interactive search via [proggie-index.html](../proggie-index.html)
+- Greppable index via [proggie-index.txt](../proggie-index.txt)
+- GitHub Pages auto-deployed on every push to main
 
 ### VB Version Breakdown
 
@@ -48,80 +48,66 @@ This repo is the largest known collection. We're building tooling to catalog eve
 
 ### Decompilation Pipeline (In Progress)
 - Network-isolated Windows 10 VM with automated VB Decompiler Pro
-- End-to-end pipeline proven: push exe → decompile → pull source → generate HTML
-- **3 of ~1,829 VB exes decompiled** so far (pipeline works, batch processing next)
-- Decompiled output includes: .frm forms, .bas modules, .vbp project files
-- Source code browsable in the HTML analysis pages with syntax highlighting
+- End-to-end pipeline proven: push exe, decompile, pull source, generate HTML
+- 3 of 1,829 VB exes decompiled so far (pipeline works, batch processing next)
+- Output includes .frm forms, .bas modules, .vbp project files
+- Source code browsable in the analysis pages with syntax highlighting
 
 ### Strings Database
-- **11.6 million strings** extracted from 2,452 executables
-- Searchable — find which proggies reference specific AOL APIs, screen names, or techniques
+- 11.6 million strings extracted from 2,452 executables
+- Searchable across all exes
 - Distributed as `exe_strings.db.zip` (301MB compressed, 2.4GB uncompressed) via Git LFS
 
 ### Infrastructure
-- GitHub Pages live with auto-deploy workflow
-- Download links serve zips from GitHub raw URLs (no Pages size limit issues)
+- GitHub Pages with auto-deploy workflow
+- Download links serve zips from GitHub raw URLs
 - `exe_strings.db.zip` tracked via Git LFS
-- Nginx dev server at `http://linux:8088/` for local browsing
+- Nginx dev server at http://linux:8088/ for local browsing
 
 ## What's Next
 
-### Batch Decompilation (~1,826 VB exes remaining)
-The pipeline works end-to-end but needs to run at scale. Each exe takes ~2.5 minutes. Full batch = ~76 hours of VM time. We need:
-- Batch orchestrator script (resume-on-crash, progress tracking)
+### Batch Decompilation (about 1,826 VB exes remaining)
+The pipeline works end-to-end but needs to run at scale. Each exe takes about 2.5 minutes. Full batch is roughly 76 hours of VM time. We need:
+- Batch orchestrator script with resume-on-crash and progress tracking
 - Snapshot rotation (revert VM to clean state every 50 exes)
-- Metadata parser to extract form layouts, control names, API calls from decompiled source
+- Metadata parser for form layouts, control names, API calls from decompiled source
 
-### VB3/VB4 Decompilation (~675 exes)
-Different decompiler needed. Partial results expected (no full source recovery for VB3/VB4).
+### VB3/VB4 Decompilation (about 675 exes)
+Different decompiler needed. Partial results expected.
 
-### Screenshots & GIFs
+### Screenshots
 - Automated screenshot capture of each proggie's main form
-- Animated GIF walkthroughs (menu → about → help → greets screens)
-- Only 3 done so far — needs the batch pipeline running first
-
-### Community Contributions Needed
-See [How to Help](#how-to-help) below.
+- Animated GIF walkthroughs of menus, about dialogs, help screens
+- Only 3 done so far
 
 ## How to Help
 
-### 🔍 Version Verification (549 proggies need review)
-549 proggies have unknown or low-confidence AOL version detection. If you have access to old AOL versions (or remember which version a proggie worked with), check [NEEDS_REVIEW.md](../NEEDS_REVIEW.md) and submit corrections.
+### Version Verification (549 proggies need review)
+549 proggies have unknown or low-confidence AOL version detection. If you remember which AOL version a proggie worked with, check [NEEDS_REVIEW.md](../NEEDS_REVIEW.md) and submit corrections.
 
-### 📦 Missing Proggies
+### Missing Proggies
 We're still looking for:
-- **Guide Punt** by Stoney (guide.exe)
-- **Magenta** by ReDxKinG (latest version — v2.0 found)
-- **Reset 1.0** by skribe
-- **1-888'd** by skribe
-- **Macro Studio** by i88i
-- **Gemini Macro** by anubis
-- **Macro House**
-- **Pup Tool** by Pen (puptool.zip)
+- Guide Punt by Stoney (guide.exe)
+- Magenta by ReDxKinG (latest version)
+- Reset 1.0 by skribe
+- 1-888'd by skribe
+- Macro Studio by i88i
+- Gemini Macro by anubis
+- Macro House
+- Pup Tool by Pen (puptool.zip)
 
-If you have ANY AOL proggies not in the archive, please contribute!
+If you have AOL proggies not in the archive, please contribute.
 
-### 🏷️ Metadata Corrections
-If you recognize a proggie and know:
-- The correct author/handle
-- Which AOL version it targeted
-- The password for a protected archive
-- The correct program name (many are mislabeled)
+### Metadata Corrections
+If you recognize a proggie and know the correct author, AOL version, password, or program name, open an issue or PR.
 
-Open an issue or PR with corrections.
+### Code Contributions
+- Python: batch decompilation orchestrator, metadata parsers
+- HTML/CSS/JS: analysis page improvements
+- VB6 knowledge: help interpret decompiled source, identify shared base modules
 
-### 💻 Code Contributions
-If you're a developer:
-- **Python** — batch decompilation orchestrator, metadata parsers
-- **HTML/CSS/JS** — analysis page improvements
-- **VB6 knowledge** — help interpret decompiled source, identify base modules and techniques
-
-### 📸 Screenshots
-If you can run these proggies (Wine, VM, or actual old Windows):
-- Screenshot the main form
-- Screenshot the About dialog
-- Screenshot any interesting features
-- We'll add them to the analysis pages
+### Screenshots
+If you can run these proggies (Wine, VM, or old Windows), screenshot the main form, about dialog, and anything interesting.
 
 ## Repository Structure
 
@@ -146,7 +132,7 @@ proggie-index.html              # Interactive web search
 proggie-index.txt               # Tab-delimited greppable index
 ```
 
-## Quick Start for Contributors
+## Quick Start
 
 ```bash
 # Clone (install Git LFS first)
@@ -157,15 +143,12 @@ cd aolunderground-proggies
 # Search for a proggie
 python3 tools/query_proggies.py --search "punter"
 
-# See VB version stats
+# VB version stats
 python3 tools/query_proggies.py --stats
 
 # Search strings across all exes (unzip first)
 unzip exe_strings.db.zip  # only needed once
 python3 tools/query_strings.py "AOL Frame25"
-
-# Browse analysis pages locally
-# Open any .html file in programs/AOL/proggies-sorted-deduped/
 ```
 
 ## Links
