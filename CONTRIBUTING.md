@@ -1,19 +1,19 @@
 # Contributing to AOL Underground Proggies
 
-Thanks for your interest! This is a community preservation project — every contribution helps.
+Thanks for your interest! This is a community preservation project. every contribution helps.
 
 ## Ways to Help (No Coding Required)
 
-### 📦 Submit Proggies
+### Submit Proggies
 Got AOL proggies sitting on an old hard drive? Submit them! Even if we already have them, duplicates help verify our collection. Open a PR or an issue with a link.
 
-### 🏷️ Metadata Corrections
-If you recognize a proggie and know the correct author, AOL version, password, or program name — open an issue. Many programs are mislabeled from years of redistribution.
+### Metadata Corrections
+If you recognize a proggie and know the correct author, AOL version, password, or program name. open an issue. Many programs are mislabeled from years of redistribution.
 
-### 🔍 Version Verification
+### Version Verification
 549 proggies need AOL version verification. See [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for the full list. If you remember which AOL version a proggie worked with, let us know.
 
-### 📸 Screenshots
+### Screenshots
 If you can run these proggies (Wine, VM, or actual old Windows), we need:
 - Main form screenshot
 - About dialog
@@ -52,7 +52,7 @@ python3 tools/query_strings.py "AOL Frame25"
 
 ## Project Status
 
-See **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** for the full picture — what we've accomplished, what's in progress, and detailed task breakdowns.
+See **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** for the full picture. what we've accomplished, what's in progress, and detailed task breakdowns.
 
 ## Branches
 
@@ -68,4 +68,4 @@ See **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** for the full picture �
 3. Make your changes
 4. Open a PR against `main`
 
-For metadata corrections (author names, AOL versions, passwords), opening an issue is fine — no PR needed.
+For metadata corrections (author names, AOL versions, passwords), opening an issue is fine. no PR needed.
