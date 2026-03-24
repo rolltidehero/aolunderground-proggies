@@ -1,0 +1,795 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>esmidle3.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/esmidle3.zip">&#x2b07; Download esmidle3.zip</a>
+</div>
+<div class="hero">
+<div><h1>ESMIDLE3</h1><span class="author">by <b>shutdown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">ESMIDLE3.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-06-07</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (2)</h2>
+<span class="s author-str">&#x27;File written by Adobe Photoshop</span>
+<span class="s author-str">unloaded by: [&lt;u&gt;</span>
+<h2>&#x1f4e6; Dependencies (1)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+
+<h2>&#x2699; API References (35)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Image</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_aol_modal</span></div>
+<div class="api-item"><span class="api-name">_AOL_ListBox</span></div>
+<div class="api-item"><span class="api-name">aol child</span></div>
+<div class="api-item"><span class="api-name">_AOL_ToolBar</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_ComboBox</span></div>
+<div class="api-item"><span class="api-name">_aol_palette</span></div>
+<div class="api-item"><span class="api-name">_aol_icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+<div class="api-item"><span class="api-name">_aol_toolbar</span></div>
+<div class="api-item"><span class="api-name">_aol_combobox</span></div>
+<div class="api-item"><span class="api-name">_AOL_List</span></div>
+<div class="api-item"><span class="api-name">_aol_listbox</span></div>
+<div class="api-item"><span class="api-name">_aol_static</span></div>
+<div class="api-item"><span class="api-name">_aol_edit</span></div>
+<div class="api-item"><span class="api-name">_AOL_Child</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (220)</h2>
+<span class="s interesting-str">esm idle 3.0 <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Photoshop 3.0 <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">What D\L stats to send</span>
+<span class="s interesting-str">Msg&#x27;s from idle&#x27;n</span>
+<span class="s interesting-str">Total msg&#x27;s:</span>
+<span class="s interesting-str">People Who Entered</span>
+<span class="s interesting-str">.dstats - sends download stats</span>
+<span class="s interesting-str">.exit - unloads the idle</span>
+<span class="s interesting-str">.idl - sends internet dl stats#</span>
+<span class="s interesting-str">.idle * - turns idle on with reason</span>
+<span class="s interesting-str">.idle? - tells you if your idle</span>
+<span class="s interesting-str">.idleoff - turns off idle!</span>
+<span class="s interesting-str">.idletime - sends total idle time</span>
+<span class="s interesting-str">.min - minimizes the idle</span>
+<span class="s interesting-str">.msgopts - loads message options</span>
+<span class="s interesting-str">.unx * - unignores *</span>
+<span class="s interesting-str">.ustats - sends upload stats</span>
+<span class="s interesting-str">.welchide - hides welcome window$</span>
+<span class="s interesting-str">.welcunhide - unhides welcome window</span>
+<span class="s interesting-str">Chat Commands</span>
+<span class="s interesting-str">idle options</span>
+<span class="s interesting-str">color &amp;&amp; other opts.</span>
+<span class="s interesting-str">chat commands</span>
+<span class="s interesting-str">total idle time</span>
+<span class="s interesting-str">Handle Options</span>
+<span class="s interesting-str">OK  /  Close</span>
+<span class="s interesting-str">Change Handle <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Current Handle <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Choose MSG options</span>
+<span class="s interesting-str">About Esm Idle</span>
+<span class="s interesting-str">JPhotoshop 3.0</span>
+<span class="s interesting-str">&amp;Ok, Return to idle</span>
+<span class="s interesting-str">Arial Narrow <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">About Esm Idle 3.0</span>
+<span class="s interesting-str">nice idle huh?  you can choose if you</span>
+<span class="s interesting-str">want messages on and off.  counts</span>
+<span class="s interesting-str">days, hours, and minutes.  sweet art</span>
+<span class="s interesting-str">huh... if any problems please e-mail me</span>
+<span class="s interesting-str">at    shutcl0wn@yahoo.com</span>
+<span class="s interesting-str">every bit of art is madde by me</span>
+<span class="s interesting-str">&gt;Photoshop 3.0</span>
+<span class="s interesting-str">Ok, i think im fucking done</span>
+<span class="s interesting-str">Change color <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Change ascii</span>
+<span class="s interesting-str">Ascii Color:</span>
+<span class="s interesting-str">GetVersionExA <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">THUNesm idle v</span>
+<span class="s interesting-str">Arrange &amp;Icons</span>
+<span class="s interesting-str">\winamp.exe</span>
+<span class="s interesting-str">\napster.exe</span>
+<span class="s interesting-str">Winamp v1.x</span>
+<span class="s interesting-str">upchat is now off</span>
+<span class="s interesting-str">upchat is now on</span>
+<span class="s interesting-str">caucasian_ktulu@hotmail.com</span>
+<span class="s interesting-str">Volume Control <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">stop cd wait</span>
+<span class="s interesting-str">welcome bot - [&lt;b&gt;on&lt;/b&gt;]</span>
+<span class="s interesting-str">&amp;Random Order</span>
+<span class="s interesting-str">set cd door open</span>
+<span class="s interesting-str">welcome bot - [&lt;b&gt;off&lt;/b&gt;]</span>
+<span class="s interesting-str">set cd door closed</span>
+<span class="s interesting-str">&amp;Continuous Play</span>
+<span class="s interesting-str">Edit Play &amp;List...</span>
+<span class="s interesting-str">Track Time &amp;Elapsed</span>
+<span class="s interesting-str">RUNDLL32.EXE SHELL32.DLL,Control_RunDLL ,</span>
+<span class="s interesting-str">Dis&amp;c Time Remaining</span>
+<span class="s interesting-str">Track Time &amp;Remaining</span>
+<span class="s interesting-str">set cd time format tmsf wait</span>
+<span class="s interesting-str">SOFTWARE\Microsoft\Windows\CurrentVersion <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">opening welcome bot</span>
+<span class="s interesting-str">set cd time format milliseconds</span>
+<span class="s interesting-str">VersionNumber</span>
+<span class="s interesting-str">SubVersionNumber</span>
+<span class="s interesting-str">&amp;new user wizard</span>
+<span class="s interesting-str">&amp;load buddy list...</span>
+<span class="s interesting-str">&amp;save buddy list...</span>
+<span class="s interesting-str">now loading handle options</span>
+<span class="s interesting-str">now viewing chat commands</span>
+<span class="s interesting-str">find a buddy &amp;wizard</span>
+<span class="s interesting-str">&lt;Font PTSIZE=</span>
+<span class="s interesting-str">&lt;font color=#fefefe&gt;&lt;&lt;a</span>
+<span class="s interesting-str">now loading messages options</span>
+<span class="s interesting-str">Socket error occurred in Cleanup.</span>
+<span class="s interesting-str">Intel Pentium</span>
+<span class="s interesting-str">winamp is loaded</span>
+<span class="s interesting-str">winamp isnt loaded</span>
+<span class="s interesting-str">color, ascii, font, options loaded</span>
+<span class="s interesting-str">America Frame25</span>
+<span class="s interesting-str">attention people</span>
+<span class="s interesting-str">listen up people</span>
+<span class="s interesting-str">&lt;font face=&quot;bell mt&quot; color=&quot;#808080&quot;&gt;</span>
+<span class="s interesting-str">status cd length wait</span>
+<span class="s interesting-str">status cd media present</span>
+<span class="s interesting-str">status cd current track</span>
+<span class="s interesting-str">tool\chat.aol</span>
+<span class="s interesting-str">\tool\chat.aol</span>
+<span class="s interesting-str">unforgiven.bas</span>
+<span class="s interesting-str">file not found</span>
+<span class="s interesting-str">Esm idle 3.0 by shutdown</span>
+<span class="s interesting-str">you can e-mail shutdown at shutcl0wn@yahoo.com</span>
+<span class="s interesting-str">no name for your comp... dumbass</span>
+<span class="s interesting-str">get member inf&amp;o</span>
+<span class="s interesting-str">unexpected error: &lt;b&gt;unknown album name&lt;/b&gt;</span>
+<span class="s interesting-str">please use the &lt;b&gt;&#x27;&#x27;-album&#x27;&#x27;&lt;/b&gt; command to set album</span>
+<span class="s interesting-str">Function failed</span>
+<span class="s interesting-str">Shutting down Windows NOW!</span>
+<span class="s interesting-str">Now Uploading</span>
+<span class="s interesting-str">status cd mode</span>
+<span class="s interesting-str">Now Downloading</span>
+<span class="s interesting-str">\waol.exe</span>
+<span class="s interesting-str">Jump to file <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Incoming/Saved Mail <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">C:\Windows\Esm3.ini <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">now sending: [&lt;b&gt;&lt;u&gt;</span>
+<span class="s interesting-str">get it at: &lt; a href=&quot;http://drop.to/shutdown&quot;&gt;&lt;/u&gt;http://drop.to/shutdown&lt;/a&gt;</span>
+<span class="s interesting-str">Goodbye from America Online!</span>
+<span class="s interesting-str">current reason:</span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">&#x27;s Online Mailbox</span>
+<span class="s interesting-str">load a listbox <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">C:\windows\Esm3.ini <span style="color:#484f58;font-size:0.75em">×12</span></span>
+<span class="s interesting-str">America  Online <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Buddy List Window <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">save a listbox</span>
+<span class="s interesting-str">c:\windows\start menu\programs\</span>
+<span class="s interesting-str">successfully opened: &lt;b&gt;</span>
+<span class="s interesting-str">unable to open &lt;b&gt;</span>
+<span class="s interesting-str">messages are now on</span>
+<span class="s interesting-str">america  online <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">messages are now off</span>
+<span class="s interesting-str">Removable drive <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Network drive <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">CD-ROM or CD-RW drive</span>
+<span class="s interesting-str">winamp v1.x <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">winamp is not loaded.. dick head</span>
+<span class="s interesting-str">winamp is now closed</span>
+<span class="s interesting-str">set CDAudio door open</span>
+<span class="s interesting-str">set CDAudio door closed</span>
+<span class="s interesting-str">&lt;Font Color=#</span>
+<span class="s interesting-str">Error: Cannot find window <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Error: Cannot find winamp window</span>
+<span class="s interesting-str">current aim: &lt;b&gt;&lt;u&gt;</span>
+<span class="s interesting-str">C:\WINDOWS\CDPlayer.EXE</span>
+<span class="s interesting-str">C:\WINDOWS\SNDVOL32.EXE</span>
+<span class="s interesting-str">handle set to:</span>
+<span class="s interesting-str">* has entered the room.</span>
+<span class="s interesting-str">Welcome To &lt;b&gt;</span>
+<span class="s interesting-str">A Guide had entered the room.</span>
+<span class="s interesting-str">&lt;Font Face=&quot;Arial Narrow&quot; Color=&quot;#007777&quot;&gt;</span>
+<span class="s interesting-str">Open Picture Gallery</span>
+<span class="s interesting-str">&amp;Open Gallery</span>
+<span class="s interesting-str">&lt;Font Face=&quot;Arial Narrow&quot; Color=&quot;#008080&quot;&gt;</span>
+<span class="s interesting-str">&gt; &lt;Font Face=&quot;Arial Narrow&quot; Color=&quot;#0086cc&quot;&gt;</span>
+<span class="s interesting-str">c:\windows\win.ini</span>
+<span class="s interesting-str">C:\windows\win.ini</span>
+<span class="s interesting-str">CD-ROM drive</span>
+<span class="s interesting-str">&lt;Font Face=&quot;times new roman&quot; Color=&quot;#0011cc&quot;&gt;</span>
+<span class="s interesting-str">status cd position wait</span>
+<span class="s interesting-str">play cd from</span>
+<span class="s interesting-str">Edit List Buddies</span>
+<span class="s interesting-str">america online <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Windows Sockets error <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">has occurred.  Unable to successfully get Host Name.</span>
+<span class="s interesting-str">V &lt;Font Face=&quot;Arial Narrow&quot; Color=&quot;#777777&quot;&gt;</span>
+<span class="s interesting-str">Open file(s) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&#x27;s&lt;/b&gt; total idle time:</span>
+<span class="s interesting-str">status cd position</span>
+<span class="s interesting-str">intel 386 dx</span>
+<span class="s interesting-str">intel 486 dx</span>
+<span class="s interesting-str">intel pentium pro</span>
+<span class="s interesting-str">unknown processor</span>
+<span class="s interesting-str">aol version 3.0</span>
+<span class="s interesting-str">aol version 4.0 or 5.0</span>
+<span class="s interesting-str">IBM PC/XT or compatible (83 key)</span>
+<span class="s interesting-str">Olivetti &quot;ico&quot; (102 key)</span>
+<span class="s interesting-str">IBM PC/AT or compatible (84 key)</span>
+<span class="s interesting-str">IBM enhanced (101 or 102 key)</span>
+<span class="s interesting-str">Nokia 1050 or compatible</span>
+<span class="s interesting-str">Nokia 9140 or compatible</span>
+<span class="s interesting-str">enter new font...</span>
+<span class="s interesting-str">error: ascii was nothing/ user canceled <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">font has been set</span>
+<span class="s interesting-str">new ascii... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">enter new ascii...</span>
+<span class="s interesting-str">ascii has been set</span>
+<span class="s interesting-str">winspool.drv</span>
+<span class="s interesting-str">enter new reason color...</span>
+<span class="s interesting-str">reason color has been set</span>
+<span class="s interesting-str">new font color...</span>
+<span class="s interesting-str">enter new font color...</span>
+<span class="s interesting-str">font color has been set</span>
+<span class="s interesting-str">new ascii color...</span>
+<span class="s interesting-str">enter new ascii color...</span>
+<span class="s interesting-str">ascii color  has been set</span>
+<span class="s interesting-str">A TOS had entered the room. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">A host had entered the room. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">A Cat had entered the room. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">File Not Found</span>
+<span class="s interesting-str">Instant Message <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Arent You Special</span>
+<span class="s interesting-str">not in order: Everyone in Phaders, everyone in deeznuts, freeza, dea, kel, pirax, bowzer, serial, top, neo/curse, barkode, ESM (R.I.P), truth, mugs, burn, dime aka warp, converge, roach, my man blood, my hockey team, my family for putting up with me ;x, and im too lazy to continue, if you want to be added email me [shutcl0wn@yahoo.com]...</span>
+<span class="s interesting-str">youre not at a site jackass</span>
+<span class="s interesting-str">put in reason</span>
+<span class="s interesting-str">idle is now on: [</span>
+<span class="s interesting-str">x for msg[x as msg]</span>
+<span class="s interesting-str">software search</span>
+<span class="s interesting-str">The 32-bit Windows Socket is not responding.</span>
+<span class="s interesting-str">This application requires a minimum of</span>
+<span class="s interesting-str">supported sockets.</span>
+<span class="s interesting-str">Sockets version</span>
+<span class="s interesting-str">is not supported by 32-bit Windows Sockets.</span>
+<span class="s interesting-str">Error: Cannot find the clock...</span>
+<span class="s interesting-str">the current time is:</span>
+<span class="s interesting-str">C:\windows\x-mas.ini <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">has occurred. Unable to successfully get Host Name.</span>
+<span class="s interesting-str">Windows Sockets are not responding.</span>
+<span class="s interesting-str">Unable to successfully get Host Name.</span>
+<span class="s interesting-str">is no longer idle: [</span>
+<span class="s interesting-str">you have &lt;b&gt;</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (429)</summary>
+<span class="s plain-str">u.s7UClu</span>
+<span class="s plain-str">KkP.9&#x27;;K-/</span>
+<span class="s plain-str">fM&amp;&gt;.&lt;bVH</span>
+<span class="s plain-str">CAmkmk,6v</span>
+<span class="s plain-str">0c&quot;Le2=&quot;#</span>
+<span class="s plain-str">wm{sug$0,</span>
+<span class="s plain-str">b8qCyK%D</span>
+<span class="s plain-str">ESMIDLE3</span>
+<span class="s plain-str">esm idle v <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">- shutdown <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">DESTapg8x</span>
+<span class="s plain-str">Internet</span>
+<span class="s plain-str">Welcome Bot</span>
+<span class="s plain-str">.x * - ignores *!</span>
+<span class="s plain-str">edit reason</span>
+<span class="s plain-str">msg options</span>
+<span class="s plain-str">upchat on</span>
+<span class="s plain-str">upchat off</span>
+<span class="s plain-str">welcome bot</span>
+<span class="s plain-str">caNCEL1</span>
+<span class="s plain-str">TimeoptS</span>
+<span class="s plain-str">idle stats</span>
+<span class="s plain-str">d\l stats</span>
+<span class="s plain-str">u\l stats</span>
+<span class="s plain-str">caNCEL2</span>
+<span class="s plain-str">GHVe*9:IJWXYZftu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Msg options</span>
+<span class="s plain-str">?001(&quot;&#x27;#(</span>
+<span class="s plain-str">61+&#x27;&#x27;((##</span>
+<span class="s plain-str">&gt;7788...87000$&amp;(</span>
+<span class="s plain-str">87$ 00&amp;&#x27;#</span>
+<span class="s plain-str">.870 0$!(</span>
+<span class="s plain-str">$ +887,=1%</span>
+<span class="s plain-str">&amp;0./....8=1</span>
+<span class="s plain-str">77&quot;=2&amp;$0&amp;&#x27;% -%</span>
+<span class="s plain-str">788787,++)$&amp;% -1(</span>
+<span class="s plain-str">877=244)$&amp;&quot;8</span>
+<span class="s plain-str">7&quot;&amp;245$&amp;+#</span>
+<span class="s plain-str">7$0)45)&amp;+</span>
+<span class="s plain-str">/44334)0&amp;,</span>
+<span class="s plain-str">2)$!(#(((#(((&#x27;&#x27;&#x27;(</span>
+<span class="s plain-str">2$$&amp;&quot;(##(((((((#</span>
+<span class="s plain-str">2$$&amp;!&#x27;(((((#(#</span>
+<span class="s plain-str">(1$!!!!!!(</span>
+<span class="s plain-str">%1!&quot;&quot;&amp;&amp;!!</span>
+<span class="s plain-str">%1(&quot;!!!&quot;&quot;</span>
+<span class="s plain-str">&quot;22222  )7</span>
+<span class="s plain-str">2222) 62(</span>
+<span class="s plain-str">8.,$++,,8..</span>
+<span class="s plain-str">06 666666  )4</span>
+<span class="s plain-str">!0!&quot;&amp;666666*6  )$</span>
+<span class="s plain-str">000$&amp; 6666**6</span>
+<span class="s plain-str">.   0&amp;0 666** :</span>
+<span class="s plain-str">16 6 $$ 6666*:</span>
+<span class="s plain-str">!066*&amp;)) )665</span>
+<span class="s plain-str">:24+,9- ..</span>
+<span class="s plain-str">$  ** 66 66 5:</span>
+<span class="s plain-str">26 6 6**6</span>
+<span class="s plain-str">&amp;2,+2)&amp;5&gt;</span>
+<span class="s plain-str">3 +,2))1&gt;	0</span>
+<span class="s plain-str">396&quot;$262.+))2</span>
+<span class="s plain-str">5*6 66   )5</span>
+<span class="s plain-str">,  6)2+2 6.)8/.-  6* )</span>
+<span class="s plain-str">*56*66  699</span>
+<span class="s plain-str">*46**66*---* ,32</span>
+<span class="s plain-str">6*5 *****----*62</span>
+<span class="s plain-str">u*****---4&gt;5****-***-99*9?&gt;&gt;:&lt;&gt;&gt;</span>
+<span class="s plain-str">D$$99***--</span>
+<span class="s plain-str">-999&gt;&gt;&gt;;;*-;&lt;&lt;&lt;</span>
+<span class="s plain-str">by shutdown</span>
+<span class="s plain-str">-shutdown</span>
+<span class="s plain-str">esm idle <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DTsEF7Gc(UVW</span>
+<span class="s plain-str">u*9:HIJXYZghijvwxyz</span>
+<span class="s plain-str">sujDey&lt;</span>
+<span class="s plain-str">93)QQTMYY5M</span>
+<span class="s plain-str">I%`,BAN	#H</span>
+<span class="s plain-str">tOUQ=Uv&amp;b</span>
+<span class="s plain-str">zI&#x27;Yceu</span>
+<span class="s plain-str">KMWEWUSGK</span>
+<span class="s plain-str">b2VRDdz</span>
+<span class="s plain-str">a%FH!X`F20</span>
+<span class="s plain-str">[Mnl8Wwy4</span>
+<span class="s plain-str">hdeUSe&quot;</span>
+<span class="s plain-str">1mQ\&quot;K1&gt;&#x27;N</span>
+<span class="s plain-str">b*d,ThnOr8an</span>
+<span class="s plain-str">Change font</span>
+<span class="s plain-str">Rsn Color:</span>
+<span class="s plain-str">Font Color:</span>
+<span class="s plain-str">SetMenuItemBitmaps</span>
+<span class="s plain-str">GetKeyboardType</span>
+<span class="s plain-str">EnumMonitorsA</span>
+<span class="s plain-str">GetVolumeInformationA</span>
+<span class="s plain-str">GetLogicalDriveStringsA</span>
+<span class="s plain-str">DISKSPACEFREE</span>
+<span class="s plain-str">GetDiskFreeSpaceA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetDriveTypeA</span>
+<span class="s plain-str">GetSystemInfo <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GlobalMemoryStatus</span>
+<span class="s plain-str">GetTempPathA</span>
+<span class="s plain-str">GetSystemDirectoryA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetWindowsDirectoryA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetComputerNameA</span>
+<span class="s plain-str">GetUserNameA</span>
+<span class="s plain-str">RegCloseKey</span>
+<span class="s plain-str">RegQueryValueExA</span>
+<span class="s plain-str">RegOpenKeyExA</span>
+<span class="s plain-str">DrawFrameControl</span>
+<span class="s plain-str">ExcludeClipRect</span>
+<span class="s plain-str">CreateRectRgn</span>
+<span class="s plain-str">CreateRectRgnIndirect</span>
+<span class="s plain-str">CreateCompatibleDC</span>
+<span class="s plain-str">CreateCompatibleBitmap</span>
+<span class="s plain-str">GetSystemMetrics</span>
+<span class="s plain-str">SetTextColor</span>
+<span class="s plain-str">CopyImage</span>
+<span class="s plain-str">GetSysColor</span>
+<span class="s plain-str">SetBkMode</span>
+<span class="s plain-str">GetStockObject</span>
+<span class="s plain-str">DrawCaption</span>
+<span class="s plain-str">GetClipRgn</span>
+<span class="s plain-str">SelectClipRgn</span>
+<span class="s plain-str">DrawTextExA</span>
+<span class="s plain-str">DrawTextA</span>
+<span class="s plain-str">RectInRegion</span>
+<span class="s plain-str">DrawIconEx</span>
+<span class="s plain-str">DrawIcon</span>
+<span class="s plain-str">OffsetRect</span>
+<span class="s plain-str">DestroyIcon</span>
+<span class="s plain-str">OffsetClipRgn</span>
+<span class="s plain-str">DeleteDC</span>
+<span class="s plain-str">SetWindowLongA</span>
+<span class="s plain-str">SetClassLongA</span>
+<span class="s plain-str">GetClassLongA</span>
+<span class="s plain-str">GetActiveWindow</span>
+<span class="s plain-str">GetWindowRgn</span>
+<span class="s plain-str">GetWindowDC</span>
+<span class="s plain-str">CallWindowProcA</span>
+<span class="s plain-str">CreateFontIndirectA</span>
+<span class="s plain-str">EmptyClipboard</span>
+<span class="s plain-str">WSACleanup</span>
+<span class="s plain-str">WSAStartup</span>
+<span class="s plain-str">WSAGetLastError</span>
+<span class="s plain-str">WindowFromPoint <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">SystemParametersInfoA</span>
+<span class="s plain-str">StretchBlt</span>
+<span class="s plain-str">SetForegroundWindow</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">RtlMoveMemory <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">SHAddToRecentDocs</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SelectObject</span>
+<span class="s plain-str">SetBkColor</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">ReleaseDC</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">Rectangle</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">IsZoomed</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">IsWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowWord</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetPixel</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">GetModuleFileNameA</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetHostByName</span>
+<span class="s plain-str">GetHostName</span>
+<span class="s plain-str">GetFileSize</span>
+<span class="s plain-str">GetFileAttributesA</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetCapture</span>
+<span class="s plain-str">FlashWindow</span>
+<span class="s plain-str">fCreateShellLink</span>
+<span class="s plain-str">ExitWindowsEx</span>
+<span class="s plain-str">EnumDisplaySettingsA</span>
+<span class="s plain-str">EnumDesktopWindows</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">EnableMenuItem</span>
+<span class="s plain-str">DestroyWindow</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">CreateWindowEx</span>
+<span class="s plain-str">CreateWindowA</span>
+<span class="s plain-str">CreateSolidBrush</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">CloseWindow</span>
+<span class="s plain-str">ChangeDisplaySettingsA</span>
+<span class="s plain-str">BringWindowToTop</span>
+<span class="s plain-str">auxGetVolume</span>
+<span class="s plain-str">auxSetVolume</span>
+<span class="s plain-str">XYZhhZA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">TYPELIB</span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">1&quot;1(1.141:1@1F1L1R1X1^1d1i1t1x1|1</span>
+<span class="s plain-str">848D8d8t8</span>
+<span class="s plain-str">0&lt;0D0p0|0</span>
+<span class="s plain-str">&lt;3@3D3H3h3</span>
+<span class="s plain-str">5h&lt;l&lt;p&lt;t&lt;x&lt;</span>
+<span class="s plain-str">H3L3P3T3X3\3|3,:0:4:8:&lt;:@:D:H:L:l:</span>
+<span class="s plain-str">1 1$1(1,1014181&lt;1@1`1</span>
+<span class="s plain-str">8 8$8(8,8084888&lt;8@8D8H8L8P8T8X8\8</span>
+<span class="s plain-str">0:0G0R0_0j0w0</span>
+<span class="s plain-str">6R6W6k6p6</span>
+<span class="s plain-str">6N6S6g6l6</span>
+<span class="s plain-str">727:7r7x7</span>
+<span class="s plain-str">8)8.8B8G8[8`8t8y8</span>
+<span class="s plain-str">9#9(9&lt;9A9U9Z9</span>
+<span class="s plain-str">9::H:V:d:</span>
+<span class="s plain-str">4$484=4Q4V4j4o4</span>
+<span class="s plain-str">9&amp;:F:R:r:</span>
+<span class="s plain-str">3&gt;4C4W4\4p4u4</span>
+<span class="s plain-str">2x3*4n4|4</span>
+<span class="s plain-str">:6:D:X:r:</span>
+<span class="s plain-str">?L?^?x?~?</span>
+<span class="s plain-str">2P3p3:4V4t4</span>
+<span class="s plain-str">5D5L5t5|5</span>
+<span class="s plain-str">7*7/7C7H7\7a7u7z7</span>
+<span class="s plain-str">0&gt;0F0R0f0t1</span>
+<span class="s plain-str">2,3H3N3l3~3</span>
+<span class="s plain-str">5:6D6j6z6</span>
+<span class="s plain-str">4$5L5n5~5</span>
+<span class="s plain-str">5$525@5N5p5</span>
+<span class="s plain-str">3H4p4&quot;5p5</span>
+<span class="s plain-str">2*383F3T3</span>
+<span class="s plain-str">8B8J8T8n8v8</span>
+<span class="s plain-str">8$848B8P8h8</span>
+<span class="s plain-str">&lt; &lt;%&lt;9&lt;&gt;&lt;R&lt;W&lt;k&lt;p&lt;</span>
+<span class="s plain-str">4J5R5t5|526</span>
+<span class="s plain-str">7B7d7p7v7</span>
+<span class="s plain-str">8&lt;8H8d8p8</span>
+<span class="s plain-str">2.2:2Z2f2</span>
+<span class="s plain-str">&lt;6&lt;^&lt;H=x=&quot;&gt;(&gt;r&gt;</span>
+<span class="s plain-str">d0&lt;1f1r1|1</span>
+<span class="s plain-str">&lt;8=T=|=&quot;&gt;j&gt;</span>
+<span class="s plain-str">465B6V6l6</span>
+<span class="s plain-str">4 5,5L5r5~5</span>
+<span class="s plain-str">3f4z425L5</span>
+<span class="s plain-str">8&quot;9&gt;9Z9|9</span>
+<span class="s plain-str">?2?N?p?|?</span>
+<span class="s plain-str">1&gt;1`1l1r1</span>
+<span class="s plain-str">6(7D7^7f7</span>
+<span class="s plain-str">0*0:0h0x0</span>
+<span class="s plain-str">3:4L4T4x4</span>
+<span class="s plain-str">5$5(50545&lt;5@5H5L5T5X5`5d5l5p5x5|5</span>
+<span class="s plain-str">6 6$6,60686&lt;6D6H6P6T6\6`6h6l6t6x6</span>
+<span class="s plain-str">7 7(7,74787@7D7L7P7X7\7d7h7p7t7|7</span>
+<span class="s plain-str">8$8(80848&lt;8@8H8L8T8X8`8d8l8p8x8|8</span>
+<span class="s plain-str">9 9$9,90989&lt;9D9H9P9T9\9`9h9l9t9x9</span>
+<span class="s plain-str">: :(:,:4:8:@:D:L:P:X:\:d:h:p:t:|:</span>
+<span class="s plain-str">=0=8=Z=b=</span>
+<span class="s plain-str">4&quot;5&gt;5`5l5~5</span>
+<span class="s plain-str">445:5H5R5h5</span>
+<span class="s plain-str">0&amp;0B0^0z0</span>
+<span class="s plain-str">1&quot;1&gt;1Z1v1</span>
+<span class="s plain-str">6*6F6b6~6</span>
+<span class="s plain-str">7&amp;7B7^7z7</span>
+<span class="s plain-str">8&quot;8&gt;8Z8v8</span>
+<span class="s plain-str">1&gt;1F1n1v1</span>
+<span class="s plain-str">2.262^2f2</span>
+<span class="s plain-str">7$8H8V8d8</span>
+<span class="s plain-str">2R2(3,3034383&lt;3C3R3b3n3u3</span>
+<span class="s plain-str">4+464C4N4[4f4s4~4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5&amp;535&gt;5K5V5c5n5{5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">6#6.6;6F6S6^6k6v6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">7+767C7N7[7f7s7~7 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">8&amp;838&gt;8K8V8c8n8{8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">9#9.9;9F9S9^9k9v9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0+060C0N0[0f0s0~0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">1&amp;131&gt;1K1V1c1n1{1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">2#2.2;2F2S2^2k2v2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">3+363C3N3[3f3s3~3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4&amp;434&gt;4K4V4c4n4{4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5#5.5;5F5S5^5k5v5</span>
+<span class="s plain-str">6+666C6N6[6f6s6~6</span>
+<span class="s plain-str">7&amp;737&gt;7K7V7c7n7{7</span>
+<span class="s plain-str">8#8.8;8F8S8^8k8v8</span>
+<span class="s plain-str">9+969C9N9[9f9s9~9</span>
+<span class="s plain-str">0&amp;030&gt;0K0V0c0n0{0</span>
+<span class="s plain-str">1#1.1;1F1S1^1k1v1</span>
+<span class="s plain-str">2+262C2N2[2f2s2~2</span>
+<span class="s plain-str">3&amp;333&gt;3K3V3c3n3{3</span>
+<span class="s plain-str">4#4.4;4F4S4^4k4v4</span>
+<span class="s plain-str">5+565C5N5[5f5s5~5</span>
+<span class="s plain-str">6&amp;636&gt;6K6V6c6n6{6</span>
+<span class="s plain-str">7#7.7;7F7S7^7k7v7</span>
+<span class="s plain-str">8+868C8N8[8f8s8~8</span>
+<span class="s plain-str">9&amp;939&gt;9K9V9c9n9{9</span>
+<span class="s plain-str">0#0.0;0F0S0^0k0v0</span>
+<span class="s plain-str">1+161C1N1[1f1s1~1</span>
+<span class="s plain-str">2&amp;232&gt;2K2V2c2n2{2</span>
+<span class="s plain-str">3#3.3;3F3S3^3k3v3</span>
+<span class="s plain-str">_extentx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">_extenty <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;Sign Off</span>
+<span class="s plain-str">&amp;Cascade</span>
+<span class="s plain-str">/notice</span>
+<span class="s plain-str">aol://2719:61-2- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aol://2719:2-2- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Winamp EQ</span>
+<span class="s plain-str">Winamp PE</span>
+<span class="s plain-str">send list</span>
+<span class="s plain-str">send status</span>
+<span class="s plain-str">play cd</span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×26</span></span>
+<span class="s plain-str">NAPSTER <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">SJE_CdPlayerClass <span style="color:#30363d;font-size:0.75em">×20</span></span>
+<span class="s plain-str">pause cd</span>
+<span class="s plain-str">close all</span>
+<span class="s plain-str">BitsPerPixel</span>
+<span class="s plain-str">Display\Settings</span>
+<span class="s plain-str">_oscar_buddylistwin <span style="color:#30363d;font-size:0.75em">×14</span></span>
+<span class="s plain-str">&amp;Intro Play</span>
+<span class="s plain-str">long time <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">seek cd to <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">aim_chatwnd <span style="color:#30363d;font-size:0.75em">×12</span></span>
+<span class="s plain-str">long date <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aol://2719:74-2-</span>
+<span class="s plain-str">aol://2719:66-2-</span>
+<span class="s plain-str">aol://2719:65-2-</span>
+<span class="s plain-str">aol://2719:63-2-</span>
+<span class="s plain-str">aol://2719:67-2-</span>
+<span class="s plain-str">aol://2719:64-2-</span>
+<span class="s plain-str">RICHEDIT</span>
+<span class="s plain-str">Default</span>
+<span class="s plain-str">System\CurrentControlSet\Control\Print\Printers</span>
+<span class="s plain-str">RegisteredOwner</span>
+<span class="s plain-str">&lt; a href=</span>
+<span class="s plain-str">listen up</span>
+<span class="s plain-str">&#x27;s profile</span>
+<span class="s plain-str">Shell_TrayWnd <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">- Winamp</span>
+<span class="s plain-str">_oscar_locate</span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×24</span></span>
+<span class="s plain-str">Sign On</span>
+<span class="s plain-str">- internet</span>
+<span class="s plain-str">aim_imessage <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ListBox <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">AOL ToolBar <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SJE_TextClass</span>
+<span class="s plain-str">SJE_LEDClass</span>
+<span class="s plain-str">Program <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">_oscar_iconbtn <span style="color:#30363d;font-size:0.75em">×13</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">&lt;b&gt;&lt;/u&gt;&lt;/i&gt;&lt;font face=&quot;arial&quot; color=&quot;000000&quot;&gt;</span>
+<span class="s plain-str">destination:</span>
+<span class="s plain-str">Fixed drive <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">RAM-disk <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ExporeWCLass</span>
+<span class="s plain-str">ComboBoxEx32</span>
+<span class="s plain-str">ComboBox <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Windows</span>
+<span class="s plain-str">Windows 95</span>
+<span class="s plain-str">Windows NT</span>
+<span class="s plain-str">remaining. <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">winamp pe <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">_oscar_tabgroup <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">_Oscar_BuddyListWin</span>
+<span class="s plain-str">buddy view</span>
+<span class="s plain-str">windowsNT</span>
+<span class="s plain-str">OnlineHost</span>
+<span class="s plain-str">shell_traywnd <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">Download</span>
+<span class="s plain-str">_oscar_tree <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">buddy list</span>
+<span class="s plain-str">aim_chatinvitesendwnd</span>
+<span class="s plain-str">days: [&lt;b&gt;</span>
+<span class="s plain-str">aol toolbar <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">mips r-4000</span>
+<span class="s plain-str">alpha 21064</span>
+<span class="s plain-str">Save  As</span>
+<span class="s plain-str">Japanese</span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">BaseBar <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">MenuSite <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ToolbarWindow32 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">new font...</span>
+<span class="s plain-str">AutoRedraw</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">Underline</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">DialogTitle</span>
+<span class="s plain-str">CancelError</span>
+<span class="s plain-str">DrawStyle</span>
+<span class="s plain-str">DrawMode</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">BackColor</span>
+<span class="s plain-str">FontCount</span>
+<span class="s plain-str">NewPage</span>
+<span class="s plain-str">not online</span>
+<span class="s plain-str">PSFloatC</span>
+<span class="s plain-str">-instantmessage <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">locate * <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Open a file</span>
+<span class="s plain-str">my &amp;profile</span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">file search</span>
+<span class="s plain-str">Partyline</span>
+<span class="s plain-str">AOL Setup</span>
+</details>
+<div class="stats">Total unique strings: 3540 · Interesting: 220 · Noise filtered: 2840</div>
+</div></body></html>

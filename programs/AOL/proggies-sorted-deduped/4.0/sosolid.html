@@ -1,0 +1,401 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>sosolid.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/sosolid.zip">&#x2b07; Download sosolid.zip</a>
+</div>
+<div class="hero">
+<div><h1>so soild</h1><span class="author">by <b>MizCHieF</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB5</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">so soild.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-08-31</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (3)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (57)</h2>
+<span class="s interesting-str">Sm0Ke CHr0NiC <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Lagg 4 (Custom)</span>
+<span class="s interesting-str">C:\Program Files\DevStudio\VB\VB5.OLB</span>
+<span class="s interesting-str">&lt;Font Color=#1AA2E6&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#3490CC&gt;&lt;/sup&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;Font Color=#4D7EB3&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#805A80&gt;&lt;sup&gt;C&lt;Font Color=#994967&gt;&lt;/sup&gt;h&lt;Font Color=#B3374D&gt;&lt;sub&gt;a&lt;Font Color=#CC2534&gt;&lt;/sub&gt;t&lt;Font Color=#E6131A&gt;&lt;sup&gt; &lt;Font Color=#FF0101&gt;&lt;/sup&gt;F&lt;Font Color=#E6131A&gt;&lt;sub&gt;l&lt;Font Color=#CC2534&gt;&lt;/sub&gt;0&lt;Font Color=#B3374D&gt;&lt;sup&gt;O&lt;Font Color=#994967&gt;&lt;/sup&gt;D&lt;Font Color=#805A80&gt;&lt;sub&gt;e&lt;Font Color=#676C99&gt;&lt;/sub&gt;D&lt;Font Color=#4D7EB3&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#1AA2E6&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#01B4FF&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">Thanx To EViLDeD, NiTRoiD and FestA. Fuck The ResT</span>
+<span class="s interesting-str">&lt;Font Color=#113DBC&gt;&lt;sup&gt; &lt;Font Color=#2037B6&gt;&lt;/sup&gt;-&lt;Font Color=#3032B0&gt;&lt;sub&gt;-&lt;Font Color=#402CAA&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#4F27A4&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#5F229E&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#6F1C98&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#7E1792&gt;&lt;/sub&gt;C&lt;Font Color=#8E118C&gt;&lt;sup&gt;h&lt;Font Color=#9E0C86&gt;&lt;/sup&gt;a&lt;Font Color=#AD0680&gt;&lt;sub&gt;t&lt;Font Color=#BD017A&gt;&lt;/sub&gt; &lt;Font Color=#B21186&gt;&lt;sup&gt;E&lt;Font Color=#A72292&gt;&lt;/sup&gt;a&lt;Font Color=#9B329E&gt;&lt;sub&gt;t&lt;Font Color=#9042AA&gt;&lt;/sub&gt;e&lt;Font Color=#8552B6&gt;&lt;sup&gt;n&lt;Font Color=#7A63C3&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#6F73CF&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#6483DB&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#5893E7&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#4DA4F3&gt;&lt;/sup&gt;-&lt;Font Color=#42B4FF&gt;&lt;sub&gt;-</span>
+<span class="s interesting-str">&lt;Font Color=#FDFFFF&gt;&lt;i</span>
+<span class="s interesting-str">&lt;Font Color=#115CEF&gt;&lt;sup&gt;_&lt;Font Color=#215CDF&gt;&lt;/sup&gt;(&lt;Font Color=#315CCF&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#405CC0&gt;&lt;/sub&gt;`&lt;Font Color=#505CB0&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#605CA0&gt;&lt;/sup&gt;.&lt;Font Color=#705C90&gt;&lt;sub&gt;_&lt;Font Color=#805C80&gt;&lt;/sub&gt;S&lt;Font Color=#905C70&gt;&lt;sup&gt;m&lt;Font Color=#A05C60&gt;&lt;/sup&gt;0&lt;Font Color=#B05C50&gt;&lt;sub&gt;k&lt;Font Color=#C05C40&gt;&lt;/sub&gt;E&lt;Font Color=#CF5C31&gt;&lt;sup&gt;d&lt;Font Color=#DF5C21&gt;&lt;/sup&gt; &lt;Font Color=#EF5C11&gt;&lt;sub&gt;D&lt;Font Color=#FF5C01&gt;&lt;/sub&gt;a&lt;Font Color=#EE5F12&gt;&lt;sup&gt;T&lt;Font Color=#DD6323&gt;&lt;/sup&gt; &lt;Font Color=#CC6634&gt;&lt;sub&gt;B&lt;Font Color=#BB6A45&gt;&lt;/sub&gt;i&lt;Font Color=#AA6D56&gt;&lt;sup&gt;T&lt;Font Color=#997067&gt;&lt;/sup&gt;c&lt;Font Color=#887478&gt;&lt;sub&gt;H&lt;Font Color=#787788&gt;&lt;/sub&gt;_&lt;Font Color=#677B99&gt;&lt;sup&gt; &lt;Font Color=#567EAA&gt;&lt;/sup&gt;.&lt;Font Color=#4581BB&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#3485CC&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#2388DD&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#128CEE&gt;&lt;/sup&gt;)&lt;Font Color=#018FFF&gt;&lt;sub&gt;_</span>
+<span class="s interesting-str">Chat Fl00dED.</span>
+<span class="s interesting-str">Thanx To EViLDeD Who Is Cool AnD Helped Alot, NiTRoiD, FestA And My WoMeN Ali wh0 Stuck By Me.  Fuck The ResT</span>
+<span class="s interesting-str">Well This is about my first Prog kk</span>
+<span class="s interesting-str">&lt;Font Color=#56889D&gt;&lt;sup&gt;L&lt;Font Color=#AA904F&gt;&lt;/sup&gt;o&lt;Font Color=#FF9901&gt;&lt;sub&gt;a&lt;Font Color=#AA8156&gt;&lt;/sub&gt;d&lt;Font Color=#5669AA&gt;&lt;sup&gt;e&lt;Font Color=#0151FF&gt;&lt;/sup&gt;d.</span>
+<span class="s interesting-str">&lt;Font Color=#1A30E6&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#343DCC&gt;&lt;/sup&gt;S&lt;Font Color=#4D49B3&gt;&lt;sub&gt;o&lt;Font Color=#675699&gt;&lt;/sub&gt;l&lt;Font Color=#806380&gt;&lt;sup&gt;L&lt;Font Color=#997067&gt;&lt;/sup&gt;i&lt;Font Color=#B37D4D&gt;&lt;sub&gt;D&lt;Font Color=#CC8934&gt;&lt;/sub&gt; &lt;Font Color=#E6961A&gt;&lt;sup&gt;T&lt;Font Color=#FFA301&gt;&lt;/sup&gt;o&lt;Font Color=#F0A00F&gt;&lt;sub&gt;o&lt;Font Color=#E09E1C&gt;&lt;/sub&gt;l&lt;Font Color=#D19C2A&gt;&lt;sup&gt;z&lt;Font Color=#C29938&gt;&lt;/sup&gt;.&lt;Font Color=#B29646&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#858F6F&gt;&lt;/sup&gt;`&lt;Font Color=#758C7C&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#668A8A&gt;&lt;/sub&gt;-</span>
+<span class="s interesting-str">&lt;Font Color=#1168A4&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#216EA0&gt;&lt;/sup&gt;B&lt;Font Color=#32759C&gt;&lt;sub&gt;y&lt;Font Color=#427B98&gt;&lt;/sub&gt; &lt;Font Color=#528294&gt;&lt;sup&gt;M&lt;Font Color=#62898F&gt;&lt;/sup&gt;i&lt;Font Color=#728F8B&gt;&lt;sub&gt;z&lt;Font Color=#839687&gt;&lt;/sub&gt;C&lt;Font Color=#939C83&gt;&lt;sup&gt;h&lt;Font Color=#A3A37F&gt;&lt;/sup&gt;i&lt;Font Color=#929184&gt;&lt;sub&gt;e&lt;Font Color=#817F89&gt;&lt;/sub&gt;f&lt;Font Color=#706D8F&gt;&lt;sup&gt;.&lt;Font Color=#5F5B94&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#4E4899&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#3D369E&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#2C24A4&gt;&lt;sup&gt;`&lt;Font Color=#1B12A9&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#0A00AE&gt;&lt;sub&gt;-</span>
+<span class="s interesting-str">&lt;Font Color=#2A729E&gt;&lt;sup&gt;U&lt;Font Color=#528294&gt;&lt;/sup&gt;n&lt;Font Color=#7A9289&gt;&lt;sub&gt;L&lt;Font Color=#A3A37F&gt;&lt;/sub&gt;o&lt;Font Color=#7D7A8B&gt;&lt;sup&gt;a&lt;Font Color=#565296&gt;&lt;/sup&gt;d&lt;Font Color=#3029A2&gt;&lt;sub&gt;e&lt;Font Color=#0A00AE&gt;&lt;/sub&gt;d.</span>
+<span class="s interesting-str">Thanx To EViLDeD Who Is Cool AnD Helped Alot, NiTRoiD, FestA, My WoMeN Ali wh0 Stuck By Me, deph and  Fuck The ResT</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">so soild.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (211)</summary>
+<span class="s plain-str">mnuMain <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuMainabout <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuSayOnce <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SayOnce</span>
+<span class="s plain-str">mnuGreetz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChateat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatclear <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatlag1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lagg 1</span>
+<span class="s plain-str">mnuChatlag2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lagg 2</span>
+<span class="s plain-str">mnuChatlag3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lagg 3</span>
+<span class="s plain-str">mnuChatlag4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatflood <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Flood 1</span>
+<span class="s plain-str">mnuChatflood2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Flood 2</span>
+<span class="s plain-str">mnuChatkrazy <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Krazy @</span>
+<span class="s plain-str">mnuChatscroll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatimon <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatimoff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatidler <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Command20_Click</span>
+<span class="s plain-str">Command21_Click</span>
+<span class="s plain-str">Form_Load</span>
+<span class="s plain-str">Form_Unload</span>
+<span class="s plain-str">Text_Lag</span>
+<span class="s plain-str">mnuChatclear_Click</span>
+<span class="s plain-str">mnuChateat_Click</span>
+<span class="s plain-str">mnuChatflood_Click</span>
+<span class="s plain-str">mnuChatflood2_Click</span>
+<span class="s plain-str">mnuChatidler_Click</span>
+<span class="s plain-str">mnuChatimoff_Click</span>
+<span class="s plain-str">mnuChatimon_Click</span>
+<span class="s plain-str">mnuChatkrazy_Click</span>
+<span class="s plain-str">mnuChatlag1_Click</span>
+<span class="s plain-str">mnuChatlag2_Click</span>
+<span class="s plain-str">mnuChatlag3_Click</span>
+<span class="s plain-str">mnuChatlag4_Click</span>
+<span class="s plain-str">mnuChatscroll_Click</span>
+<span class="s plain-str">mnuGreetz_Click</span>
+<span class="s plain-str">mnulagg5_Click</span>
+<span class="s plain-str">mnuMainabout_Click</span>
+<span class="s plain-str">mnuSayOnce_Click</span>
+<span class="s plain-str">mnuscroll2_Click</span>
+<span class="s plain-str">Timer1_Timer</span>
+<span class="s plain-str">Timer2_Timer</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">y$K|yu-~y</span>
+<span class="s plain-str">1$141D1L1T1\1d1t1|1</span>
+<span class="s plain-str">2$2,242&lt;2D2L2T2\2d2l2t2|2</span>
+<span class="s plain-str">2,3&lt;3L3\3l3|3</span>
+<span class="s plain-str">4$4*40464&lt;4B4H4N4T4Z4`4f4l4r4x4~4</span>
+<span class="s plain-str">5 5&amp;5,52585&gt;5D5J5P5V5\5b5h5n5t5z5</span>
+<span class="s plain-str">&lt; &lt;(&lt;0&lt;8&lt;@&lt;H&lt;P&lt;X&lt;`&lt;h&lt;l&lt;t&lt;x&lt;|&lt;</span>
+<span class="s plain-str">1(181@1P1`1h1x1</span>
+<span class="s plain-str">2(202@2P2X2h2x2</span>
+<span class="s plain-str">3 303@3H3X3h3p3x3|3</span>
+<span class="s plain-str">4 4$4(4,40444&lt;4@4D4H4L4P4X4\4`4d4h4l4t4x4|4</span>
+<span class="s plain-str">6l6p6t6x6|6</span>
+<span class="s plain-str">6$7(7,7074787@7D7H7L7P7T7\7`7d7h7l7p7x7|7</span>
+<span class="s plain-str">8 8$8(8,80848&lt;8@8D8H8L8P8X8\8`8d8h8l8t8x8|8</span>
+<span class="s plain-str">9 9$9(9,909</span>
+<span class="s plain-str">`9d9l9q9|9</span>
+<span class="s plain-str">:	:(:,:4:9:D:I:h:l:t:y:</span>
+<span class="s plain-str">= =%=@=D=L=Q=\=a=</span>
+<span class="s plain-str">&gt; &gt;%&gt;0&gt;5&gt;T&gt;X&gt;`&gt;e&gt;p&gt;u&gt;</span>
+<span class="s plain-str">0	04080@0E0P0U0</span>
+<span class="s plain-str">=0=8=E=\=g=m=</span>
+<span class="s plain-str">&gt;0&gt;I&gt;T&gt;w&gt;</span>
+<span class="s plain-str">0-0@0Y0l0</span>
+<span class="s plain-str">151H1a1t1</span>
+<span class="s plain-str">2$2=2P2i2|2</span>
+<span class="s plain-str">3,3E3X3q3</span>
+<span class="s plain-str">4!444M4`4y4</span>
+<span class="s plain-str">5)5&lt;5U5h5</span>
+<span class="s plain-str">616D6]6p6</span>
+<span class="s plain-str">7 797L7e7x7</span>
+<span class="s plain-str">8(8A8T8m8</span>
+<span class="s plain-str">9/979J9l9t9}9</span>
+<span class="s plain-str">;7;P;X;e;|;</span>
+<span class="s plain-str">=G=`=k=p=w=</span>
+<span class="s plain-str">&gt;1?H?U?m?</span>
+<span class="s plain-str">0%0=0H0w0</span>
+<span class="s plain-str">1%181Q1d1}1</span>
+<span class="s plain-str">2-2@2Y2l2</span>
+<span class="s plain-str">2&#x27;3@3H3U3l3w3}3</span>
+<span class="s plain-str">4-4@4Y4d4</span>
+<span class="s plain-str">555H5a5t5</span>
+<span class="s plain-str">6%606W6p6x6</span>
+<span class="s plain-str">717D7]7p7</span>
+<span class="s plain-str">8&#x27;8-8@8Y8l8</span>
+<span class="s plain-str">959H9a9t9</span>
+<span class="s plain-str">:A:X:e:}:</span>
+<span class="s plain-str">&lt; =(=I=R=p=</span>
+<span class="s plain-str">?4?U?]?~?</span>
+<span class="s plain-str">0	171]1w1</span>
+<span class="s plain-str">3-33393W3n3v3</span>
+<span class="s plain-str">3 434C4e4x4</span>
+<span class="s plain-str">5%575L5T5]5b5k5}5</span>
+<span class="s plain-str">60676H6P6b6x6</span>
+<span class="s plain-str">777=7P7i7|7</span>
+<span class="s plain-str">8,8E8X8q8</span>
+<span class="s plain-str">9!949M9`9y9</span>
+<span class="s plain-str">=5=&gt;=E=Y=r=</span>
+<span class="s plain-str">%050&lt;0V0l0</span>
+<span class="s plain-str">3+3&gt;3W3j3</span>
+<span class="s plain-str">3!41484R4]4c4v4</span>
+<span class="s plain-str">8.8G8Z8s8</span>
+<span class="s plain-str">9#969O9b9{9</span>
+<span class="s plain-str">;3;F;_;r;</span>
+<span class="s plain-str">&gt;2&gt;K&gt;^&gt;w&gt;</span>
+<span class="s plain-str">0/0B0[0n0</span>
+<span class="s plain-str">171J1c1v1</span>
+<span class="s plain-str">222=2C2V2o2</span>
+<span class="s plain-str">323K3^3w3</span>
+<span class="s plain-str">4&#x27;4:4S4n4y4</span>
+<span class="s plain-str">5&amp;5?5R5k5~5</span>
+<span class="s plain-str">6.6G6Z6s6</span>
+<span class="s plain-str">6!71787R7]7c7v7</span>
+<span class="s plain-str">8&amp;8?8R8k8~8</span>
+<span class="s plain-str">8&quot;9T9q9y9</span>
+<span class="s plain-str">:2:L:T:]:f:o:u:{:</span>
+<span class="s plain-str">=3=T=\=}=</span>
+<span class="s plain-str">&gt;6&gt;&gt;&gt;_&gt;h&gt;</span>
+<span class="s plain-str">? ?A?J?h?</span>
+<span class="s plain-str">0&amp;0&gt;0P0\0</span>
+<span class="s plain-str">1,1D1O1i1</span>
+<span class="s plain-str">2&amp;2?2R2k2~2</span>
+<span class="s plain-str">626K6^6w6</span>
+<span class="s plain-str">7&#x27;7:7S7f7</span>
+<span class="s plain-str">9.969H9e9m9v9{9</span>
+<span class="s plain-str">&gt;0?A?L?w?</span>
+<span class="s plain-str">0-050A0h0u0</span>
+<span class="s plain-str">1!1C1M1o1y1</span>
+<span class="s plain-str">444&lt;4N4w4</span>
+<span class="s plain-str">515&gt;5F5[5f5u5</span>
+<span class="s plain-str">A*\AProject1</span>
+<span class="s plain-str">&lt;Font Color=#676C99&gt;&lt;/sub&gt;</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;$$$$$$$$$$$$$$$$</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;@@@@@@@@@@@@@@@@</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;****************</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;((((((((((((((((</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;))))))))))))))))</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;!!!!!!!!!!!!!!!!</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;################</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;%%%%%%%%%%%%%%%%</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;^^^^^^^^^^^^^^^^</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;WWWWWWWWWWWWWWWW</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;yyyyyyyyyyyyyyyy</span>
+<span class="s plain-str">&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;&lt;html&gt;6666666666666666</span>
+<span class="s plain-str">PatchesCRV:</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">0&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;O&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;o&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;0&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;O&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;o&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;0&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;O&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;h&gt;&lt;i $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$&gt;&lt;/B&gt;&lt;/FONT&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt; <span style="color:#30363d;font-size:0.75em">×13</span></span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;^&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;(&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;.&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;)&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;!&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;!&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;M&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;i&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;z&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;C&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;H&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;i&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;e&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;F&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;!&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;!&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;</span>
+<span class="s plain-str">&lt;b&gt;w&lt;/b&gt;as &lt;b&gt;i&lt;/b&gt;dle</span>
+<span class="s plain-str">minute(s)</span>
+<span class="s plain-str">&lt;Font Color=#A39453&gt;&lt;/sub&gt;</span>
+<span class="s plain-str">&lt;Font Color=#949261&gt;&lt;sup&gt;</span>
+<span class="s plain-str">solid toolz</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Welcome,</span>
+</details>
+<div class="stats">Total unique strings: 563 · Interesting: 57 · Noise filtered: 271</div>
+</div></body></html>

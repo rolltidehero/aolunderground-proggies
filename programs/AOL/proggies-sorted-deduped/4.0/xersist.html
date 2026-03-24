@@ -1,0 +1,426 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>xersist.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/xersist.zip">&#x2b07; Download xersist.zip</a>
+</div>
+<div class="hero">
+<div><h1>X-Ersist</h1><span class="author">by <b>OpiuM</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">X-Ersist.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-03-10</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">X-Ersist - By: OpiuM</span>
+<h2>&#x1f4e6; Dependencies (2)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">CHATSCAN3.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (23)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Palette</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (25)</h2>
+<span class="s interesting-str">MS Sans Serif</span>
+<span class="s interesting-str">O (?00??8@OHOOHOOHPOHP@H_0Ho H</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">This Xer is already activated</span>
+<span class="s interesting-str">Incoming/Saved Mail <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">This Xer is already unactivated</span>
+<span class="s interesting-str">America  Online</span>
+<span class="s interesting-str">&gt;Instant Message From: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Instant Message <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Buddy List Window <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Invitation From:</span>
+<span class="s interesting-str">&lt;FONT COLOR= <span style="color:#484f58;font-size:0.75em">×24</span></span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Instant Message From: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">X-Ersist.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (265)</summary>
+<span class="s plain-str">}DESTao <span style="color:#30363d;font-size:0.75em">×42</span></span>
+<span class="s plain-str">X-Ersist <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">db``bejp <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ZWLLLabk <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">}NHFFHKWdj <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">z5348FJac <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">{CHF&gt;7027@IKR <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">$16=E&gt;&gt;8=% <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">p&lt;AQ5//6DFFEM <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">V:&lt;C@IKLLC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">U9Bddbb`Ztusx| <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">U9BkkeekOyy| <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">\9Bllll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">P_`POHO</span>
+<span class="s plain-str">X-ersist <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">}DESTaoA%</span>
+<span class="s plain-str">Options...</span>
+<span class="s plain-str">X&#x27;s someone              Un X&#x27;s someone           Turns IMs On              Turns IMs Off               Sends how many people xed                  Advertises                  Turns Xer Off</span>
+<span class="s plain-str">000/(/000?8??8?000?8??8??8??8??8?/(/</span>
+<span class="s plain-str">?8?/(//(/   /(/</span>
+<span class="s plain-str">?8??8?000/(/</span>
+<span class="s plain-str">XpoH`oPo</span>
+<span class="s plain-str">0O_8P0H`/Xo@Xo</span>
+<span class="s plain-str">PooHp0Hp</span>
+<span class="s plain-str">Xpp@_0H_/Ho</span>
+<span class="s plain-str">/ (? (0/(0</span>
+<span class="s plain-str">(0o(0`(?P(?O(??</span>
+<span class="s plain-str">0o08`O8O`8@</span>
+<span class="s plain-str">0oXpoHP</span>
+<span class="s plain-str">(p/0o@8OP(?</span>
+<span class="s plain-str">P( O(/`(?`</span>
+<span class="s plain-str">OP(o@(o@8</span>
+<span class="s plain-str">? @0(P/(P/(O0(O</span>
+<span class="s plain-str">O(/P(//(/</span>
+<span class="s plain-str">o(?@8O0hp0</span>
+<span class="s plain-str">8p/(`_(P` ?</span>
+<span class="s plain-str">8@p(?o(?_ /P</span>
+<span class="s plain-str">(o@(oO(`_ O</span>
+<span class="s plain-str">PPO8??8?/(//000(008?</span>
+<span class="s plain-str">`opXoph</span>
+<span class="s plain-str">/0oO8ooHo@H`</span>
+<span class="s plain-str">@ (??0@OHO_X_oho</span>
+<span class="s plain-str">_ 8p 0p@8pP8`oHp?8`</span>
+<span class="s plain-str">O0o_8o_Ho@Ho</span>
+<span class="s plain-str">O/(_P(P00P (P (@</span>
+<span class="s plain-str">/08OOH`_h</span>
+<span class="s plain-str">H__8PO(@@(@0 ?0</span>
+<span class="s plain-str">0?pP`08OOHP@HOOHO?8@@(0</span>
+<span class="s plain-str">O (`0(o@(`@</span>
+<span class="s plain-str">_ho?HO/80</span>
+<span class="s plain-str">`hp?8@00@/(?</span>
+<span class="s plain-str">_Xp/(@ (@</span>
+<span class="s plain-str">(0 HP?hp@</span>
+<span class="s plain-str">_H`@(@@ 0O 0_(?_(@P(PO8o@H</span>
+<span class="s plain-str">/0008?_X`_XpOXp</span>
+<span class="s plain-str">( ?8?000/(/</span>
+<span class="s plain-str">(O/(@@@OOHO`X_`ho</span>
+<span class="s plain-str">H`pH_o8P_8P@0O0(@  ?</span>
+<span class="s plain-str">8?pHOop</span>
+<span class="s plain-str">/Hp 8` @`/Hp0Hp?H</span>
+<span class="s plain-str">@H`_Xo_X_phppho</span>
+<span class="s plain-str">`X_OHO/(0</span>
+<span class="s plain-str">08?OHO```PX_`X_OHOPX_OHO@@O (0 (/</span>
+<span class="s plain-str">@ 0P/8_OXp_h</span>
+<span class="s plain-str">@Ho?Ho/0P/8P (O (@</span>
+<span class="s plain-str">?Ho?Ho/8_/8_ (@</span>
+<span class="s plain-str">?00O@H_OH`_Xpoh</span>
+<span class="s plain-str">0(/?@@@8O@8@</span>
+<span class="s plain-str">?8@_X_@8@</span>
+<span class="s plain-str">pXo`8Op8O</span>
+<span class="s plain-str">P`oX`ohoohpoX`</span>
+<span class="s plain-str">(P 8`0@`OX</span>
+<span class="s plain-str">0HpPXpohp</span>
+<span class="s plain-str">pppohoohoOHO</span>
+<span class="s plain-str">0(/?8@08_0p</span>
+<span class="s plain-str">OXp@Ho08P/0O</span>
+<span class="s plain-str">0` 8`/8o?HpOX</span>
+<span class="s plain-str">0 (@?8P?8POP`_Xo</span>
+<span class="s plain-str">ohoPPPOHO?8?</span>
+<span class="s plain-str">(P?HpOP</span>
+<span class="s plain-str">@PpPXopx</span>
+<span class="s plain-str">_Xp/8_ (/</span>
+<span class="s plain-str">?8?@HPPXoPh</span>
+<span class="s plain-str">00??8@_X`px</span>
+<span class="s plain-str">008_@Ho`h</span>
+<span class="s plain-str">ohoPHO@HO/(/</span>
+<span class="s plain-str">ohoOHO?8?000</span>
+<span class="s plain-str">opoOHO?8@/(</span>
+<span class="s plain-str">_X_OHP000/(?</span>
+<span class="s plain-str">08`@H__X_</span>
+<span class="s plain-str">?8?000OHO?8?/(/</span>
+<span class="s plain-str">oho_X_@@@O@O?8??8@/(0 (?</span>
+<span class="s plain-str">/8o?8POHP_X_ppp</span>
+<span class="s plain-str">oho_X`PHOOHO?8@00?00? (?</span>
+<span class="s plain-str">@ (O08Poh</span>
+<span class="s plain-str">oho_X_OHO08?  /</span>
+<span class="s plain-str">/8` (@00?/(0@@@?8?@HO?8@@H`?Hp0h</span>
+<span class="s plain-str">@Ho@H`@@`08` (_</span>
+<span class="s plain-str">0Hp08P@Ho08P/8`</span>
+<span class="s plain-str">ohoo`o@HO?8?</span>
+<span class="s plain-str">(000@_X`oho</span>
+<span class="s plain-str">00??8@08_ H</span>
+<span class="s plain-str">@ (00(0/000(//(/</span>
+<span class="s plain-str">pxpoho`X`OHO?8?/(/  /</span>
+<span class="s plain-str">phpohoOHPOHO/(0/(/</span>
+<span class="s plain-str">0(/08?@@P08`</span>
+<span class="s plain-str">?8?@@O@Ho Hp</span>
+<span class="s plain-str">8o (O/ ?/(//(//(/</span>
+<span class="s plain-str">?8?PPOohpohopx</span>
+<span class="s plain-str">php```OHO?8?</span>
+<span class="s plain-str">(O/(OOHP/0?/</span>
+<span class="s plain-str">`ho_P_08?/(0</span>
+<span class="s plain-str">(P (@?8O/(0</span>
+<span class="s plain-str">000OHO_X_PXP/(?</span>
+<span class="s plain-str">`h`OHO?8@ (/</span>
+<span class="s plain-str">oho_X`@8@?8@  0</span>
+<span class="s plain-str">?8@OHPoho</span>
+<span class="s plain-str">_X`OPP?8O (@</span>
+<span class="s plain-str">? (??@_@H_PXo?8_/8P</span>
+<span class="s plain-str">/ (P 8o/X</span>
+<span class="s plain-str">ohp_Xo?8O/0@</span>
+<span class="s plain-str">@8@_X_oho</span>
+<span class="s plain-str">oho_X_@@@?8?</span>
+<span class="s plain-str">(P/8o 8o0P</span>
+<span class="s plain-str">(P 8`/@o/H</span>
+<span class="s plain-str">/8_?8O/(?/(?</span>
+<span class="s plain-str">00?@8?_X_oho</span>
+<span class="s plain-str">_XoOH_?8@00@</span>
+<span class="s plain-str">ohp_X`@HP?8O  /</span>
+<span class="s plain-str">?8??8@OP`OX</span>
+<span class="s plain-str">0Hp0Ho/8`/8P</span>
+<span class="s plain-str">?8?OHO_X_OHP@@O/(?</span>
+<span class="s plain-str">PX`OHP/(?</span>
+<span class="s plain-str">}DESTao)</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">sndPlaySoundA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetWindowTextA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetMenuStringA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">SetWindowPos <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">GetWindowTextLengthA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetMenuItemCount <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetMenu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetMenuItemID <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetSubMenu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwCopyData <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">RtlMoveMemory <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CloseHandle <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">OpenProcess <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetWindowThreadProcessId <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ReadProcessMemory <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">THUNX-ersist</span>
+<span class="s plain-str">}DESTaoSLTG</span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">TYPELIB <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">1T8X8x8(?,?L?</span>
+<span class="s plain-str">6 6$6(6,6064686&lt;6@6D6H6</span>
+<span class="s plain-str">081X1\1`1d1</span>
+<span class="s plain-str">7*8*9&gt;9h9</span>
+<span class="s plain-str">9&quot;:2:N:\:p:</span>
+<span class="s plain-str">=1=6=J=O=c=h=|=</span>
+<span class="s plain-str">0&quot;161^1r1</span>
+<span class="s plain-str">8$8(80848&lt;8@8H8L8T8X8`8d8l8p8x8|8</span>
+<span class="s plain-str">9 9$9,90989&lt;9D9H9P9T9\9`9h9l9t9x9</span>
+<span class="s plain-str">: :(:,:4:8:@:D:L:P:X:\:d:h:p:t:|:</span>
+<span class="s plain-str">1&quot;242R2j2</span>
+<span class="s plain-str">020L0T0v0~0</span>
+<span class="s plain-str">3H3d3z3$4V4b4~4</span>
+<span class="s plain-str">1&amp;1B1^1z1</span>
+<span class="s plain-str">2&quot;2&gt;2Z2v2</span>
+<span class="s plain-str">0&#x27;020?0J0W0b0o0z0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">1&quot;1/1:1G1R1_1j1w1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">7&quot;8n829J9|9</span>
+<span class="s plain-str">7&#x27;727?7J7W7b7o7z7</span>
+<span class="s plain-str">8&quot;8/8:8G8R8_8j8w8</span>
+<span class="s plain-str">9*979B9O9Z9g9r9</span>
+<span class="s plain-str">2*272B2O2Z2g2r2</span>
+<span class="s plain-str">3&#x27;323?3J3W3b3o3z3</span>
+<span class="s plain-str">4&quot;4/4:4G4R4_4j4w4</span>
+<span class="s plain-str">_extentx <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">_extenty <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×26</span></span>
+<span class="s plain-str">Shell_TrayWnd <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">Enabled</span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; M&lt;/b&gt;in&lt;b&gt;i</span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; A&lt;/b&gt;ct&lt;b&gt;i&lt;/b&gt;v&lt;b&gt;a&lt;/b&gt;te&lt;b&gt;d <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; U&lt;/b&gt;N&lt;b&gt;A&lt;/b&gt;ct&lt;b&gt;i&lt;/b&gt;v&lt;b&gt;a&lt;/b&gt;te&lt;b&gt;d <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; I&lt;/b&gt;&lt;b&gt;&lt;/b&gt;m&lt;b&gt;s O&lt;/b&gt;n <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; I&lt;/b&gt;&lt;b&gt;&lt;/b&gt;m&lt;b&gt;s O&lt;/b&gt;ff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×23</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t&lt;/b&gt;</span>
+<span class="s plain-str">B&lt;/b&gt;y&lt;b&gt;:&lt;/b&gt; &lt;b&gt;O&lt;/b&gt;p&lt;b&gt;i&lt;/b&gt;u&lt;b&gt;M&lt;/b&gt;</span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×15</span></span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×12</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Keyword <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Buddy Chat</span>
+<span class="s plain-str">&lt;FONT FACE=</span>
+<span class="s plain-str">&lt;B&gt; :::::::   :::  :::   : :::::    ::::::     ::::::</span>
+<span class="s plain-str">&lt;B&gt;::::::::    ::::: ::  :::        :::::::    ::::::</span>
+<span class="s plain-str">&lt;B&gt;                                ::::::::</span>
+<span class="s plain-str">aol://9293: <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">Write Mail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">BuddyView</span>
+<span class="s plain-str">- [&lt;/b&gt;X&lt;b&gt;]&lt;/b&gt;e&lt;b&gt;d</span>
+<span class="s plain-str">&lt;b&gt;X-E&lt;/b&gt;rs&lt;b&gt;i&lt;/b&gt;s&lt;b&gt;t &lt;/b&gt;-&lt;b&gt; S&lt;/b&gt;N&lt;b&gt; n&lt;/b&gt;o&lt;b&gt;t f&lt;/b&gt;ou&lt;b&gt;n&lt;/b&gt;d <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">- U&lt;/b&gt;n&lt;b&gt;[&lt;/b&gt;X&lt;b&gt;]&lt;/b&gt;e&lt;b&gt;d</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">_IID_FORM1</span>
+<span class="s plain-str">_IID_FORM3</span>
+<span class="s plain-str">_IID_FORM2</span>
+<span class="s plain-str">_IID_FORM4</span>
+<span class="s plain-str">Programer</span>
+</details>
+<div class="stats">Total unique strings: 2449 · Interesting: 25 · Noise filtered: 2130</div>
+</div></body></html>

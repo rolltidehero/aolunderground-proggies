@@ -1,0 +1,479 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>breakdown.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/breakdown.zip">&#x2b07; Download breakdown.zip</a>
+</div>
+<div class="hero">
+<div><h1>Breakdown Recruiter Idle</h1><span class="author">by <b>DarKStaR</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Breakdown Recruiter Idle.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-05-25</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (2)</h2>
+<span class="s author-str">This Program was made by DarKStaR using VB4 hope you guys like it.  If you want to contact me E-Mail me at i3reakdown@hotmail.com, -Peace</span>
+<span class="s author-str">Made By DarKStaR</span>
+<h2>&#x1f4e6; Dependencies (1)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (32)</h2>
+<span class="s interesting-str">Breakdown Recruiter Idle <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Text of hyperlink - USE SPACES</span>
+<span class="s interesting-str">Stop Recruiter</span>
+<span class="s interesting-str">Start Recruiter</span>
+<span class="s interesting-str">Subj. - No Spaces USE &quot;_&quot;</span>
+<span class="s interesting-str">Your SN - NO SPACES!</span>
+<span class="s interesting-str">00/__Pph@pg/ph pg oX</span>
+<span class="s interesting-str">OG@``Opg0ph/ph pg</span>
+<span class="s interesting-str">THUNBreakdown Recruiter Idle</span>
+<span class="s interesting-str">[Breakdown Recruiter/Idle Unloaded]</span>
+<span class="s interesting-str">[By DarKStaR &lt; a href=mailto:i3reakdown@hotmail.com?subject=Send_me_Breakdown_Recruiter/Idle&gt;Get it Here&lt;/a&gt;.] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Incoming/Saved Mail <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">[Breakdown Recruiter/Idle Loaded]</span>
+<span class="s interesting-str">&lt;b&gt;&lt; A HREF=mailto: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Instant Message <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Ok heres how it works, what you do is you type in your SN then type in the subj. for instance (I WANT AN APP) then click start recruiter.  Every minute until you turn it off it will scroll a hyperlink saying whatever you want it to say like (Click here to join my warez group) then when they click it it will send you a mail saying they want to join your group.</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Ok heres how it works you can either use it as a lister to spam or you can use it as a recruiter.  So if your using it as a recruiter what you do is you type in your SN then type in the subj for instance (I WANT AN APP) then click start recruiter.  Every minute until you turn it off it will scroll a hyperlink saying whatever you want it to say like (Click here to join my warez group) then when they click it it will send you a mail saying they want to join your group.</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">An Idler that recruits people for Warez Groups.</span>
+<span class="s interesting-str">Copyrigthed on May25th 2000</span>
+<span class="s interesting-str">Breakdown Recruiter Idle.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (315)</summary>
+<span class="s plain-str">o0pw@OG/oW?</span>
+<span class="s plain-str">g/ph0`P0_G0</span>
+<span class="s plain-str">_G _G PG PG</span>
+<span class="s plain-str">`X `X `X `W _P _O PH</span>
+<span class="s plain-str">`H `H oP/pX/</span>
+<span class="s plain-str">x_`W/`X/p</span>
+<span class="s plain-str">wOoX/`W pp</span>
+<span class="s plain-str">w?ph0pg0oX</span>
+<span class="s plain-str">w@pg0oX ph/</span>
+<span class="s plain-str">@ph?pg0`W `W</span>
+<span class="s plain-str">x@ph?`W _H</span>
+<span class="s plain-str">xOog0`W PH</span>
+<span class="s plain-str">h/o`/og/pg/ph</span>
+<span class="s plain-str">wOo`/`W _H</span>
+<span class="s plain-str">w0pg/`_ o`/pg ph</span>
+<span class="s plain-str">xOog0oX/oW</span>
+<span class="s plain-str">oX/pg?og0o_/oW `W `W `W/_H O8</span>
+<span class="s plain-str">wPog?o_/oX</span>
+<span class="s plain-str">_P `W oW oW</span>
+<span class="s plain-str">h0og/pg/p_/pg0og/og/o`/`X `X `W</span>
+<span class="s plain-str">ph/ph/`_ PH</span>
+<span class="s plain-str">`X oX oW oW</span>
+<span class="s plain-str">?og0_P PH PH `W/</span>
+<span class="s plain-str">`W oX oW oP</span>
+<span class="s plain-str">OG _W `` ph0</span>
+<span class="s plain-str">`W ph0pg0`X/PH</span>
+<span class="s plain-str">?og/_P/PH PH `W/</span>
+<span class="s plain-str">`W `W oW oP</span>
+<span class="s plain-str">h?oX/`H P@</span>
+<span class="s plain-str">PW `g oh/</span>
+<span class="s plain-str">h0ph/`X pg</span>
+<span class="s plain-str">p?ph0`X/PH</span>
+<span class="s plain-str">p?pg?og0`X o_ pX</span>
+<span class="s plain-str">w?pg0`W _O</span>
+<span class="s plain-str">`X `W/PH OH</span>
+<span class="s plain-str">w0o_/_P PH PH `W/ph?</span>
+<span class="s plain-str">_X/`g `h/</span>
+<span class="s plain-str">x0o`/_W PO PH _W/og0</span>
+<span class="s plain-str">PW `_ `g oh0</span>
+<span class="s plain-str">`W `X `W _O</span>
+<span class="s plain-str">PW/_W _` ph0</span>
+<span class="s plain-str">_W _X `` ph0</span>
+<span class="s plain-str">oX/`P PH OG</span>
+<span class="s plain-str">x/ph0`_0_W/_G</span>
+<span class="s plain-str">p/pg/ph oW</span>
+<span class="s plain-str">_g ``/`X oW `W</span>
+<span class="s plain-str">_g/`_ oX oW</span>
+<span class="s plain-str">h pg o` `W</span>
+<span class="s plain-str">h/ph/o` oX</span>
+<span class="s plain-str">h/ph0og0o`/`W</span>
+<span class="s plain-str">PH _W _W PH</span>
+<span class="s plain-str">`X/`X0PG/@7</span>
+<span class="s plain-str">`P ph0ph?_W/</span>
+<span class="s plain-str">x?ph/_P OG</span>
+<span class="s plain-str">PH _W/_W _O</span>
+<span class="s plain-str">pg?ph?_P `X `W</span>
+<span class="s plain-str">PH _W/`W _O</span>
+<span class="s plain-str">PH `X/`W _O</span>
+<span class="s plain-str">_P/`X `W PH</span>
+<span class="s plain-str">07/`W_/&#x27;P</span>
+<span class="s plain-str">h/pg o_ `W</span>
+<span class="s plain-str">x`_WOPWO</span>
+<span class="s plain-str">h/o` oX `W</span>
+<span class="s plain-str">x_pg@_W PO</span>
+<span class="s plain-str">xpOGOOGO</span>
+<span class="s plain-str">`X `_ `W _H</span>
+<span class="s plain-str">pP_W?OH OG</span>
+<span class="s plain-str">PH `W/`W/_H</span>
+<span class="s plain-str">PO `W/`W/_H</span>
+<span class="s plain-str">_P/`X/`W0_H</span>
+<span class="s plain-str">0/(_/&#x27;p/&#x27;</span>
+<span class="s plain-str">_W/o_0oX0_H</span>
+<span class="s plain-str">OG `X0oX0`W/PH</span>
+<span class="s plain-str">PG `W0`W/_O/PG</span>
+<span class="s plain-str">`W/oX0`P/PG</span>
+<span class="s plain-str">`W o_ oW `X</span>
+<span class="s plain-str">op`WPOH@OH?OO?_X__XoPW</span>
+<span class="s plain-str">ho`WPOG?@G0@@/PPPPWoOW</span>
+<span class="s plain-str">070070PWPpgo</span>
+<span class="s plain-str">`W p`/oX `H</span>
+<span class="s plain-str">g pg/og PW</span>
+<span class="s plain-str">`X o_ oX `X `W `W O@</span>
+<span class="s plain-str">&#x27; @G@_WO``@o_/`X `W</span>
+<span class="s plain-str">@7/@8 O@/?8</span>
+<span class="s plain-str">_W _X/`W/@8</span>
+<span class="s plain-str">`X `X/`X0O?</span>
+<span class="s plain-str">PWOph@ph/</span>
+<span class="s plain-str">OH@og@ph/ph oX</span>
+<span class="s plain-str">?80ohOpg/o`</span>
+<span class="s plain-str">?8?o`Opg/`X</span>
+<span class="s plain-str">w?oW `P oW</span>
+<span class="s plain-str">_W/_W/_W0@7</span>
+<span class="s plain-str">w?oW `X pX</span>
+<span class="s plain-str">_X/_W/_W0O8</span>
+<span class="s plain-str">x?pg/oW p_</span>
+<span class="s plain-str">_X/_W/`X0O8 ?(</span>
+<span class="s plain-str">PH/O@/?7 0( 0(</span>
+<span class="s plain-str">x?pX p` pX</span>
+<span class="s plain-str">w?pX p` pW</span>
+<span class="s plain-str">@7 O? O8/O@/@8/0( 0(</span>
+<span class="s plain-str">_P _X/_W/PG @7</span>
+<span class="s plain-str">x?oX oW oW</span>
+<span class="s plain-str">@8 OG/_X?_W0_W?OH/@@</span>
+<span class="s plain-str">0( ?/ @8/@7/@8/@8/0/ /&#x27;</span>
+<span class="s plain-str">OG OH OH0OG 0(</span>
+<span class="s plain-str">PH _O/@7 @7</span>
+<span class="s plain-str">ph0`W pg/o_</span>
+<span class="s plain-str">O@ @? @8 @7 PH/`W ?7</span>
+<span class="s plain-str">ph0o_/pg/pg/`W</span>
+<span class="s plain-str">@G OG @G/?7</span>
+<span class="s plain-str">w?pg/o_ _H</span>
+<span class="s plain-str">o?8p`Wpogo@??07/00////?80OG@PH@OG?OG?OG?OH@@800(/</span>
+<span class="s plain-str">OH/PG0OG?OH?_W@PP@PO@OH0@G/?@ @8</span>
+<span class="s plain-str">_H oW0PG/?8</span>
+<span class="s plain-str">`O oW0PH/?7</span>
+<span class="s plain-str">OG@@H0@H?_W/_W??7?0/??8@0/00(//&#x27;</span>
+<span class="s plain-str">`W/`X/PH O@</span>
+<span class="s plain-str">O8/@8/@G/@8//7</span>
+<span class="s plain-str">PH@@H0OH?o`/_X0?8/@8/O@0@8/@7/?7</span>
+<span class="s plain-str">o0pg/pX oW</span>
+<span class="s plain-str">g0pg/ph o`</span>
+<span class="s plain-str">`O oX?`X0@7</span>
+<span class="s plain-str">_7/P8/O8 O@0?8</span>
+<span class="s plain-str">`W `X oX pg/ph/</span>
+<span class="s plain-str">o/&#x27;pPHpo_oOGO07007007/00/?0/@80@80@80@7/@8/@7/@8/@7/@8/@80@8/@8 O@ OG OG/PO?@G@0/</span>
+<span class="s plain-str">p`?`W0PH/?7</span>
+<span class="s plain-str">oP pX/oW/_H _G</span>
+<span class="s plain-str">x@og0`_ _X</span>
+<span class="s plain-str">pOoW0_H</span>
+<span class="s plain-str">oh/og?oh?oh/oh</span>
+<span class="s plain-str">`X/_X@PP?0(</span>
+<span class="s plain-str">pg0`X0o`0@8</span>
+<span class="s plain-str">OG O?/PH/PG/@8 ?7 @7/@8/@80@70?70?00?8??8@?8@@8OP@O`XO`_?OO</span>
+<span class="s plain-str">pOoX0_O <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">O  O/&#x27;O/&#x27;O/&#x27;O0(@0(@?0?@7?@70O80O8/@7 O8 O8 @8</span>
+<span class="s plain-str">pg?`X/`X/@?</span>
+<span class="s plain-str">`X0pg?ph@</span>
+<span class="s plain-str">_X0_X?__ _X</span>
+<span class="s plain-str">_H `W0`O _H</span>
+<span class="s plain-str">wOpg0`P</span>
+<span class="s plain-str">xOpg0`P</span>
+<span class="s plain-str">pg/ph?oh@PH ?0</span>
+<span class="s plain-str">xOpg0`W</span>
+<span class="s plain-str">8?p00o?/`7/oH/`H/_W</span>
+<span class="s plain-str">h?`W?PH/OG/OG ?8 00</span>
+<span class="s plain-str">?7_?7P?7P?7P?0O0/O0(@0(?/(0/&#x27;0/&#x27;//</span>
+<span class="s plain-str">0/ 08/@@0PH?PG/PG/_H0P8 @8</span>
+<span class="s plain-str">?7 0(/?( @/</span>
+<span class="s plain-str">h0`X/_O/OG OG @?</span>
+<span class="s plain-str">`X ph/oX0OG PG OG</span>
+<span class="s plain-str">pg/pg/p` oX</span>
+<span class="s plain-str">w0pg/_O PH _W/OH @?</span>
+<span class="s plain-str">?ph/oX/`P/`X0PG</span>
+<span class="s plain-str">h/pg `W oX/`W _P</span>
+<span class="s plain-str">0 &#x27;0/&#x27;?0(?//?/&#x27;0</span>
+<span class="s plain-str">0 &#x27;?/&#x27;?0(?0/?/(?</span>
+<span class="s plain-str">?70POO___ohPog@`W0_H/PG OG @? @8</span>
+<span class="s plain-str">0 &#x27;?/&#x27;?/(?0/@/(?</span>
+<span class="s plain-str">o/ph/og/pg0</span>
+<span class="s plain-str">? &#x27;?/&#x27;?/(?0/@/(?</span>
+<span class="s plain-str">?8/OG0PO0PP0`X0_W/`W `W</span>
+<span class="s plain-str">pg og ph0og0`X0_P/PG O@ @7</span>
+<span class="s plain-str">?8 @7 O@/_W@ohP</span>
+<span class="s plain-str">?8/OH/PO0_W/_W/`X `W</span>
+<span class="s plain-str">PH _O `W pg/</span>
+<span class="s plain-str">? &#x27;?/&#x27;?/(?0/?/(0</span>
+<span class="s plain-str">?8 PH0_P/_W/_W `X</span>
+<span class="s plain-str">@8 OH0_P/`X/`X `X</span>
+<span class="s plain-str">0/&#x27;?0(??0??7?070/(</span>
+<span class="s plain-str">?7 OH/_W/`X/`X `X</span>
+<span class="s plain-str">_W/o`/ph/pg</span>
+<span class="s plain-str">PH `_0ph/ph pg</span>
+<span class="s plain-str">_W/og/po/ph</span>
+<span class="s plain-str">OH OH OH O@</span>
+<span class="s plain-str">PH PG PG OG @? ?8</span>
+<span class="s plain-str">@8 @? @8 ?7</span>
+<span class="s plain-str">OH PH PG P?</span>
+<span class="s plain-str">h0og/`g/ph/p`</span>
+<span class="s plain-str">h?pg0pg/og `_</span>
+<span class="s plain-str">h0ph0`h/ph/</span>
+<span class="s plain-str">h0ph/oh ph</span>
+<span class="s plain-str">g/ph og ph</span>
+<span class="s plain-str">w0po0o`/`W/`W `W `X</span>
+<span class="s plain-str">p?ph0o_/oX `W `X</span>
+<span class="s plain-str">_W _X _X/PW/PW/PX0PW0PX0PW0PW0OP0OO/@H/@G/@?/?8 ?8 ?8 ?8 ?7 00 00</span>
+<span class="s plain-str">_H PO/PO/OG/PH0PG/PG _H</span>
+<span class="s plain-str">PG/PH0@@0PG?OG0OG/O@</span>
+<span class="s plain-str">@G @80@8?OG@OG?O@0@?/@8</span>
+<span class="s plain-str">P@ PG/PH/PH/PH PG</span>
+<span class="s plain-str">0/&#x27;0/(/0/ 0( 0( 0(</span>
+<span class="s plain-str">?  ?/ 0/&#x27;0/&#x27;//&#x27;/0&#x27;/0( 0(</span>
+<span class="s plain-str">@8 @?/@8/@8 ?7</span>
+<span class="s plain-str">?7 00 /( /&#x27;</span>
+<span class="s plain-str">00&#x27;//&#x27; /  0(</span>
+<span class="s plain-str">0/&#x27;//&#x27; /( //</span>
+<span class="s plain-str">0/(/?8/?8</span>
+<span class="s plain-str">?8 ?80/(/</span>
+<span class="s plain-str">0 &#x27;007/?8</span>
+<span class="s plain-str">OG/OH????/(</span>
+<span class="s plain-str">&#x27;  &#x27;  &#x27; /( 0/ ?8/07/</span>
+<span class="s plain-str">&#x27; /&#x27;//(//(//(0/&#x27;0/&#x27;0/ 0/ 0</span>
+<span class="s plain-str">?0 ?8/@8/?8/?8 07</span>
+<span class="s plain-str">x_ohPOH00/</span>
+<span class="s plain-str">&#x27; /&#x27;//&#x27;//(//(/ &#x27;/ &#x27;/  /</span>
+<span class="s plain-str">/  //( /( 0(</span>
+<span class="s plain-str">0@(?P7O_/O_&#x27;O`(Po8P</span>
+<span class="s plain-str">`W _W/_W/PX0PW/OH @@</span>
+<span class="s plain-str">PppP_X??8 /&#x27;</span>
+<span class="s plain-str">0/&#x27;00/0070?80?8/?8 ?8 @?</span>
+<span class="s plain-str">`X `W _W/PX/PW/OO OG</span>
+<span class="s plain-str">?7 ?7 ?8 ?8 ?8/?8/?7/?700000000/?/(?/(?/&#x27;?/&#x27;0/&#x27;0/(00/0?70?80@@0O@/OG/OG/OG PH PO</span>
+<span class="s plain-str">OG OG @@ @8</span>
+<span class="s plain-str">00 ?7 ?7 @8 @?/PG0`X@ogOogO</span>
+<span class="s plain-str">og og og/oh/`h0``/_X _P</span>
+<span class="s plain-str">ph ph ph/oo/oo0`g/_W</span>
+<span class="s plain-str">@G OG OG OG</span>
+<span class="s plain-str">_W _` `g og oh oh og</span>
+<span class="s plain-str">OH/_W0`X/`_ `X</span>
+<span class="s plain-str">w@ph@ohO@? @8</span>
+<span class="s plain-str">OH _X0og0po/</span>
+<span class="s plain-str">_W `X p` `X</span>
+<span class="s plain-str">_H _W `X/o_0pg0</span>
+<span class="s plain-str">p`/ph0og/og pX oX PG</span>
+<span class="s plain-str">_P `X/og/ph og</span>
+<span class="s plain-str">`X `X o_/pg/</span>
+<span class="s plain-str">o@ph?ph?ph0</span>
+<span class="s plain-str">_G/oH0pH0</span>
+<span class="s plain-str">oW pX oW _H</span>
+<span class="s plain-str">_O `X0_G `G</span>
+<span class="s plain-str">OG O7 OG @O</span>
+<span class="s plain-str">O@ O@ OG OG OG OG OH OG @@ @G OG OH PO/_W/_W _X _X</span>
+<span class="s plain-str">`W/pg?`H pO</span>
+<span class="s plain-str">`W OX `X _P</span>
+<span class="s plain-str">PW pw0oW @G</span>
+<span class="s plain-str">PW PX/oX PP</span>
+<span class="s plain-str">`X?`X?_@/_7 o70_(/o8/</span>
+<span class="s plain-str">`O PW _X/oX _X p</span>
+<span class="s plain-str">h/ph/pg/pg pg og og pg pg pg pg</span>
+<span class="s plain-str">o` pg/ph pg pg</span>
+<span class="s plain-str">pw ox oh ph/oX _O _H</span>
+<span class="s plain-str">PP/@8 PH?`W?O7 _@/_7/_8@O8 pX0pO</span>
+<span class="s plain-str">80_&#x27; _( `/ p7/</span>
+<span class="s plain-str">`W `X oX oX `X</span>
+<span class="s plain-str">X0p8 P(/@&#x27; _8?`HOP8</span>
+<span class="s plain-str">w/_W oo0@H</span>
+<span class="s plain-str">`W `X oX pg ph/pg/pg og o`</span>
+<span class="s plain-str">W?pG/o70o7?p80</span>
+<span class="s plain-str">wPpgOPW@`X@o_Pop_px`</span>
+<span class="s plain-str">`X `X `X `W _W</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">TYPELIB <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">0,1L1\1|1</span>
+<span class="s plain-str">061D1R1`1n1|1</span>
+<span class="s plain-str">2$222@2N2\2x2</span>
+<span class="s plain-str">&gt;R?W?k?p?</span>
+<span class="s plain-str">03080L0Q0e0j0~0</span>
+<span class="s plain-str">6P6l6$7J7l7</span>
+<span class="s plain-str">9&amp;939&gt;9K9V9c9n9{9</span>
+<span class="s plain-str">0#0.0;0F0S0^0k0v0</span>
+<span class="s plain-str">1+161C1N1[1f1s1~1</span>
+<span class="s plain-str">2&amp;232&gt;2K2V2c2n2{2</span>
+<span class="s plain-str">3#3.3;3F3S3^3k3v3</span>
+<span class="s plain-str">4+464C4N4[4f4s4~4</span>
+<span class="s plain-str">5&amp;535&gt;5K5V5c5n5{5</span>
+<span class="s plain-str">6#6.6;6F6S6^6k6v6</span>
+<span class="s plain-str">Caption</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">DarKStaR <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×15</span></span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×10</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">?subject= <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">Write Mail <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">aol://9293: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">_IID_FORM1</span>
+<span class="s plain-str">Anus Inc.</span>
+</details>
+<div class="stats">Total unique strings: 3854 · Interesting: 32 · Noise filtered: 3482</div>
+</div></body></html>

@@ -1,0 +1,907 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>db3remix.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/db3remix.zip">&#x2b07; Download db3remix.zip</a>
+</div>
+<div class="hero">
+<div><h1>db idle</h1><span class="author">by <b>xer2k</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB5</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">db idle.exe</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (16)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSDXM.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">CHATSCAN3.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">SYSTRAY.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSDXM.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">CHATSCAN3.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">SYSTRAY.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (51)</h2>
+<span class="s interesting-str">PPhotoshop 3.0</span>
+<span class="s interesting-str">Copyright (c) 1998 Hewlett-Packard Company</span>
+<span class="s interesting-str">sRGB IEC61966-2.1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">IEC http://www.iec.ch <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">.IEC 61966-2.1 Default RGB colour space - sRGB <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">,Reference Viewing Condition in IEC61966-2.1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">C:\Program Files\DevStudio\VB\VB5.OLB</span>
+<span class="s interesting-str">C:\PROGRAM FILES\DEVSTUDIO\VB\SYSTRAY.oca</span>
+<span class="s interesting-str">C:\WINDOWS\SYSTEM\MSDXM.oca</span>
+<span class="s interesting-str">lo&amp;ad styles</span>
+<span class="s interesting-str">s&amp;ave styles</span>
+<span class="s interesting-str">&amp;delete style</span>
+<span class="s interesting-str">&lt; a href=http://xer2k.cjb.net&gt;&lt;/u&gt;db3(remix) : dl here ?&lt;/a&gt;</span>
+<span class="s interesting-str">random &amp;messages</span>
+<span class="s interesting-str">&amp;edit random mesages</span>
+<span class="s interesting-str">&amp;enable &amp;scrolling</span>
+<span class="s interesting-str">scrolling interval: 1 min.</span>
+<span class="s interesting-str">file not found kill</span>
+<span class="s interesting-str">beep when scrolling</span>
+<span class="s interesting-str">vi&amp;ew styles</span>
+<span class="s interesting-str">make a style</span>
+<span class="s interesting-str">hide &amp;welcome</span>
+<span class="s interesting-str">show &amp;welcome</span>
+<span class="s interesting-str">xer2k productions</span>
+<span class="s interesting-str">&amp;edit mp3 dir</span>
+<span class="s interesting-str">&amp;blockin op.</span>
+<span class="s interesting-str">im&#x27;s on &amp;after</span>
+<span class="s interesting-str">im&#x27;s off &amp;befor</span>
+<span class="s interesting-str">close im&#x27;s befor</span>
+<span class="s interesting-str">&amp;trasnfer op.</span>
+<span class="s interesting-str">start downloads</span>
+<span class="s interesting-str">unupchat n&amp;ow</span>
+<span class="s interesting-str">&amp;enabled auto upchat</span>
+<span class="s interesting-str">subclass dl win.</span>
+<span class="s interesting-str">subclass ul win.</span>
+<span class="s interesting-str">subclass &amp;msie win.</span>
+<span class="s interesting-str">&amp;disc. protecting</span>
+<span class="s interesting-str">dpc &amp;dial-up</span>
+<span class="s interesting-str">edit pr room</span>
+<span class="s interesting-str">&amp;enter pr room</span>
+<span class="s interesting-str">co&amp;ntiue downloads</span>
+<span class="s interesting-str">Arial NarrowD <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Arial Narrow <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">dir settings</span>
+<span class="s interesting-str">right click for option <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">random messages</span>
+<span class="s interesting-str">[ inactive ] <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">[ http://xer2k.cjb.net ]</span>
+<span class="s interesting-str">preset styles</span>
+<span class="s interesting-str">preset styles maker</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (731)</summary>
+<span class="s plain-str">(remixidle</span>
+<span class="s plain-str">XICC_PROFILE</span>
+<span class="s plain-str">mntrRGB XYZ</span>
+<span class="s plain-str">acspMSFT</span>
+<span class="s plain-str">IEC sRGB</span>
+<span class="s plain-str">CRT curv</span>
+<span class="s plain-str">%	:	O	d	y</span>
+<span class="s plain-str">DTsEF7Gc(UVW</span>
+<span class="s plain-str">u*9:HIJXYZghijvwxyz</span>
+<span class="s plain-str">mLCE$[z</span>
+<span class="s plain-str">noeriZt</span>
+<span class="s plain-str">i`iCQZWI</span>
+<span class="s plain-str">gbOwK\l</span>
+<span class="s plain-str">fTVf4P*O</span>
+<span class="s plain-str">jl?\@32	P0</span>
+<span class="s plain-str">x&amp;eEHK=</span>
+<span class="s plain-str">@Z5(iCZzW</span>
+<span class="s plain-str">W,:yyVA</span>
+<span class="s plain-str">SysTray.SystemTray <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SystemTray</span>
+<span class="s plain-str">MediaPlayerCtl.MediaPlayer <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MediaPlayer</span>
+<span class="s plain-str">CombineRgn</span>
+<span class="s plain-str">CreateRectRgn</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">GetPixel</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">SetWindowRgn</span>
+<span class="s plain-str">Form_Load</span>
+<span class="s plain-str">Form_MouseDown</span>
+<span class="s plain-str">Label1_MouseDown</span>
+<span class="s plain-str">Label17_MouseDown</span>
+<span class="s plain-str">Label19_MouseDown</span>
+<span class="s plain-str">Label2_Click</span>
+<span class="s plain-str">Label20_MouseDown</span>
+<span class="s plain-str">Label3_MouseDown</span>
+<span class="s plain-str">Timer1_Timer</span>
+<span class="s plain-str">Timer2_Timer</span>
+<span class="s plain-str">Timer3_Timer</span>
+<span class="s plain-str">Timer4_Timer</span>
+<span class="s plain-str">Timer5_Timer</span>
+<span class="s plain-str">Timer6_Timer</span>
+<span class="s plain-str">Timer7_Timer</span>
+<span class="s plain-str">BringWindowToTop</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CreateEllipticRgn</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">GetTickCount</span>
+<span class="s plain-str">GetFreeSystemResources</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">5VChat1</span>
+<span class="s plain-str">C:\UNZIPPED\SOLAR\CHATSCAN</span>
+<span class="s plain-str">{showwelcome</span>
+<span class="s plain-str">SysTray</span>
+<span class="s plain-str">mins_Click</span>
+<span class="s plain-str">SetMenuItemBitmaps</span>
+<span class="s plain-str">adv_Click</span>
+<span class="s plain-str">auto_Click</span>
+<span class="s plain-str">Chat1_ChatMsg</span>
+<span class="s plain-str">Chat2_ChatMsg</span>
+<span class="s plain-str">closeall_Click</span>
+<span class="s plain-str">downloads_Click</span>
+<span class="s plain-str">dpcaim_Click</span>
+<span class="s plain-str">dpcaol_Click</span>
+<span class="s plain-str">dpcdial_Click</span>
+<span class="s plain-str">editdir_Click</span>
+<span class="s plain-str">editpr_Click</span>
+<span class="s plain-str">editrandom_Click</span>
+<span class="s plain-str">exit_Click</span>
+<span class="s plain-str">ghostoff_Click</span>
+<span class="s plain-str">ghoston_Click</span>
+<span class="s plain-str">hideaol_Click</span>
+<span class="s plain-str">hidewelcome_Click</span>
+<span class="s plain-str">imsoff_Click</span>
+<span class="s plain-str">imson_Click</span>
+<span class="s plain-str">kill45_Click</span>
+<span class="s plain-str">makea_Click</span>
+<span class="s plain-str">minimize_Click</span>
+<span class="s plain-str">msgss_Click</span>
+<span class="s plain-str">notfound_Click</span>
+<span class="s plain-str">off_Click</span>
+<span class="s plain-str">on_Click</span>
+<span class="s plain-str">onan_Click</span>
+<span class="s plain-str">player_Click</span>
+<span class="s plain-str">random_Click</span>
+<span class="s plain-str">reason_Click</span>
+<span class="s plain-str">restart_Click</span>
+<span class="s plain-str">roomenter_Click</span>
+<span class="s plain-str">rooms_Click</span>
+<span class="s plain-str">scrolling_Click</span>
+<span class="s plain-str">scrollings_Click</span>
+<span class="s plain-str">showaol_Click</span>
+<span class="s plain-str">showwelcome_Click</span>
+<span class="s plain-str">signooff_Click</span>
+<span class="s plain-str">stats_Click</span>
+<span class="s plain-str">stoped_Click</span>
+<span class="s plain-str">tank_Click</span>
+<span class="s plain-str">tray_IconModified</span>
+<span class="s plain-str">tray_MouseDblClk</span>
+<span class="s plain-str">tray_MouseDown</span>
+<span class="s plain-str">ulstats_Click</span>
+<span class="s plain-str">unupchat_Click</span>
+<span class="s plain-str">upchat_Click</span>
+<span class="s plain-str">view_Click</span>
+<span class="s plain-str">viewcmds_Click</span>
+<span class="s plain-str">xer2k_Click</span>
+<span class="s plain-str">List1_DblClick</span>
+<span class="s plain-str">List1_MouseDown</span>
+<span class="s plain-str">Text1_KeyPress</span>
+<span class="s plain-str">delete_Click</span>
+<span class="s plain-str">load_Click</span>
+<span class="s plain-str">make_Click</span>
+<span class="s plain-str">Label6_Click</span>
+<span class="s plain-str">add_Click</span>
+<span class="s plain-str">Label5_Click</span>
+<span class="s plain-str">Label4_Click</span>
+<span class="s plain-str">Label3_Click</span>
+<span class="s plain-str">Label11_MouseDown</span>
+<span class="s plain-str">Label10_MouseDown</span>
+<span class="s plain-str">MediaPlayerCtl</span>
+<span class="s plain-str">Label7_MouseDown</span>
+<span class="s plain-str">Label8_MouseDown</span>
+<span class="s plain-str">Label9_MouseDown</span>
+<span class="s plain-str">List1_KeyPress</span>
+<span class="s plain-str">b3__vbaLsetFixstrFree</span>
+<span class="s plain-str">Label2_MouseDown</span>
+<span class="s plain-str">&amp;Label12_Click</span>
+<span class="s plain-str">Label4_MouseDown</span>
+<span class="s plain-str">Label5_MouseDown</span>
+<span class="s plain-str">Label6_MouseDown</span>
+<span class="s plain-str">List1_Click</span>
+<span class="s plain-str">5Label7_Click</span>
+<span class="s plain-str">Label8_Click</span>
+<span class="s plain-str">n)Gedit</span>
+<span class="s plain-str">clear_Click</span>
+<span class="s plain-str">copy_Click</span>
+<span class="s plain-str">edit_Click</span>
+<span class="s plain-str">remove_Click</span>
+<span class="s plain-str">save_Click</span>
+<span class="s plain-str">signon_Click</span>
+<span class="s plain-str">unload_Click</span>
+<span class="s plain-str">m&amp;ake style</span>
+<span class="s plain-str">&amp;unload me</span>
+<span class="s plain-str">load list</span>
+<span class="s plain-str">save list</span>
+<span class="s plain-str">clear list</span>
+<span class="s plain-str">dupe kill</span>
+<span class="s plain-str">edit text</span>
+<span class="s plain-str">copy text</span>
+<span class="s plain-str">unload me</span>
+<span class="s plain-str">im sLeeping</span>
+<span class="s plain-str">&amp;brag stats</span>
+<span class="s plain-str">&amp;idle op.</span>
+<span class="s plain-str">&amp;reason</span>
+<span class="s plain-str">&amp;auto idle</span>
+<span class="s plain-str">clear time</span>
+<span class="s plain-str">45 min kill</span>
+<span class="s plain-str">&amp;style op.</span>
+<span class="s plain-str">&amp;other op.</span>
+<span class="s plain-str">turn &amp;on <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">turn &amp;off</span>
+<span class="s plain-str">ghost &amp;on</span>
+<span class="s plain-str">ghost &amp;off</span>
+<span class="s plain-str">hide &amp;aol</span>
+<span class="s plain-str">show &amp;aol</span>
+<span class="s plain-str">&amp;signoff</span>
+<span class="s plain-str">mp3 player <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;edit msg</span>
+<span class="s plain-str">re&amp;start</span>
+<span class="s plain-str">&amp;advertise</span>
+<span class="s plain-str">upchat n&amp;ow</span>
+<span class="s plain-str">mi&amp;nimize</span>
+<span class="s plain-str">unl&amp;oad me</span>
+<span class="s plain-str">&amp;cancel</span>
+<span class="s plain-str">mp3 index:</span>
+<span class="s plain-str">222___JJJJJJJJJ666222JJJ222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ666222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ___222JJJ___222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ666222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ666222JJJ222JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222))):::222222222222222222222222222222222222222222222222222222222222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ666222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ666222JJJ222222JJJ222222JJJ222222JJJJJJ222222222666&gt;&gt;&gt;666222222222222222222222222222222222222222222222222222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ666222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ___222JJJ___222JJJ___222JJJ___222JJJJJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222________________________________________________________________________222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ222222JJJ222222JJJ222222JJJ222222JJJ222222JJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222222222222222222222222222222222222222222222222222222222222222222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ___222JJJ___222JJJ___222JJJ___222JJJ___222JJJJJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ666222JJJ222222JJJ222222JJJ222222JJJ222222JJJ222222JJJJJJ222222222666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222___JJJJJJJJJ___222JJJ___222JJJ___222JJJ___222JJJ___222JJJ___222JJJJJJJJJ222222666666JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ222222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ppppPbr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">|skd\[RH?66 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ujaYQC6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">xocZSJF6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">c&amp;ancel</span>
+<span class="s plain-str">fcolor: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">acolor: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">styles:</span>
+<span class="s plain-str">Screen_Name</span>
+<span class="s plain-str">What_Said</span>
+<span class="s plain-str">KeyAscii</span>
+<span class="s plain-str">2x	x3x.25x</span>
+<span class="s plain-str">)x$|3xUy3x</span>
+<span class="s plain-str">*x$K%xu-&#x27;x6</span>
+<span class="s plain-str">!5xT15xx#&amp;x</span>
+<span class="s plain-str">0$0,040&lt;0D0L0T0\0d0l0t0|0</span>
+<span class="s plain-str">1 1$1(1,1014181&lt;1@1D1H1L1P1T1X1\1`1d1h1l1p1t1x1|1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">2 2$2(2,2024282&lt;2@2D2H2L2P2T2X2\2`2d2t2|2</span>
+<span class="s plain-str">3$3,34383&lt;3</span>
+<span class="s plain-str">4,4&lt;4L4X4\4d4l4p4t4x4|4</span>
+<span class="s plain-str">5(5,585&lt;5L5\5h5l5x5|5</span>
+<span class="s plain-str">6$6,6064686&lt;6@6D6H6L6P6d6l6t6x6|6</span>
+<span class="s plain-str">7 7$747D7P7T7d7p7t7</span>
+<span class="s plain-str">8 8$848D8T8`8d8t8</span>
+<span class="s plain-str">9$949D9P9T9`9d9t9</span>
+<span class="s plain-str">; ;$;(;,;0;4;8;&lt;;@;D;H;L;P;T;X;\;`;d;h;l;p;t;x;|; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt; &lt;$&lt;(&lt;,&lt;0&lt;4&lt;8&lt;&lt;&lt;@&lt;D&lt;H&lt;L&lt;P&lt;T&lt;X&lt;\&lt;`&lt;d&lt;h&lt;l&lt;p&lt;t&lt;x&lt;|&lt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">= =$=(=,=0=4=8=&lt;=@=D=H=L=P=T=X=\=`=d=h=l=p=t=x=|=</span>
+<span class="s plain-str">&gt; &gt;$&gt;(&gt;,&gt;0&gt;4&gt;8&gt;&lt;&gt;@&gt;D&gt;H&gt;L&gt;P&gt;T&gt;X&gt;\&gt;`&gt;d&gt;h&gt;l&gt;p&gt;t&gt;x&gt;|&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0$0,040&lt;0@0D0L0P0T0`0d0l0t0|0</span>
+<span class="s plain-str">1$1,141&lt;1D1L1X1\1d1l1t1|1</span>
+<span class="s plain-str">2$2(2,2024282&lt;2@2D2H2L2P2T2X2\2`2d2t2|2</span>
+<span class="s plain-str">3$3,343&lt;3D3L3T3\3d3l3t3|3</span>
+<span class="s plain-str">4$444&lt;4D4L4T4X4\4`4d4h4l4p4|4</span>
+<span class="s plain-str">5$5,50545&lt;5D5L5T5\5d5l5t5|5</span>
+<span class="s plain-str">6$6,646&lt;6D6L6T6\6l6t6|6</span>
+<span class="s plain-str">7,747&lt;7D7L7T7\7d7l7t7|7</span>
+<span class="s plain-str">8 8$8(8,8084888&lt;8@8D8H8L8P8T8X8\8`8d8h8l8p8t8x8|8</span>
+<span class="s plain-str">9 9$9(9,9094989&lt;9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9</span>
+<span class="s plain-str">: :$:(:,:0:4:8:&lt;:@:D:H:L:P:T:X:\:`:d:h:l:p:t:x:|:</span>
+<span class="s plain-str">= =0=D=L=\=d=h=l=t=|=</span>
+<span class="s plain-str">? ?$?(?,?0?4?8?&lt;?@?D?H?L?P?T?X?\?`?d?h?l?p?t?x?|?</span>
+<span class="s plain-str">0 0$0(0,0004080&lt;0@0D0H0L0P0T0X0\0`0d0h0l0p0t0x0|0</span>
+<span class="s plain-str">1$1,141&lt;1D1L1T1\1d1l1t1|1</span>
+<span class="s plain-str">2$2,2024282&lt;2@2D2H2L2P2T2X2\2`2d2t2|2</span>
+<span class="s plain-str">3 3$3(3,3034383&lt;3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4$4,444&lt;4@4D4L4T4X4\4`4d4h4l4p4t4x4|4</span>
+<span class="s plain-str">5$52585&gt;5D5J5P5V5\5b5h5n5t5z5</span>
+<span class="s plain-str">6&quot;6(6.646:6@6F6L6R6X6^6d6j6p6v6|6</span>
+<span class="s plain-str">7$7*70767&lt;7B7H7N7T7Z7`7f7l7r7x7~7</span>
+<span class="s plain-str">8 8&amp;8,82888&gt;8D8J8P8V8\8b8h8n8t8z8</span>
+<span class="s plain-str">2,2&lt;2D2T2d2l2|2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">2h3l3p3t3x3</span>
+<span class="s plain-str">3044484&lt;4@4H4</span>
+<span class="s plain-str">445&lt;5H5L5d5l5t5|5</span>
+<span class="s plain-str">6 606@6H6X6h6p6</span>
+<span class="s plain-str">7L7P7T7X7\7</span>
+<span class="s plain-str">8 8(8,8084888T849</span>
+<span class="s plain-str">0181D1H1`1h1p1x1</span>
+<span class="s plain-str">2 3$3(3,303h3</span>
+<span class="s plain-str">404\4`4d4h4l4</span>
+<span class="s plain-str">6$646&lt;6L6\6d6t6</span>
+<span class="s plain-str">7 7$7,7074787&lt;7D7</span>
+<span class="s plain-str">8&lt;9p9t9x9|9</span>
+<span class="s plain-str">94:&lt;:H:L:d:l:t:|:</span>
+<span class="s plain-str">; ;0;@;H;X;h;p;</span>
+<span class="s plain-str">;0&lt;d&lt;h&lt;l&lt;p&lt;t&lt;|&lt;</span>
+<span class="s plain-str">&gt;H&gt;L&gt;P&gt;T&gt;X&gt;t&gt;</span>
+<span class="s plain-str">&gt;8?@?L?P?h?p?x?</span>
+<span class="s plain-str">0$040D0L0\0l0t0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">041h1l1p1t1x1</span>
+<span class="s plain-str">1024282&lt;2@2D2h2</span>
+<span class="s plain-str">3,3X3\3`3d3h3</span>
+<span class="s plain-str">3H4P4\4`4x4</span>
+<span class="s plain-str">5,545D5T5\5l5|5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">6$646D6L6\6l6t6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">7$747&lt;7L7\7d7l7p7t7x7|7</span>
+<span class="s plain-str">7L8P8T8X8\8`8h8l8p8t8x8</span>
+<span class="s plain-str">9 9$9(9,90989&lt;9@9D9H9</span>
+<span class="s plain-str">; ;$;(;4;8;&lt;;@;D;</span>
+<span class="s plain-str">&lt; &lt;$&lt;0&lt;@&lt;H&lt;X&lt;h&lt;p&lt;</span>
+<span class="s plain-str">= =0=8=H=X=`=p=</span>
+<span class="s plain-str">&gt; &gt;(&gt;8&gt;H&gt;P&gt;`&gt;p&gt;x&gt;</span>
+<span class="s plain-str">004080&lt;0@0L0P0T0X0\0h0l0p0t0x0|0</span>
+<span class="s plain-str">1 1,1014181&lt;1@1H1L1P1T1X1\1d1h1l1p1t1</span>
+<span class="s plain-str">2X2\2`2d2h2t2x2|2</span>
+<span class="s plain-str">2D3L3X3\3t3|3</span>
+<span class="s plain-str">4(404@4P4X4h4x4</span>
+<span class="s plain-str">5 505@5H5X5h5p5</span>
+<span class="s plain-str">6 60686@6D6H6L6P6T6X6\6`6d6h6p6t6x6|6</span>
+<span class="s plain-str">6D7H7L7P7T7</span>
+<span class="s plain-str">8 8$8(808x8|8</span>
+<span class="s plain-str">9(9T9X9\9`9d9</span>
+<span class="s plain-str">: :$:H:t:x:|:</span>
+<span class="s plain-str">:4;h;l;p;t;x;</span>
+<span class="s plain-str">0,0&lt;0D0T0d0l0|0</span>
+<span class="s plain-str">1,141D1T1\1l1|1</span>
+<span class="s plain-str">1D2H2L2P2T2</span>
+<span class="s plain-str">2,3034383&lt;3D3</span>
+<span class="s plain-str">444`4d4h4l4p4</span>
+<span class="s plain-str">4 5$5(5,505T5</span>
+<span class="s plain-str">5T6X6\6`6d6</span>
+<span class="s plain-str">6(7,7074787</span>
+<span class="s plain-str">808\8`8d8h8l8</span>
+<span class="s plain-str">9 9$9(9,9P9|9</span>
+<span class="s plain-str">: :$:(:&lt;:H:x:|:</span>
+<span class="s plain-str">&lt; &lt;(&lt;0&lt;8&lt;D&lt;H&lt;T&lt;X&lt;d&lt;t&lt;|&lt;</span>
+<span class="s plain-str">0$040&lt;0L0\0d0t0</span>
+<span class="s plain-str">1$1,14181&lt;1@1D1H1L1P1T1X1\1`1d1h1l1p1x1|1</span>
+<span class="s plain-str">2T2X2\2`2d2</span>
+<span class="s plain-str">2034383&lt;3@3d3</span>
+<span class="s plain-str">5`5d5h5l5p5</span>
+<span class="s plain-str">5 6$6(6,606</span>
+<span class="s plain-str">7 7$7(7L7x7|7</span>
+<span class="s plain-str">788&lt;8@8D8H8</span>
+<span class="s plain-str">9 9$9t9x9|9</span>
+<span class="s plain-str">:4:8:&lt;:@:D:H:P:T:X:\:`:d:l:p:t:x:|:</span>
+<span class="s plain-str">= =0=@=H=X=h=p=</span>
+<span class="s plain-str">&gt; &gt;0&gt;8&gt;H&gt;X&gt;`&gt;p&gt;</span>
+<span class="s plain-str">0(080@0P0`0h0x0</span>
+<span class="s plain-str">1(10181&lt;1@1D1H1L1P1T1X1\1`1d1h1l1p1t1x1|1</span>
+<span class="s plain-str">2,2X2\2`2d2h2l2t2x2|2</span>
+<span class="s plain-str">24383&lt;3@3D3</span>
+<span class="s plain-str">4\4`4d4h4l4</span>
+<span class="s plain-str">5 5$5(5,5P5|5</span>
+<span class="s plain-str">6X6\6`6d6h6</span>
+<span class="s plain-str">7 7$7(707D7</span>
+<span class="s plain-str">8@8D8H8L8P8t8</span>
+<span class="s plain-str">= =(=0=8=@=H=T=X=d=h=t=</span>
+<span class="s plain-str">0,040D0T0\0l0|0</span>
+<span class="s plain-str">1$141D1L1\1l1t1</span>
+<span class="s plain-str">2$242&lt;2L2\2d2t2</span>
+<span class="s plain-str">3$3,3&lt;3L3T3d3t3|3</span>
+<span class="s plain-str">4,4&lt;4D4T4d4l4|4</span>
+<span class="s plain-str">7$747&lt;7L7\7d7t7</span>
+<span class="s plain-str">8$8,8&lt;8L8T8d8t8|8</span>
+<span class="s plain-str">9,9&lt;9D9T9d9l9|9</span>
+<span class="s plain-str">1$141&lt;1L1\1d1t1</span>
+<span class="s plain-str">2$2,2&lt;2L2T2d2t2|2</span>
+<span class="s plain-str">3$3(3,3034383&lt;3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3</span>
+<span class="s plain-str">4 4$4(44484&lt;4@4D4</span>
+<span class="s plain-str">5 5$5(5,50545&lt;5@5D5H5L5X5\5`5d5h5t5x5|5</span>
+<span class="s plain-str">6 6$6(6,686&lt;6@6D6H6L6T6X6\6`6d6h6p6t6x6|6</span>
+<span class="s plain-str">7 7$7(74787&lt;7@7D7P7T7X7\7`7</span>
+<span class="s plain-str">8 8$8(84888&lt;8@8D8H8P8T8X8\8`8l8p8t8x8|8</span>
+<span class="s plain-str">8P9T9X9\9`9l9p9t9x9|9</span>
+<span class="s plain-str">9T:X:\:`:d:</span>
+<span class="s plain-str">; ;$;(;,;8;&lt;;@;D;H;</span>
+<span class="s plain-str">= =$=(=d=h=l=p=t=</span>
+<span class="s plain-str">&gt; &gt;(&gt;,&gt;0&gt;4&gt;8&gt;</span>
+<span class="s plain-str">? ?$?0?4?8?&lt;?@?D?L?P?T?X?\?h?l?p?t?x?</span>
+<span class="s plain-str">0$0(0,0004080@0D0H0L0P0T0\0`0d0h0l0</span>
+<span class="s plain-str">0P1T1X1\1`1d1l1p1t1x1|1</span>
+<span class="s plain-str">2\2`2d2h2l2</span>
+<span class="s plain-str">3 3$3(3,30383&lt;3@3D3H3L3T3X3\3`3d3</span>
+<span class="s plain-str">4 4$4t4x4|4</span>
+<span class="s plain-str">5X5\5`5d5h5</span>
+<span class="s plain-str">6(6,6064686</span>
+<span class="s plain-str">8d8h8l8p8t8</span>
+<span class="s plain-str">9 9(9,9094989D9H9L9P9T9`9d9h9l9p9|9</span>
+<span class="s plain-str">181&lt;1@1D1H1L1P1T1X1\1`1d1h1l1p1</span>
+<span class="s plain-str">2 2$2(2,24282&lt;2@2D2H2L2P2T2X2\2`2d2h2t2x2|2</span>
+<span class="s plain-str">3 3$3(3,3034383&lt;3@3D3H3L3\3`3d3h3l3p3t3x3|3</span>
+<span class="s plain-str">4 4$4(4,4044484&lt;4H5X5\5`5</span>
+<span class="s plain-str">70747&lt;7A7L7Q7l7p7x7}7</span>
+<span class="s plain-str">888&lt;8D8I8T8Y8</span>
+<span class="s plain-str">:P:T:\:a:l:q:</span>
+<span class="s plain-str">: ;$;,;1;&lt;;A;h;l;t;y;</span>
+<span class="s plain-str">&gt;0&gt;4&gt;&lt;&gt;A&gt;L&gt;Q&gt;|&gt;</span>
+<span class="s plain-str">0 0$0,010&lt;0A0p0t0|0</span>
+<span class="s plain-str">10141&lt;1A1L1Q1h1l1t1y1</span>
+<span class="s plain-str">2 2$2,212&lt;2A2p2t2|2</span>
+<span class="s plain-str">3	3,30383=3H3M3x3|3</span>
+<span class="s plain-str">3D5T5X5\5p6</span>
+<span class="s plain-str">9 9%90959</span>
+<span class="s plain-str">2 2$2(2,2024282&lt;2@2D2H2L2P2T2X2\2`2d2h2l2p2t2x2|2</span>
+<span class="s plain-str">4 4$4(4,4044484&lt;4@4D4H4L4P4T4X4\4`4d4h4l4p4t4x4|4</span>
+<span class="s plain-str">5$5(5,5054585&lt;5P5t5</span>
+<span class="s plain-str">6(6P6T6X6\6`6x6</span>
+<span class="s plain-str">=0=X=p=t=x=|=</span>
+<span class="s plain-str">&gt; &gt;(&gt;,&gt;0&gt;L&gt;`&gt;h&gt;l&gt;p&gt;</span>
+<span class="s plain-str">? ?(?,?0?L?`?h?l?p?</span>
+<span class="s plain-str">0 0(0,000L0`0h0l0p0</span>
+<span class="s plain-str">1 1(1,101L1P1T1X1\1`1d1h1l1p1t1x1|1</span>
+<span class="s plain-str">2 2$2(2,2024282&lt;2@2D2H2L2P2T2X2\2`2p2t2x2|2</span>
+<span class="s plain-str">3$3(3,3034383&lt;3@3D3H3L3P3T3X3d3p3</span>
+<span class="s plain-str">4 4H4L4P4T4X4\4`4d4h4</span>
+<span class="s plain-str">5&quot;5(5.5C5g5</span>
+<span class="s plain-str">6?6L6l6x6</span>
+<span class="s plain-str">0!0&#x27;0,0S0n0}0</span>
+<span class="s plain-str">1#1(1O1\1a1j1w1</span>
+<span class="s plain-str">252=2F2P2Y2^2d2i2</span>
+<span class="s plain-str">3#3(3.333J3[3h3m3v3{3</span>
+<span class="s plain-str">4&amp;474D4I4R4W4]4b4</span>
+<span class="s plain-str">5-5H5M5_5d5j5o5</span>
+<span class="s plain-str">6(656:6C6P6m6</span>
+<span class="s plain-str">7&#x27;7/747=7B7H7M7a7x7</span>
+<span class="s plain-str">8&quot;8&#x27;80858;8@8T8q8y8~8</span>
+<span class="s plain-str">2&amp;2/2F2S2a2v2~2</span>
+<span class="s plain-str">3&#x27;303@3v3</span>
+<span class="s plain-str">4.464?4a4i4r4x4</span>
+<span class="s plain-str">5 575H5P5Y5</span>
+<span class="s plain-str">6&quot;6+6;6w6</span>
+<span class="s plain-str">7$7-767F7`7{7</span>
+<span class="s plain-str">8#848&lt;8E8W8h8p8y8</span>
+<span class="s plain-str">979?9E9p9x9</span>
+<span class="s plain-str">:4:@:K:w:</span>
+<span class="s plain-str">:	;;;O;k;q;</span>
+<span class="s plain-str">&gt;D&gt;X&gt;s&gt;y&gt;</span>
+<span class="s plain-str">0!0C0V0f0n0s0y0</span>
+<span class="s plain-str">0	1$1-1:1B1G1M1W1c1</span>
+<span class="s plain-str">2*22272=2G2S2w2</span>
+<span class="s plain-str">32383N3Y3</span>
+<span class="s plain-str">4(464A4j4~4</span>
+<span class="s plain-str">6=6P6`6h6m6s6}6</span>
+<span class="s plain-str">7+747P7X7]7c7m7y7</span>
+<span class="s plain-str">7(8&lt;8X8^8t8</span>
+<span class="s plain-str">9*9N9\9g9</span>
+<span class="s plain-str">&lt;1&lt;S&lt;f&lt;v&lt;~&lt;</span>
+<span class="s plain-str">=4===J=R=W=]=g=s=</span>
+<span class="s plain-str">080F0Q0z0</span>
+<span class="s plain-str">1&gt;1R1m1r1w1}1</span>
+<span class="s plain-str">2/2J2O2T2Z2c2l2y2</span>
+<span class="s plain-str">3&#x27;3,31373@3I3V3^3c3i3s3</span>
+<span class="s plain-str">4&amp;4=4C4I4`4</span>
+<span class="s plain-str">566J6e6k6v6</span>
+<span class="s plain-str">6&#x27;7;7S7[7`7f7p7|7</span>
+<span class="s plain-str">8$878V8^8c8i8s8</span>
+<span class="s plain-str">9:9B9G9M9W9c9</span>
+<span class="s plain-str">;F;b;j;o;u;</span>
+<span class="s plain-str">0&quot;0=0J0R0W0]0g0s0</span>
+<span class="s plain-str">2&lt;2P2k2x2</span>
+<span class="s plain-str">4;4G4O4T4Z4d4p4</span>
+<span class="s plain-str">6:6N6f6n6s6y6</span>
+<span class="s plain-str">7$7.7:7^7</span>
+<span class="s plain-str">9&amp;9,929=9H9S9Y9_9j9u9</span>
+<span class="s plain-str">=2&gt;F&gt;]&gt;g&gt;r&gt;x&gt;~&gt;</span>
+<span class="s plain-str">0 141L1T1Y1_1i1u1</span>
+<span class="s plain-str">3&#x27;323=3C3I3s3</span>
+<span class="s plain-str">4&#x27;4,424&lt;4H4l4</span>
+<span class="s plain-str">8(868A8j8~8</span>
+<span class="s plain-str">9)9/9F9O9k9s9x9~9</span>
+<span class="s plain-str">161J1b1j1o1u1</span>
+<span class="s plain-str">2 2*262Z2</span>
+<span class="s plain-str">3*32373=3G3S3w3</span>
+<span class="s plain-str">4&quot;4(434&gt;4I4O4U4`4k4v4|4</span>
+<span class="s plain-str">4@5c5s5{5</span>
+<span class="s plain-str">6&amp;6+616;6G6k6</span>
+<span class="s plain-str">7H7\7t7|7</span>
+<span class="s plain-str">8(83898?8J8U8`8f8l8w8</span>
+<span class="s plain-str">= &gt;4&gt;O&gt;X&gt;j&gt;r&gt;w&gt;}&gt;</span>
+<span class="s plain-str">0&#x27;070?0D0J0T0`0</span>
+<span class="s plain-str">4)4/454@4K4V4a4l4r4x4</span>
+<span class="s plain-str">656I6a6i6n6t6~6</span>
+<span class="s plain-str">8)81868&lt;8F8R8v8</span>
+<span class="s plain-str">9!9&#x27;929=9H9N9T9_9j9u9{9</span>
+<span class="s plain-str">9?:b:r:z:</span>
+<span class="s plain-str">0!0,070=0C0N0</span>
+<span class="s plain-str">2,24292?2I2U2y2</span>
+<span class="s plain-str">5$5/5:5@5F5Q5\5g5m5s5~5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">6&#x27;676?6D6J6T6`6</span>
+<span class="s plain-str">8 888@8E8K8U8a8</span>
+<span class="s plain-str">9$9*909;9F9Q9W9]9h9s9~9</span>
+<span class="s plain-str">9F:P:`:h:m:s:}:</span>
+<span class="s plain-str">&gt;	?;?O?j?p?</span>
+<span class="s plain-str">+0?0W0_0d0j0t0</span>
+<span class="s plain-str">3#3.393D3J3P3[3f3q3w3}3</span>
+<span class="s plain-str">5+53585&gt;5H5T5x5</span>
+<span class="s plain-str">818H8R8]8c8i8t8</span>
+<span class="s plain-str">9(939&gt;9D9J9U9</span>
+<span class="s plain-str">;7;?;D;J;T;`;</span>
+<span class="s plain-str">2(2L2Z2e2</span>
+<span class="s plain-str">4.464;4A4K4W4{4</span>
+<span class="s plain-str">6.686C6I6O6Z6e6p6v6|6</span>
+<span class="s plain-str">7+8?8W8_8d8j8t8</span>
+<span class="s plain-str">;I;];t;~;</span>
+<span class="s plain-str">= =*=6=Z=h=s=</span>
+<span class="s plain-str">090B0G0P0m0</span>
+<span class="s plain-str">1*1K1Y1n1</span>
+<span class="s plain-str">2;2T2\2a2g2n2w2</span>
+<span class="s plain-str">31393&gt;3D3K3T3r3</span>
+<span class="s plain-str">4!4+474[4~4</span>
+<span class="s plain-str">777&lt;7A7P7[7`7i7n7t7y7</span>
+<span class="s plain-str">8&#x27;808:8C8H8N8S8g8n8</span>
+<span class="s plain-str">9-959&gt;9C9L9Q9W9\9p9</span>
+<span class="s plain-str">0 0%0,040[0c0l0r0</span>
+<span class="s plain-str">1!171B1R1Z1j1}1</span>
+<span class="s plain-str">262&gt;2G2M2_2h2v2</span>
+<span class="s plain-str">3-353E3X3]3i3n3t3y3</span>
+<span class="s plain-str">4&quot;4(4-424=4F4K4T4Y4_4d4</span>
+<span class="s plain-str">5%5.535&lt;5A5G5L5s5{5</span>
+<span class="s plain-str">5&#x27;6W6k6q6</span>
+<span class="s plain-str">8C8N8v8|8</span>
+<span class="s plain-str">989@9N9[9e9</span>
+<span class="s plain-str">;0;&gt;;F;[;f;u;</span>
+<span class="s plain-str">=	&gt;!&gt;-&gt;6&gt;;&gt;F&gt;g&gt;</span>
+<span class="s plain-str">1/1?1M1V1z1</span>
+<span class="s plain-str">2*252P2W2}2</span>
+<span class="s plain-str">21363A3J3T3n3</span>
+<span class="s plain-str">4 414O4U4]4</span>
+<span class="s plain-str">6&gt;6Z6_6p6</span>
+<span class="s plain-str">7&#x27;737E7R7W7m7{7</span>
+<span class="s plain-str">8&#x27;8K8r8~8</span>
+<span class="s plain-str">9#9H9N9^9m9w9</span>
+<span class="s plain-str">97:O:X:e:</span>
+<span class="s plain-str">=A=\=e=j=p=u=</span>
+<span class="s plain-str">&gt;B&gt;O&gt;T&gt;]&gt;j&gt;</span>
+<span class="s plain-str">1&#x27;212&lt;2L2_2j2v2</span>
+<span class="s plain-str">4 4%444Q4X4d4i4r4w4}4</span>
+<span class="s plain-str">575T5^5g5l5r5w5</span>
+<span class="s plain-str">6D6Q6V6_6l6</span>
+<span class="s plain-str">7	777N7a7n7</span>
+<span class="s plain-str">7&#x27;8@8X8`8n8|8</span>
+<span class="s plain-str">9%9E9O9o9y9</span>
+<span class="s plain-str">0*070Q0^0f0{0</span>
+<span class="s plain-str">3(3W3q3~3</span>
+<span class="s plain-str">556?6E6U6\6e6k6{6</span>
+<span class="s plain-str">7,757J7O7`7i7}7</span>
+<span class="s plain-str">8%808F8P8^8</span>
+<span class="s plain-str">&lt; =,=1=B=^=q=~=</span>
+<span class="s plain-str">0$070Q0h0p0~0</span>
+<span class="s plain-str">1&amp;1F1P1n1</span>
+<span class="s plain-str">212&gt;2D2a2|2</span>
+<span class="s plain-str">303C3L3`3h3t3</span>
+<span class="s plain-str">9&quot;9+9I9S9o9~9</span>
+<span class="s plain-str">1&quot;191B1K1P1V1[1o1</span>
+<span class="s plain-str">1&amp;2=2F2{2</span>
+<span class="s plain-str">393A3k3w3</span>
+<span class="s plain-str">40494B4G4M4R4f4}4</span>
+<span class="s plain-str">6 6*666&lt;6C6H6N6T6i6</span>
+<span class="s plain-str">7%7+7@7^7r7{7</span>
+<span class="s plain-str">8&#x27;868&lt;8D8P8_8w8</span>
+<span class="s plain-str">9&#x27;:-:3:9:p:</span>
+<span class="s plain-str">;D;S;^;c;t;</span>
+<span class="s plain-str">0&amp;0.0B0X0`0r0</span>
+<span class="s plain-str">121V1c1l1t1</span>
+<span class="s plain-str">2&lt;2W2d2t2</span>
+<span class="s plain-str">3%3-3&gt;3G3O3n3{3</span>
+<span class="s plain-str">4/4F4S4r4</span>
+<span class="s plain-str">5&gt;5Y5f5l5</span>
+<span class="s plain-str">646P6a6x6</span>
+<span class="s plain-str">8%8E8N8W8\8b8h8}8</span>
+<span class="s plain-str">9&#x27;9F9a9j9s9x9~9</span>
+<span class="s plain-str">&gt;	?2???_?h?q?v?|?</span>
+<span class="s plain-str">040A0`0{0</span>
+<span class="s plain-str">1(1P1\1g1l1r1x1</span>
+<span class="s plain-str">4&#x27;4S4\4d4j4</span>
+<span class="s plain-str">5&amp;5,5A5p5y5</span>
+<span class="s plain-str">6&#x27;7.7S7q7</span>
+<span class="s plain-str">898L8V8`8g8</span>
+<span class="s plain-str">;4;S;l;v;</span>
+<span class="s plain-str">&lt;7&lt;G&lt;g&lt;x&lt;</span>
+<span class="s plain-str">0#0-0P0d0n0</span>
+<span class="s plain-str">2#2+2[2b2n2|2</span>
+<span class="s plain-str">2&#x27;3K3e3l3x3</span>
+<span class="s plain-str">4B4J4P4^4t4}4</span>
+<span class="s plain-str">889H9T9_9h9</span>
+<span class="s plain-str">0&#x27;0;0F0N0Z0l0</span>
+<span class="s plain-str">1:1b1x1~1</span>
+<span class="s plain-str">1!2(2&lt;2G2W2_2h2y2</span>
+<span class="s plain-str">313&gt;3D3a3|3</span>
+<span class="s plain-str">4&amp;424;4M4S4[4g4</span>
+<span class="s plain-str">7=7G7i7s7</span>
+<span class="s plain-str">9.999E9l9</span>
+<span class="s plain-str">2A2T2]2q2y2</span>
+<span class="s plain-str">9(9&lt;9Z9`9h9</span>
+<span class="s plain-str">=0=H=P=^=i=x=</span>
+<span class="s plain-str">1+191K1t1</span>
+<span class="s plain-str">3#3U3n3t3z3</span>
+<span class="s plain-str">9!9)999K9]9</span>
+<span class="s plain-str">1%141Z1}1</span>
+<span class="s plain-str">5&quot;5&#x27;585A5Q5^5{5</span>
+<span class="s plain-str">727N7Z7_7y7</span>
+<span class="s plain-str">7&quot;8,888[8</span>
+<span class="s plain-str">;1;9;L;b;j;o;z;</span>
+<span class="s plain-str">=7=P=e=m={=</span>
+<span class="s plain-str">&gt;7&gt;P&gt;e&gt;m&gt;{&gt;</span>
+<span class="s plain-str">?7?P?e?m?{?</span>
+<span class="s plain-str">070P0e0m0{0</span>
+<span class="s plain-str">171Q1^1f1{1</span>
+<span class="s plain-str">3h3s3y3~3</span>
+<span class="s plain-str">3_4f4q4z4</span>
+<span class="s plain-str">6&lt;6D6^6c6u6z6</span>
+<span class="s plain-str">767I7N7T7Y7</span>
+<span class="s plain-str">7#8+80898&gt;8D8I8]8t8|8</span>
+<span class="s plain-str">9&amp;969S9p9x9</span>
+<span class="s plain-str">; ;&amp;;+;P;X;a;f;o;t;z;</span>
+<span class="s plain-str">&lt;6&lt;&gt;&lt;J&lt;P&lt;f&lt;}&lt;</span>
+<span class="s plain-str">= =.=7=&lt;=B=G=n=v={=</span>
+<span class="s plain-str">0*02070@0E0K0P0d0{0</span>
+<span class="s plain-str">21292B2H2</span>
+<span class="s plain-str">2&#x27;373P3f3</span>
+<span class="s plain-str">6+6H6M6S6X6z6</span>
+<span class="s plain-str">7/747:7?7S7s7{7</span>
+<span class="s plain-str">8!888@8E8N8S8Y8^8r8</span>
+<span class="s plain-str">9N9e9j9v9{9</span>
+<span class="s plain-str">1+14191?1D1S1a1q1x1</span>
+<span class="s plain-str">2&amp;23282A2F2L2Q2h2y2</span>
+<span class="s plain-str">3 3%3J3W3\3e3j3p3u3</span>
+<span class="s plain-str">3&#x27;4K4i4t4</span>
+<span class="s plain-str">565C5H5Q5V5\5a5</span>
+<span class="s plain-str">6-6L6R6n6v6</span>
+<span class="s plain-str">7&#x27;7,72777K7w7~7</span>
+<span class="s plain-str">8$8-82888=8T8e8r8w8</span>
+<span class="s plain-str">909=9B9K9P9V9[9</span>
+<span class="s plain-str">&lt; &lt;)&lt;.&lt;4&lt;9&lt;`&lt;m&lt;s&lt;</span>
+<span class="s plain-str">0	1,1?1O1r1</span>
+<span class="s plain-str">20272C2H2Q2V2\2a2u2</span>
+<span class="s plain-str">5/575@5E5P5U5\5</span>
+<span class="s plain-str">6+64696@6W6`6e6k6p6</span>
+<span class="s plain-str">7 7&amp;7E7N7S7[7p7x7}7</span>
+<span class="s plain-str">8&#x27;808@8E8Q8V8\8a8</span>
+<span class="s plain-str">9(959:9C9P9m9</span>
+<span class="s plain-str">:4:Z:u:}:</span>
+<span class="s plain-str">;2;X;o;w;</span>
+<span class="s plain-str">0&#x27;0F0N0S0Y0c0o0</span>
+<span class="s plain-str">1$282P2X2]2c2m2y2</span>
+<span class="s plain-str">3)343?3E3K3V3a3l3r3x3</span>
+<span class="s plain-str">6%6/6;6b6</span>
+<span class="s plain-str">6	707K7t7</span>
+<span class="s plain-str">8,8K8S8X8^8h8t8y8</span>
+<span class="s plain-str">9$959B9H9N9Z9g9o9t9z9</span>
+<span class="s plain-str">;3;;;@;F;P;\;</span>
+<span class="s plain-str">1%1+111&lt;1q1</span>
+<span class="s plain-str">2 242O2V2s2</span>
+<span class="s plain-str">434K4S4X4^4h4t4</span>
+<span class="s plain-str">6$787P7X7]7c7m7y7</span>
+<span class="s plain-str">9 9&amp;919&lt;9G9M9S9y9</span>
+<span class="s plain-str">&gt;B&gt;V&gt;q&gt;v&gt;{&gt;</span>
+<span class="s plain-str">0/1C1[1c1h1n1x1</span>
+<span class="s plain-str">3%3+313&lt;3G3R3X3^3i3t3</span>
+<span class="s plain-str">535Q5Z5_5h5</span>
+<span class="s plain-str">6+6C6K6P6V6`6l6</span>
+<span class="s plain-str">979&gt;9[9z9</span>
+<span class="s plain-str">&gt;B&gt;W&gt;_&gt;d&gt;j&gt;t&gt;</span>
+<span class="s plain-str">2;2H2P2U2[2e2q2</span>
+<span class="s plain-str">5&quot;5:5B5G5M5W5c5</span>
+<span class="s plain-str">828O8V8m8</span>
+<span class="s plain-str">929?9G9L9R9\9h9</span>
+<span class="s plain-str">&lt; &lt;7&lt;A&lt;L&lt;R&lt;X&lt;c&lt;n&lt;y&lt;</span>
+<span class="s plain-str">040L0T0Y0_0i0u0</span>
+<span class="s plain-str">1*10161A1F1O1T1]1y1</span>
+<span class="s plain-str">2 2(2-232=2I2p2|2</span>
+<span class="s plain-str">2@3T3l3t3y3</span>
+<span class="s plain-str">4#4)444?4J4P4V4a4f4o4t4}4</span>
+<span class="s plain-str">505@5H5M5S5]5i5</span>
+<span class="s plain-str">7(7C7I7T7_7j7p7v7</span>
+<span class="s plain-str">708P8`8h8m8s8}8</span>
+<span class="s plain-str">94:H:c:i:t:</span>
+<span class="s plain-str">? ?*?6?]?</span>
+<span class="s plain-str">0&amp;060&gt;0C0I0S0_0</span>
+<span class="s plain-str">2$2*242@2g2</span>
+<span class="s plain-str">303@3H3M3S3]3i3</span>
+<span class="s plain-str">4#4+40464@4L4s4</span>
+<span class="s plain-str">718E8]8e8j8p8z8</span>
+<span class="s plain-str">9	:;:O:g:o:t:z:</span>
+<span class="s plain-str">?E?Y?u?{?</span>
+<span class="s plain-str">0D0X0t0z0</span>
+<span class="s plain-str">1:1H1S1|1</span>
+<span class="s plain-str">3/3G3O3T3Z3d3p3</span>
+<span class="s plain-str">4 4+464&lt;4B4M4X4c4i4o4z4</span>
+<span class="s plain-str">666J6b6j6o6u6</span>
+<span class="s plain-str">9(9.949?9J9U9[9a9l9}9</span>
+<span class="s plain-str">=0=H=P=U=[=e=q=</span>
+<span class="s plain-str">0 0+060A0G0M0X0c0n0t0z0</span>
+<span class="s plain-str">2/3C3[3c3h3n3x3</span>
+<span class="s plain-str">5&lt;5P5g5q5|5</span>
+<span class="s plain-str">6%60666&lt;6G6R6]6c6i6t6</span>
+<span class="s plain-str">7&quot;7)7@7u7</span>
+<span class="s plain-str">8 8,8h8|8</span>
+<span class="s plain-str">9)91969&lt;9F9R9W9f9t9</span>
+<span class="s plain-str">;C&lt;W&lt;v&lt;~&lt;</span>
+<span class="s plain-str">0&lt;0[0c0h0n0x0</span>
+<span class="s plain-str">1!101&gt;1O1\1b1h1t1</span>
+<span class="s plain-str">2&quot;2,282_2</span>
+<span class="s plain-str">6*62676=6G6S6z6</span>
+<span class="s plain-str">7%707;7F7L7R7]7</span>
+<span class="s plain-str">7%8A8U8p8w8</span>
+<span class="s plain-str">979K9i9v9~9</span>
+<span class="s plain-str">&gt;2&gt;A&gt;N&gt;V&gt;[&gt;a&gt;k&gt;w&gt;</span>
+<span class="s plain-str">0,0P0X0]0c0m0y0</span>
+<span class="s plain-str">2/2F2O2T2]2|2</span>
+<span class="s plain-str">4&quot;4B4J4O4U4_4k4p4</span>
+<span class="s plain-str">5,595?5E5Q5^5f5k5q5{5</span>
+<span class="s plain-str">7*72777=7G7S7z7</span>
+<span class="s plain-str">?I?]?t?~?</span>
+<span class="s plain-str">0&#x27;1C1W1r1y1</span>
+<span class="s plain-str">272K2f2l2</span>
+<span class="s plain-str">3 3,393A3F3L3V3b3g3v3</span>
+<span class="s plain-str">5)5=5[5h5p5u5{5</span>
+<span class="s plain-str">7&amp;7+717;7G7u7|7</span>
+<span class="s plain-str">8$8*848@8g8</span>
+<span class="s plain-str">9G9[9s9{9</span>
+<span class="s plain-str">9	:!:):.:4:&gt;:J:q:</span>
+<span class="s plain-str">&lt;4&lt;&lt;&lt;A&lt;G&lt;Q&lt;]&lt;</span>
+<span class="s plain-str">2%2*202:2F2K2Z2h2y2</span>
+<span class="s plain-str">3,4H4\4w4~4</span>
+<span class="s plain-str">5&amp;565&gt;5C5I5S5_5</span>
+<span class="s plain-str">6,64696?6I6U6|6</span>
+<span class="s plain-str">8 8(8-838=8I8p8</span>
+<span class="s plain-str">;5;=;B;H;R;^;</span>
+<span class="s plain-str">010I0Q0V0\0f0r0</span>
+<span class="s plain-str">1&quot;1-181&gt;1D1O1Z1e1k1q1|1</span>
+<span class="s plain-str">3,393A3F3L3V3b3</span>
+<span class="s plain-str">5+5B5L5W5]5c5n5y5</span>
+<span class="s plain-str">7&amp;7+717;7G7n7</span>
+<span class="s plain-str">9&#x27;919&lt;9B9H9S9^9i9o9u9</span>
+<span class="s plain-str">:M;Z;e;{;</span>
+<span class="s plain-str">0B0V0m0w0</span>
+<span class="s plain-str">0(1H1X1`1e1k1u1</span>
+<span class="s plain-str">2-2;2L2Y2_2e2q2~2</span>
+<span class="s plain-str">4.595K5W5</span>
+<span class="s plain-str">6!696A6F6L6V6b6</span>
+<span class="s plain-str">&gt;8&gt;X&gt;_&gt;v&gt;</span>
+<span class="s plain-str">1%1A1I1N1T1^1j1</span>
+<span class="s plain-str">333K3S3X3^3h3t3</span>
+<span class="s plain-str">5!5,575B5H5N5Y5d5o5u5{5</span>
+<span class="s plain-str">666K6S6X6^6h6t6</span>
+</details>
+<div class="stats">Total unique strings: 2391 · Interesting: 51 · Noise filtered: 1599</div>
+</div></body></html>

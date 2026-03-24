@@ -1,0 +1,518 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>pwc.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/pwc.zip">&#x2b07; Download pwc.zip</a>
+</div>
+<div class="hero">
+<div><h1>Pwc</h1><span class="author">by <b>sk8</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB3</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Pwc.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2007-12-02</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (12)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VBRun300.Dll</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">APIGuide.Dll</span></div>
+<div style="padding:2px 0"><span class="api-name">VBMSG.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+<div style="padding:2px 0"><span class="api-name">VBStr.Dll</span></div>
+<div style="padding:2px 0"><span class="api-name">VBWFind.Dll</span></div>
+<div style="padding:2px 0"><span class="api-name">ROTEXT.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+<div style="padding:2px 0"><span class="api-name">THREED.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+<div style="padding:2px 0"><span class="api-name">CMDIALOG.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+<div style="padding:2px 0"><span class="api-name">GAUGE.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+<div style="padding:2px 0"><span class="api-name">DBPUSH.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div style="padding:2px 0"><span class="api-name">fb_spch.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (28)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_LISTBOX</span></div>
+<div class="api-item"><span class="api-name">_AOL_STATIC</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">_AOL_VIEW</span></div>
+<div class="api-item"><span class="api-name">_AOL_EDIT</span></div>
+<div class="api-item"><span class="api-name">_AOL_ICON</span></div>
+<div class="api-item"><span class="api-name">_AOL_COMBOBOX</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_PALETTE</span></div>
+<div class="api-item"><span class="api-name">Aol frame25</span></div>
+<div class="api-item"><span class="api-name">_Aol_icon</span></div>
+<div class="api-item"><span class="api-name">_Aol_listbox</span></div>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_AOL_TREE</span></div>
+<div class="api-item"><span class="api-name">_AOL_BUTTON</span></div>
+<div class="api-item"><span class="api-name">AoL frame25</span></div>
+<div class="api-item"><span class="api-name">_AoL_Listbox</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (207)</h2>
+<span class="s interesting-str">This program requires Microsoft Windows.</span>
+<span class="s interesting-str">$You are already running Microsoft Windows.</span>
+<span class="s interesting-str">$Unable to start Microsoft Windows.</span>
+<span class="s interesting-str">account hacker <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">2.5 only - AC_AlterMailStatic</span>
+<span class="s interesting-str">2.5 only - AC_AlterTOPStatic</span>
+<span class="s interesting-str">2.5 only - AC_AlterWelcomeStatic</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×37</span></span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×17</span></span>
+<span class="s interesting-str">is online and able to receive Instant Messages.</span>
+<span class="s interesting-str">Compose Mail <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">Do you want to exit Windows?</span>
+<span class="s interesting-str">\idb\main.idx <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">You must have AOL open to use this program.</span>
+<span class="s interesting-str">\WAOL.EXE</span>
+<span class="s interesting-str">The parent window was NOT found.</span>
+<span class="s interesting-str">That classname does not exist on</span>
+<span class="s interesting-str">aolchat.aol <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">chat.aol <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Send an Instant Message <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">&gt;Instant Message From:</span>
+<span class="s interesting-str">Turning Instant Messages</span>
+<span class="s interesting-str">You must be signed on to use this program.</span>
+<span class="s interesting-str">AOL was not detected (Keyword)</span>
+<span class="s interesting-str">Exit Free Area</span>
+<span class="s interesting-str">Exit Unlimited Use area</span>
+<span class="s interesting-str">Buddy List Window <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">You must be offline to use this feature.</span>
+<span class="s interesting-str">You need to be signed onto AOL to use this feature.</span>
+<span class="s interesting-str">WTF are you tryin&#x27; to do?  Fuck up your AOL Software?</span>
+<span class="s interesting-str">Renaming the host was UNSUCCESSFUL.  Please try again.</span>
+<span class="s interesting-str">You must be signed onto AOL to use this option.</span>
+<span class="s interesting-str">You need to be in a room to use this feature.</span>
+<span class="s interesting-str">No Room Detected</span>
+<span class="s interesting-str">Incorrect NameIndex String.</span>
+<span class="s interesting-str">The chat room focus was lost.  I will pause until it is found again.</span>
+<span class="s interesting-str">You need a room open to use this feature.</span>
+<span class="s interesting-str">Room Location Error</span>
+<span class="s interesting-str">Edit Go To Menu</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">No file transfer detected. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">You cannot have more than one of the specified program running at once.</span>
+<span class="s interesting-str">Unable to Release Device Context</span>
+<span class="s interesting-str">Device Error</span>
+<span class="s interesting-str">Set Preferences <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">General Preferences <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Enable event sounds <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">The AOTurkey Logo</span>
+<span class="s interesting-str">Please excuse me while I scroll my turkey</span>
+<span class="s interesting-str">enter phrase you want to bait with.</span>
+<span class="s interesting-str">Did you just send me an IM?</span>
+<span class="s interesting-str">DONT DO THAT AGAIN!</span>
+<span class="s interesting-str">IM REPORTING YOU TO AOL!</span>
+<span class="s interesting-str">stop baiting</span>
+<span class="s interesting-str">account hacker by sk8 <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">america online <span style="color:#484f58;font-size:0.75em">×15</span></span>
+<span class="s interesting-str">c:\windows\accxhack.ini <span style="color:#484f58;font-size:0.75em">×110</span></span>
+<span class="s interesting-str">public rooms <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">member rooms <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">choose a category to begin baiting on...</span>
+<span class="s interesting-str">1 - town square</span>
+<span class="s interesting-str">2 - arts &amp; entertainment</span>
+<span class="s interesting-str">who&#x27;s chatting <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">c:\windows\spamem.ini <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">baiting options <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">error: not signed on!</span>
+<span class="s interesting-str">&#x27;s Buddy List <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Privacy Preferences <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Allow all AOL <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Block all AOL <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Chat Preferences <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Notify me when members arrive <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Notify me when members leave <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Fwd Window NOT found!</span>
+<span class="s interesting-str">The following problems occurred while processing your request: <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">You have not specified anyone to send mail to.</span>
+<span class="s interesting-str">does not exist so it could not be attached.  The mail message was not sent.</span>
+<span class="s interesting-str">None of the screen names specified were known AOL members so the mail could not be sent.</span>
+<span class="s interesting-str">internal crack mass mailer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Reply to All</span>
+<span class="s interesting-str">Mail Preferences <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Confirm mail after it has been sent <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Close mail after it has been sent <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">c:\windows\hnic.ini</span>
+<span class="s interesting-str">hey gtfo out of here bitch! ;x <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">i will kill you! ;D <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">logon=0.3</span>
+<span class="s interesting-str">c:\windows\imhacker.ini</span>
+<span class="s interesting-str">Video not found.</span>
+<span class="s interesting-str">Play %PATH% window</span>
+<span class="s interesting-str">enter a sn to extract profile.</span>
+<span class="s interesting-str">extracting pw&#x27;s from [</span>
+<span class="s interesting-str">Member&#x27;s Profile</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Member Profile <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">has no profile.</span>
+<span class="s interesting-str">Member Name:</span>
+<span class="s interesting-str">Marital Status:</span>
+<span class="s interesting-str">Personal Quote:</span>
+<span class="s interesting-str">c:\windows\acchax.tmp <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">File exists... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">do you wish to overwrite this file? <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">an error occured while opening <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Olivetti ICO</span>
+<span class="s interesting-str">IBM Enhanced</span>
+<span class="s interesting-str">Japanese Keyboard</span>
+<span class="s interesting-str">Keyboard not detected.</span>
+<span class="s interesting-str">invalid number of sn&#x27;s to mass tos check</span>
+<span class="s interesting-str">killing sn dupes first... (please wait)</span>
+<span class="s interesting-str">mass tos check aborted!</span>
+<span class="s interesting-str">where do you want to start tos checking from on your sn list?</span>
+<span class="s interesting-str">how about you put in a number! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">index number too high!</span>
+<span class="s interesting-str">what do you want to tos check by? (1-</span>
+<span class="s interesting-str">- too big of tos check interval.</span>
+<span class="s interesting-str">. account hacker <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">[mass tos check] by sk8 . <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">checking screen names... ( <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">aol&#x27;s e-mail system is down, do you want to try again?</span>
+<span class="s interesting-str">- This is not a known AOL member.</span>
+<span class="s interesting-str">0 screen names were dead.</span>
+<span class="s interesting-str">screen names were dead.</span>
+<span class="s interesting-str">total screen names were dead.</span>
+<span class="s interesting-str">no name selected to tos check</span>
+<span class="s interesting-str">tos checking [</span>
+<span class="s interesting-str">[tos check] by sk8 .</span>
+<span class="s interesting-str">- This is not a known</span>
+<span class="s interesting-str">is dead and was removed!</span>
+<span class="s interesting-str">Offline Help</span>
+<span class="s interesting-str">Who&#x27;s chatting</span>
+<span class="s interesting-str">you must have who&#x27;s chatting window showing</span>
+<span class="s interesting-str">is already on your screen name list</span>
+<span class="s interesting-str">enter a screen name to add</span>
+<span class="s interesting-str">is an invalid scree name</span>
+<span class="s interesting-str">no screen names to clear</span>
+<span class="s interesting-str">clear your screen name list?</span>
+<span class="s interesting-str">confirm screen name deletion</span>
+<span class="s interesting-str">no passwords to delete from</span>
+<span class="s interesting-str">select a password to remove</span>
+<span class="s interesting-str">is already on your password list</span>
+<span class="s interesting-str">enter a password to add</span>
+<span class="s interesting-str">is an invalid password</span>
+<span class="s interesting-str">no passwords to clear</span>
+<span class="s interesting-str">clear your password list?</span>
+<span class="s interesting-str">confirm password deletion</span>
+<span class="s interesting-str">account hacker by sk8 - load password list</span>
+<span class="s interesting-str">loading pw list (please wait)</span>
+<span class="s interesting-str">unexpected error occured while trying to open <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">pw list loading is now complete!</span>
+<span class="s interesting-str">account hacker by sk8 - save password list</span>
+<span class="s interesting-str">no file selected <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">saving pw list (please wait)</span>
+<span class="s interesting-str">pw list saving is now complete!</span>
+<span class="s interesting-str">are you sure you want to exit account hacker</span>
+<span class="s interesting-str">stop hacking <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">start hacking <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">you are signed on... you have to sign off to hack.</span>
+<span class="s interesting-str">would you like to sign off and begin hacking now?</span>
+<span class="s interesting-str">Goodbye from America Online! <span style="color:#484f58;font-size:0.75em">×16</span></span>
+<span class="s interesting-str">lag protect is disabled..</span>
+<span class="s interesting-str">do you wan to continue anyways?</span>
+<span class="s interesting-str">turning aol sounds off... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">turning aol sounds on... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">starting ieet hack0r...</span>
+<span class="s interesting-str">Set Up &amp;&amp; Sign On</span>
+<span class="s interesting-str">Goodbye from America <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">restarting aol to protect from lag <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\waol.exe <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">pausing then resuming hacking... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Reestablish Connection <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">tcp has disconnected... pausing and reconnecting... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">waiting for tcp to reconnect... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">logging on waiting for aol... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Connect Error <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">weak tcp... canceling... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">account is signed on <span style="color:#484f58;font-size:0.75em">×8</span></span>
+<span class="s interesting-str">yay we hacked an account ;D <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">checking staus... master or sub? foriegn? <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Accounts &amp; Billing <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Keywords Found <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">AOL Account &amp; Billing Support -- Keyword: ACCOUNT or BILLING <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Gestion de mon Compte AOL <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Modifier vos coordonn <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Modify Name or Address <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Account Name/Address Information <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Ihre neue Adresse <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Modify name/address details <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">checking status... overhead/host? internal? <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Last Logout: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Welcome to the ARC Online <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">ok back to cracking... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">restarting aol... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">restarting aol... pausing <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">waiting for sign on window... <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Checking password ...</span>
+<span class="s interesting-str">hacking account</span>
+<span class="s interesting-str">hacking complete!</span>
+<span class="s interesting-str">accounts were hacked.</span>
+<span class="s interesting-str">account hacker by sk8 - load screen name list</span>
+<span class="s interesting-str">loading sn list (please wait)</span>
+<span class="s interesting-str">sn list loading is now complete!</span>
+<span class="s interesting-str">account hacker by sk8 - save screen name list</span>
+<span class="s interesting-str">saving sn list (please wait)</span>
+<span class="s interesting-str">sn list saving is now complete!</span>
+<span class="s interesting-str">no screen names to delete from</span>
+<span class="s interesting-str">select a screen name to remove</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (160)</summary>
+<span class="s plain-str">7m7[7$!j7</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×18</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×20</span></span>
+<span class="s plain-str">Available?</span>
+<span class="s plain-str">Buddy Lists</span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">KI@SKIz8 <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">Windows</span>
+<span class="s plain-str">Iite sk8</span>
+<span class="s plain-str">5n%d7$!j7</span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Mem&amp;bers <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">5b25I@S5I</span>
+<span class="s plain-str">Respond</span>
+<span class="s plain-str">h:mm AM/PM</span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">KID~jLeI</span>
+<span class="s plain-str">55I@S5I!-p</span>
+<span class="s plain-str">aol://2719:2-2- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">55I@S5I!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5*\5I@S5I</span>
+<span class="s plain-str">NEWMAIL</span>
+<span class="s plain-str">COMPOSE</span>
+<span class="s plain-str">FAVORITE</span>
+<span class="s plain-str">SERVICES</span>
+<span class="s plain-str">KEYWORD</span>
+<span class="s plain-str">x5I@S5I!-</span>
+<span class="s plain-str">y5I@S5I!-&gt;</span>
+<span class="s plain-str">R{5I@S5I!-l</span>
+<span class="s plain-str">|5I@S5I!-</span>
+<span class="s plain-str">KIz8333333 <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">m7[7$!j7!-</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×17</span></span>
+<span class="s plain-str">{       )  (    ,(    ,_+--+--,      ^)      ^\</span>
+<span class="s plain-str">{ (@)    } f   ,(  ,+-^ __*_*_  ^^\_   ^\       )</span>
+<span class="s plain-str">( /  (    (        ,___    ^*+_+* )   &lt;    &lt;      \</span>
+<span class="s plain-str">U _/     )    *--&lt;  ) ^\-----++__)   )    )       )</span>
+<span class="s plain-str">(      )  _(^)^^))  )  )\^^^^^))^*+/    /       /</span>
+<span class="s plain-str">(      /  (_))_^)) )  )  ))^^^^^))^^^)__/     +^^</span>
+<span class="s plain-str">(     ,/    (^))^))  )  ) ))^^^^^^^))^^)       _)</span>
+<span class="s plain-str">\             \_)^)_)) ))^^^^^^^^^^))^^^^)</span>
+<span class="s plain-str">|     ^^^^^\uuu/^^\uuu/^^^^\^\^\^\^\^\^\^\</span>
+<span class="s plain-str">aol://2719:2-2-oh</span>
+<span class="s plain-str">find a chat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">12 - canada</span>
+<span class="s plain-str">13 - japan</span>
+<span class="s plain-str">XIz8333333 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Block AOL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Block only <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Allow only <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Subject: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Not Online</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">Send Later</span>
+<span class="s plain-str">Address</span>
+<span class="s plain-str">Forward <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5l&quot;5I@S5I</span>
+<span class="s plain-str">#5I@S5I42</span>
+<span class="s plain-str">Attach File <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">New Mail <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">Z&lt;5I@S5I!-~</span>
+<span class="s plain-str">5nG5I@S5I</span>
+<span class="s plain-str">5&amp;L5I@S5I</span>
+<span class="s plain-str">5Iz8ffffff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MailType$</span>
+<span class="s plain-str">Download</span>
+<span class="s plain-str">4|RKI@SKI</span>
+<span class="s plain-str">killed=0</span>
+<span class="s plain-str">rooms=0</span>
+<span class="s plain-str">loaded=1</span>
+<span class="s plain-str">aoldir=c:\aol25 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hacks=0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">fildel=false</span>
+<span class="s plain-str">tcpconnect=true</span>
+<span class="s plain-str">ispre=true</span>
+<span class="s plain-str">protect=0</span>
+<span class="s plain-str">custom=0</span>
+<span class="s plain-str">offwhilecrack=true</span>
+<span class="s plain-str">onafter=true</span>
+<span class="s plain-str">autoloadsn=</span>
+<span class="s plain-str">autoloadpw=</span>
+<span class="s plain-str">cloner=</span>
+<span class="s plain-str">uponcrackstat=true</span>
+<span class="s plain-str">restartoncrack=false</span>
+<span class="s plain-str">removeall=false</span>
+<span class="s plain-str">removesns=true</span>
+<span class="s plain-str">toschat=true</span>
+<span class="s plain-str">imoff=true</span>
+<span class="s plain-str">addaolstaff=true</span>
+<span class="s plain-str">baitchats=true</span>
+<span class="s plain-str">onlybaitlist=false</span>
+<span class="s plain-str">bustfull=false</span>
+<span class="s plain-str">currentroom=true</span>
+<span class="s plain-str">roomgag=0</span>
+<span class="s plain-str">roomrooms=0</span>
+<span class="s plain-str">imsonaf=false</span>
+<span class="s plain-str">gagduration=60</span>
+<span class="s plain-str">obaitppl=0</span>
+<span class="s plain-str">obaitrom=0</span>
+<span class="s plain-str">obaitall=0</span>
+<span class="s plain-str">uponcrack=False</span>
+<span class="s plain-str">aftertryingpwl=False</span>
+<span class="s plain-str">overhead=False</span>
+<span class="s plain-str">introart=True</span>
+<span class="s plain-str">snfile= <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">pwfile= <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">snindex= <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">pwindex= <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">loaded=0</span>
+<span class="s plain-str">autoload=</span>
+<span class="s plain-str">4fXId7$!j7</span>
+<span class="s plain-str">Location:</span>
+<span class="s plain-str">Birthdate:</span>
+<span class="s plain-str">Hobbies:</span>
+<span class="s plain-str">Computers:</span>
+<span class="s plain-str">Occupation:</span>
+<span class="s plain-str">exists. <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">5KIeI&lt;x</span>
+<span class="s plain-str">8m7[7$!j7!- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Sign Off</span>
+<span class="s plain-str">Welcome <span style="color:#30363d;font-size:0.75em">×24</span></span>
+<span class="s plain-str">IBM PC/XT</span>
+<span class="s plain-str">Nokia 1050</span>
+<span class="s plain-str">Nokia 9140</span>
+<span class="s plain-str">h:mm AM/PM mm-dd-yy</span>
+<span class="s plain-str">KI@SKIp7</span>
+<span class="s plain-str">48|y(tKI!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">I48|y(t,I</span>
+<span class="s plain-str">XI@SKI!-&lt;</span>
+<span class="s plain-str">- 1 (first sn)</span>
+<span class="s plain-str">(last sn)</span>
+<span class="s plain-str">&#x27; |\___&#x27;\/___/|  |&#x27;</span>
+<span class="s plain-str">is alive!</span>
+<span class="s plain-str">j7KInJl</span>
+<span class="s plain-str">pw list (*.lst)|*.lst|pw list (*.txt)|*.txt|pw list (*.*)|*.* <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">j7KIeIj</span>
+<span class="s plain-str">x+KInJJ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Reconnect... <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5KI@SKI!-~ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4ZFKIeI&gt;\</span>
+<span class="s plain-str">now hacking <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Goodbye <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">KI@SKI!-v <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">j7KInJH <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">]KIz8333333</span>
+<span class="s plain-str">H^KIz8333333 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Abrechnung <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">j7XInJH <span style="color:#30363d;font-size:0.75em">×26</span></span>
+<span class="s plain-str">mon compte <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5KI@SKI!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">stop dk</span>
+<span class="s plain-str">stop remove</span>
+<span class="s plain-str">sn list (*.lst)|*.lst|sn list (*.txt)|*.txt|sn list (*.*)|*.* <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">KI@SKI!-(</span>
+<span class="s plain-str">j7KIeIf</span>
+<span class="s plain-str">j7KInJ4</span>
+<span class="s plain-str">5KI@SKIz8</span>
+<span class="s plain-str">directory:</span>
+</details>
+<div class="stats">Total unique strings: 1295 · Interesting: 207 · Noise filtered: 900</div>
+</div></body></html>

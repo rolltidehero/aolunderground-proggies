@@ -1,0 +1,563 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>syphonbeta3.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/syphonbeta3.zip">&#x2b07; Download syphonbeta3.zip</a>
+</div>
+<div class="hero">
+<div><h1>Syphon beta 3</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Syphon beta 3.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-03-02</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (4)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">VB5CHAT2.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (67)</h2>
+<span class="s interesting-str">V9kfJxgk</span>
+<span class="s interesting-str">EHL/:V4Mm</span>
+<span class="s interesting-str">w{zlpmbeeZ\\RR]QOWKGWD=W=7V60V2*W-!Z)</span>
+<span class="s interesting-str">Syphon beta 3 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">VB5Chat2.Chat <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Q|C:\PROGRAM FILES\MICROSOFT VISUAL STUDIO\VB98\VB5CHAT2.oca</span>
+<span class="s interesting-str">Private Room</span>
+<span class="s interesting-str">Fake Re-enter <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Screen Name?</span>
+<span class="s interesting-str">Ex:Screen names</span>
+<span class="s interesting-str">Arial Narrow <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">X runic@aol.com <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Custom Annoy</span>
+<span class="s interesting-str">Custom Ascii</span>
+<span class="s interesting-str">.adv - advertise prog</span>
+<span class="s interesting-str">.x - x&#x27;s a person</span>
+<span class="s interesting-str">.unx -unx a person</span>
+<span class="s interesting-str">.idleon - turns on idler w\ rsn</span>
+<span class="s interesting-str">.idleoff - turns off idler</span>
+<span class="s interesting-str">.at - sends attention!</span>
+<span class="s interesting-str">About Syphon <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Coded with vb6</span>
+<span class="s interesting-str">Syphon v1 - runic</span>
+<span class="s interesting-str">Custom Scroller</span>
+<span class="s interesting-str">Fake Un-load</span>
+<span class="s interesting-str">Cuss At Room</span>
+<span class="s interesting-str">enter your handle</span>
+<span class="s interesting-str">who are you?</span>
+<span class="s interesting-str">&lt;FONT FACE=Tahoma&gt;&lt;Font Color=#0000AA&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#0091AA&gt;s&lt;Font Color=#00DAFF&gt;</span>
+<span class="s interesting-str">&lt;FONT FACE=Tahoma&gt;&lt;Font Color=#0000CC&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;Font Color=#00AACC&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#00D4FF&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#009FBF&gt; &lt;Font Color=#006A80&gt;</span>
+<span class="s interesting-str">C:\WINDOWS\MEDIA\Utopia Question.wav</span>
+<span class="s interesting-str">&lt;Font Color=#007F99&gt;a&lt;Font Color=#00AACC&gt;d&lt;Font Color=#00D4FF&gt;</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">writing life12.shs to windows .ini</span>
+<span class="s interesting-str">sending to chat room in...</span>
+<span class="s interesting-str">ng to chat...</span>
+<span class="s interesting-str">CATWatch01 has entered the room.</span>
+<span class="s interesting-str">thanx for your time  :)</span>
+<span class="s interesting-str">The Aliens are CUMMING!!!!!</span>
+<span class="s interesting-str">Hey you muthafukas go suck ur fat black mom&#x27;s fucking glow in the dark dildos!!</span>
+<span class="s interesting-str">Hey Everbody</span>
+<span class="s interesting-str">no longer idle</span>
+<span class="s interesting-str">Ur a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a LamerUr a Lamer</span>
+<span class="s interesting-str">Shut up biznatch</span>
+<span class="s interesting-str">talk to me bish</span>
+<span class="s interesting-str">is no longer idle</span>
+<span class="s interesting-str">C-coms now On</span>
+<span class="s interesting-str">C-coms now off</span>
+<span class="s interesting-str">&gt;click here!&lt;/a&gt;</span>
+<span class="s interesting-str">Syphon beta 3.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (360)</summary>
+<span class="s plain-str">1J&quot;L1*m%+l</span>
+<span class="s plain-str">:C|U&quot;GG&amp;R0&#x27;j&#x27;+l</span>
+<span class="s plain-str">E-c@(X/$c(*k</span>
+<span class="s plain-str">6-(e(:{&amp;2t!%l</span>
+<span class="s plain-str">%6o/#S&#x27;;u</span>
+<span class="s plain-str">B!=y&quot;;y,*^+</span>
+<span class="s plain-str">3w!4q*+c&quot;A~</span>
+<span class="s plain-str">Q|z9fn/Wb3d0I</span>
+<span class="s plain-str">S1wT,t;+~,1</span>
+<span class="s plain-str">1$r/&quot;l5#h4&quot;e.*u</span>
+<span class="s plain-str">-y#6z&quot;1o I</span>
+<span class="s plain-str">A&amp;R;&#x27;V@$O&gt;</span>
+<span class="s plain-str">L&gt;~]AolP~cc</span>
+<span class="s plain-str">0It1Pm:_BQ</span>
+<span class="s plain-str">`6}^,rA+z0.</span>
+<span class="s plain-str">S&quot;&gt;G&amp;KF$M=</span>
+<span class="s plain-str">9&amp;um cX*s(V</span>
+<span class="s plain-str">5Dq=buTyG]</span>
+<span class="s plain-str">Y:&quot;R3?y%S</span>
+<span class="s plain-str">8M&quot;GH$N?&quot;T&gt;</span>
+<span class="s plain-str">OD OM3c4F</span>
+<span class="s plain-str">7(|l/sc2~4V</span>
+<span class="s plain-str">Z:*Z5C}%M</span>
+<span class="s plain-str">-U&quot;DH%Q;&#x27;\:!YD!SV1_:E</span>
+<span class="s plain-str">`nwPibe</span>
+<span class="s plain-str">b?kd&lt;_K9v#N</span>
+<span class="s plain-str">9*hW3b@&gt;z,B</span>
+<span class="s plain-str">LXkCm9M</span>
+<span class="s plain-str">h)[t,[O@~%f</span>
+<span class="s plain-str">22xG&#x27;b_2]IB{2T</span>
+<span class="s plain-str">A*hl&amp;DY+YF3lT/ak$?h</span>
+<span class="s plain-str">K&lt;(p2.vH+t8;</span>
+<span class="s plain-str">F*ec3]PAz&lt;U</span>
+<span class="s plain-str">&lt;9$h&lt;*oJ(h?,u,[</span>
+<span class="s plain-str">h)[u2_P,n%?</span>
+<span class="s plain-str">@2l.&quot;^!)v$&#x27;q( _#,p</span>
+<span class="s plain-str">F-g`8bMG|AV</span>
+<span class="s plain-str">:6xm$&gt;c&amp;LQ-aV0dh,Km ;R.]5A</span>
+<span class="s plain-str">0@ Y8*dM(`G%f0N</span>
+<span class="s plain-str">j3jv9eR3v(B</span>
+<span class="s plain-str">K0hl/Sw *</span>
+<span class="s plain-str">C(gZ/bSAvHS</span>
+<span class="s plain-str">e+He+NR1dQ7g_3Xh(FU2Z5G</span>
+<span class="s plain-str">S3tv)Nj:n=Y</span>
+<span class="s plain-str">N+cm%Cy$8h%EN+d9?</span>
+<span class="s plain-str">E 2o 5s()a.</span>
+<span class="s plain-str">N*`X&#x27;UL-dI5pS6hZ.WV4\BM</span>
+<span class="s plain-str">0/~/:f-TQ9s</span>
+<span class="s plain-str">6\$U@5{I1rj2U</span>
+<span class="s plain-str">b;owEm`D</span>
+<span class="s plain-str">0&#x27;Y&amp;;x%5p$0j</span>
+<span class="s plain-str">F(3o(;x./g5!L/</span>
+<span class="s plain-str">)s1&quot;_F&quot;LJ&amp;TH2fA;t&lt;G</span>
+<span class="s plain-str">6.oE%^D+iB1qO0gV&amp;ZP+YGEyAL</span>
+<span class="s plain-str">C=tE2kF8nOCs`LvcQzcQzaP{_Q{^Q}^Q}^Q}^Q}_R~^Q}_R~_S}]S~_R~XN|JG~DE</span>
+<span class="s plain-str">-5}1QZ4f^-_</span>
+<span class="s plain-str">^0_{A^f9`B?</span>
+<span class="s plain-str">?30g12j/,c</span>
+<span class="s plain-str">G04o0?}64o;$P7</span>
+<span class="s plain-str">I.&quot;^0(g2&quot;_6</span>
+<span class="s plain-str">CJ!GG&amp;RC._=8o-=</span>
+<span class="s plain-str">&#x27;1~3(l5*p4.u&gt;/lD&amp;aH&#x27;ZD&lt;qEE{N8lR+YX(R`1Xk&lt;]qBbnGgnIilKmkNokPrkPqkPrjOqkPrkPrhOqhPrhOqeKoWDoQApV&lt;dr:G</span>
+<span class="s plain-str">a5^~CXm/GP3j7J</span>
+<span class="s plain-str">.2z&amp;?M;v&#x27;W</span>
+<span class="s plain-str">$A~67qC)YO</span>
+<span class="s plain-str">&quot;I E93j8@{&lt;9qB(VA</span>
+<span class="s plain-str">N:&quot;\&lt;&amp;`D!SJ</span>
+<span class="s plain-str">CD$MA*W./l</span>
+<span class="s plain-str">1I}6Q|9Tx=Yu?\sC_tGbsJetMgvRjtQkqQjpQlqPkpOjcFg\@d^&gt;]|&gt;D</span>
+<span class="s plain-str">C=uKnid</span>
+<span class="s plain-str">O]n1;X4RFB}^a</span>
+<span class="s plain-str">V%EK._C-^/.r</span>
+<span class="s plain-str">%U#EC3h?@xB=tE,^D#V@%]E%[L</span>
+<span class="s plain-str">*0{.(o5$]:1dH&gt;sS6d`*Hj</span>
+<span class="s plain-str">CU~FY}H\yKa{Na|RdmI_fC]iDT</span>
+<span class="s plain-str">Yhy;5d:AR@gk`</span>
+<span class="s plain-str">Q6PjYt&lt;@s*M</span>
+<span class="s plain-str">@M~2Q\Dt4;r7.f^Y</span>
+<span class="s plain-str">35oM/`Z%Fi</span>
+<span class="s plain-str">s$2].UT0_9/q&amp;6</span>
+<span class="s plain-str">8*jO$Qc!&gt;M!PE&amp;]\ H\</span>
+<span class="s plain-str">$Z#DC0c:;u9&lt;s:,b;$[:&quot;\? SJ</span>
+<span class="s plain-str">#0z+(p1&quot;\:+^E5jT-[e%Cs</span>
+<span class="s plain-str">FRvAOs?PwAN</span>
+<span class="s plain-str">kwvG?pGD^J]xiw\8&gt;w_i&gt;8[&amp;?q</span>
+<span class="s plain-str">6M{?S|?Mq6FqV_</span>
+<span class="s plain-str">VbhKbY_</span>
+<span class="s plain-str">M[yA^_Mv;3b?0\lg</span>
+<span class="s plain-str">K+f_&amp;Mu$=V#OG%[]&quot;H[ ?a</span>
+<span class="s plain-str">D:*`45q16s2*f3$^5 ^;</span>
+<span class="s plain-str">&lt;Mx:Ls8Gy1&gt;</span>
+<span class="s plain-str">fMK}nr92M&amp;3_</span>
+<span class="s plain-str">&gt;h 9a@Ijz</span>
+<span class="s plain-str">+Gp0Jo3Gf9D_2;]Zc~QUqQc</span>
+<span class="s plain-str">nrwilqcfnV[pRe</span>
+<span class="s plain-str">-Dq,0`B$Ma#;t %</span>
+<span class="s plain-str">1Bi6\H5t48</span>
+<span class="s plain-str">K(ac&amp;Hm$&gt;U KD&amp;[M</span>
+<span class="s plain-str">?7%Z--i*0q++k-$c0![7</span>
+<span class="s plain-str">U%#e (u!-</span>
+<span class="s plain-str">4C|1Fx0D|-6</span>
+<span class="s plain-str">XZevrwhP8~mXqlk</span>
+<span class="s plain-str">Y[e\^fX[`RWfOax</span>
+<span class="s plain-str">)Ho24\2&#x27;OG!=a%-u$</span>
+<span class="s plain-str">*3h/UC2q07</span>
+<span class="s plain-str">G)^_&amp;Ee#&lt;M</span>
+<span class="s plain-str">:4 U+(f&#x27;+l(*k)#d,</span>
+<span class="s plain-str">L&#x27;#d$&#x27;r((n)%l/ Z@</span>
+<span class="s plain-str">di~COkny</span>
+<span class="s plain-str">-Dv?Ko^bu</span>
+<span class="s plain-str">RWfRVaSV^IQ^el}</span>
+<span class="s plain-str">n|sh|ri~7!4R8H</span>
+<span class="s plain-str">8n)&lt;o1JlKp</span>
+<span class="s plain-str">-6W,(E3&quot;=E#.^*$s+</span>
+<span class="s plain-str">M)&quot;_%$f%$h&amp;&quot;c+</span>
+<span class="s plain-str">P0&quot;b/$c4#f6</span>
+<span class="s plain-str">%Dy(Cu8Hl</span>
+<span class="s plain-str">2Ct&lt;EgX\n</span>
+<span class="s plain-str">_fzU\m^crTZmen|</span>
+<span class="s plain-str">,V 5h6?jI\}e</span>
+<span class="s plain-str">*0yG)ZX&amp;F\&quot;&gt;H</span>
+<span class="s plain-str">UQP$8Q6AUUYZ</span>
+<span class="s plain-str">VWebdlWYc</span>
+<span class="s plain-str">5?]8@^?Dc=C`AG^</span>
+<span class="s plain-str">9GqAIgY]oz~</span>
+<span class="s plain-str">EJ_+3bGKnWb~</span>
+<span class="s plain-str">*8s*Dl*Gs*Dv+A</span>
+<span class="s plain-str">ipppUTXLLL</span>
+<span class="s plain-str">MPNOSNOPTzv</span>
+<span class="s plain-str">cKSM.1^(!u&#x27;</span>
+<span class="s plain-str">pqoZXXfkj</span>
+<span class="s plain-str">mlhab`lll !</span>
+<span class="s plain-str">iljXYU/.*</span>
+<span class="s plain-str">ooo~}ybbb</span>
+<span class="s plain-str">kkkikk^`Z</span>
+<span class="s plain-str">uvt0.-gic</span>
+<span class="s plain-str">ZZZ[\Z/*+</span>
+<span class="s plain-str">egg*)+fea</span>
+<span class="s plain-str">gmhchg}</span>
+<span class="s plain-str">tpoywvb``5</span>
+<span class="s plain-str">4=l2Nd1Vd,Oe/M{/:</span>
+<span class="s plain-str">]ascgrqt|}</span>
+<span class="s plain-str">@A?;&lt;8=&lt;8AB&gt;</span>
+<span class="s plain-str">X_rhkyy{</span>
+<span class="s plain-str">w\`cAAi?3j6&amp;l-</span>
+<span class="s plain-str">W#-P#&gt;Z!6w</span>
+<span class="s plain-str">l&quot;4g%&gt;s#4</span>
+<span class="s plain-str">fitOWiEEo&gt;4q9.o4*d/,Y.=T.LZ)?p)&amp;</span>
+<span class="s plain-str">s!3Y%MM)]T VW&quot;No#;</span>
+<span class="s plain-str">wrswzxx}|bfgcdbcdb}zv</span>
+<span class="s plain-str">v$0]*PS-ab6e_4aw2G</span>
+<span class="s plain-str">4&#x27;m(%\$1R!=X</span>
+<span class="s plain-str">!Z =O$OR$RW&#x27;Qr*A</span>
+<span class="s plain-str">e *^$&lt;f 1x</span>
+<span class="s plain-str">qrpxyw_^`</span>
+<span class="s plain-str">|vvvvGII</span>
+<span class="s plain-str">hig&lt;=;klj</span>
+<span class="s plain-str">ytqm`bb</span>
+<span class="s plain-str">1569;;7&lt;;&gt;BC6;:^[][YY</span>
+<span class="s plain-str">ymkYWVJFE</span>
+<span class="s plain-str">586@A??@&gt;</span>
+<span class="s plain-str">AE@y{{sssEGH&gt;?=BCA #!/0.</span>
+<span class="s plain-str">133=&gt;:HJJ</span>
+<span class="s plain-str">mql\_]&quot;&#x27;(</span>
+<span class="s plain-str">ijhX[Y+++</span>
+<span class="s plain-str">zkiE/)yjg&amp;</span>
+<span class="s plain-str">K&gt;t9)y7%z6#w%</span>
+<span class="s plain-str">@A?AB@DA=771&amp;&#x27;%</span>
+<span class="s plain-str">c1%l8,_MF</span>
+<span class="s plain-str">q`TR1766;9</span>
+<span class="s plain-str">q`[Z&#x27;/.7&lt;;</span>
+<span class="s plain-str">sq~je~d^|]T</span>
+<span class="s plain-str">v`]X*14;;;</span>
+<span class="s plain-str">z|~rrxigp`Zp[SuZPsSHuK?uE9y@1};)</span>
+<span class="s plain-str">vY&lt;7eZRiZWqjg{xsaMHl[Xyxtxokleb</span>
+<span class="s plain-str">tmjvf`tiktd^eH?yohfJC</span>
+<span class="s plain-str">woppgdi][cWUfVPdNHdG@eA9e&lt;3f6*k2#p.</span>
+<span class="s plain-str">b\W-04:?&gt;</span>
+<span class="s plain-str">d]Z-3.69=</span>
+<span class="s plain-str">tv{jnq_feW]WPSTLMMEEI@&lt;H:4G3.G/)F+!G&#x27;</span>
+<span class="s plain-str">_RpZOg]Vu^V</span>
+<span class="s plain-str">aZW,52?;:</span>
+<span class="s plain-str">outfhi^`dT[]LWSHPIBEA&lt;=&lt;76:1-9*&#x27;8% 7!</span>
+<span class="s plain-str">{bZZ.327;&lt;</span>
+<span class="s plain-str">chjY]_PTUGMNGLG?F&gt;7&gt;6351,-/(%-!</span>
+<span class="s plain-str">tZSP(/2267</span>
+<span class="s plain-str">birW[aNQPEGGAFC;B&gt;5?406*)+&amp;$##</span>
+<span class="s plain-str">o:-zF:^WN</span>
+<span class="s plain-str">w^VV)/.185</span>
+<span class="s plain-str">betWZ^MPSDHNACB:;7233-2)&amp;/&quot;!%</span>
+<span class="s plain-str">RF~PE{QE|XN{UQ</span>
+<span class="s plain-str">^b}UWjKL[CET?AF8::/1/)*&amp;$$</span>
+<span class="s plain-str">mevG9qB4q@6oD;jA8mC&gt;qHE</span>
+<span class="s plain-str">UUvJKbCB\?;K65&gt;./3&#x27;&#x27;&amp;!</span>
+<span class="s plain-str">i0!o8)r=0</span>
+<span class="s plain-str">PDxH&lt;yJ&lt;rF9qA5j;3f81b81^83]80d;2a&lt;4qLHuPHxRM</span>
+<span class="s plain-str">LIsAAe&gt;&lt;U72E/*9(%-!</span>
+<span class="s plain-str">g1 o9(m1!q8)y;0~B2|D3</span>
+<span class="s plain-str">K?~M?}L&lt;xD8rB6k&lt;.h8,]/$^+!Y+#S)&quot;S)&quot;O(</span>
+<span class="s plain-str">S)&quot;S/%U2$Z7*Y-&amp;[4,h95l:4w@9}G&lt;</span>
+<span class="s plain-str">s5#{=-u5#{9&#x27;z6#|8%</span>
+<span class="s plain-str">V*#c3-f5+j4)o4*z5,|4(</span>
+<span class="s plain-str">?6q72]-+L&amp;!=</span>
+<span class="s plain-str">w4%q3#n3 q3!l5&amp;j5(j6&amp;d/&quot;[&#x27;</span>
+<span class="s plain-str">Module1</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">osdufhuisdhfosdu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">hdfoiuzxhciuzhxucxz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uhfdiuxchoiuxchvouixhcfvoiu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hcxuvuxchvouixchvouxc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">fhdiuvcxhjoxchvx <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hzcxoiuzxhoucixzhoiuchzxouic <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dhfzxoiuchxzuhcozxuichzh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">usdfhsuffhudufdhufduh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">xhfg09vbhucxivhxc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hdusfiiuchsiuchz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sodfoicjvjzcixzj <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uxhfuzxhcizuxhcuzi <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hdihfuxjhcuzxhcux <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">iuxhcoiuxzhcouzhx <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ciuvhoiuxcvhoxcuh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uhvuhuixchiuvxuch <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uhjviuhcxivuhxcu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uhvuxichxhvoxiucucvhxo <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hcvuhxcuhxcuhvuxcuvhxcu <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">fhfgpfdughdfugduhfguhdfuhguujsoij <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">duhfxiuchvuixcvho <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">cuhvuchvuhcvhcuv <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">czhvuzxhcoxzhcouzxhzcxoc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">iuhvjxicjixcvijxc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dufhdiuhfsdihfds <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">fdsjfsdijfsdpfjdsi <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">uhxuchcuxvhxuchvux <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">zhxcvixchvjkxchvjioh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">hxviughxcoviuxhcviuh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">VB5Chat2</span>
+<span class="s plain-str">Scroller</span>
+<span class="s plain-str">Pub Room <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Room Name <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Member Room</span>
+<span class="s plain-str">Attetioner</span>
+<span class="s plain-str">Get Profile <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Keyword <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Reason?</span>
+<span class="s plain-str">RuffRyda</span>
+<span class="s plain-str">Mail Me</span>
+<span class="s plain-str">Subject</span>
+<span class="s plain-str">What to say</span>
+<span class="s plain-str">Annoy toolz</span>
+<span class="s plain-str">Annoy 3</span>
+<span class="s plain-str">Annoy 2</span>
+<span class="s plain-str">Annoy 1</span>
+<span class="s plain-str">Ascii Hell <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Ascii 3</span>
+<span class="s plain-str">Ascii 2</span>
+<span class="s plain-str">Ascii 1</span>
+<span class="s plain-str">Art - panthr                          Programming - runic             Ideas\Help - klox</span>
+<span class="s plain-str">Advertise</span>
+<span class="s plain-str">Chat Syphon</span>
+<span class="s plain-str">Dice Roll</span>
+<span class="s plain-str">Dice Hell</span>
+<span class="s plain-str">Fake Viri</span>
+<span class="s plain-str">A-Z Scroll</span>
+<span class="s plain-str">Pr. Room</span>
+<span class="s plain-str">Mem. Room</span>
+<span class="s plain-str">Westside</span>
+<span class="s plain-str">Mini Angel</span>
+<span class="s plain-str">Wu-Tang <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Annoy Tools</span>
+<span class="s plain-str">Age/Sex/Location <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Sound Hell</span>
+<span class="s plain-str">Fake Load</span>
+<span class="s plain-str">Clear Hell</span>
+<span class="s plain-str">Room Scare</span>
+<span class="s plain-str">Attentioner</span>
+<span class="s plain-str">Mail runic</span>
+<span class="s plain-str">Properties</span>
+<span class="s plain-str">Not on top</span>
+<span class="s plain-str">&lt;Font Color=#000055&gt;</span>
+<span class="s plain-str">&lt;Font Color=#000000&gt; &lt;Font Color=#004955&gt;</span>
+<span class="s plain-str">&lt;Font Color=#006D80&gt;r&lt;Font Color=#000000&gt; &lt;Font Color=#004432&gt;</span>
+<span class="s plain-str">&lt;Font Color=#000099&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font Color=#010066&gt; &lt;Font Color=#010033&gt;s&lt;Font Color=#010000&gt;y&lt;Font Color=#012A33&gt;p&lt;Font Color=#015566&gt;h&lt;Font Color=#007F99&gt;</span>
+<span class="s plain-str">&lt;Font Color=#003540&gt; &lt;Font Color=#000000&gt;r&lt;Font Color=#000C14&gt;</span>
+<span class="s plain-str">&lt;Font Color=#001828&gt;n&lt;Font Color=#00253D&gt;</span>
+<span class="s plain-str">&lt;Font Color=#003151&gt;c</span>
+<span class="s plain-str">&lt;Font Color=#008963&gt;</span>
+<span class="s plain-str">&lt;Font Color=#010066&gt;</span>
+<span class="s plain-str">&lt;Font Color=#010033&gt;&lt;Font Color=#010000&gt;n&lt;Font Color=#012A33&gt;l&lt;Font Color=#015566&gt;</span>
+<span class="s plain-str">&lt;Font Color=#009FBF&gt;&lt;Font Color=#006A80&gt;d&lt;Font Color=#003540&gt; &lt;Font Color=#000000&gt; &lt;Font Color=#000C14&gt;b&lt;Font Color=#001828&gt;</span>
+<span class="s plain-str">&lt;Font Color=#00253D&gt;</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">;    |       ,&#x27;</span>
+<span class="s plain-str">.      ;   @&#x27;;   ;</span>
+<span class="s plain-str">)        &#x27; ,</span>
+<span class="s plain-str">complete..</span>
+<span class="s plain-str">aol://2719:2-2-Syphon</span>
+<span class="s plain-str">&lt;font face= <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;FONT FACE = WINGDINGS 2&gt;.&lt;P |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||</span>
+<span class="s plain-str">.            -,o,-     /  \      -,o,-</span>
+<span class="s plain-str">.              \  &#x27; , &#x27;   ()    &#x27; , &#x27; /</span>
+<span class="s plain-str">.                (---------------)</span>
+<span class="s plain-str">.                 //\./\\  //\./\\</span>
+<span class="s plain-str">{s gotmail</span>
+<span class="s plain-str">|   &#x27;| |   &#x27;||   &#x27;|/__/|&#x27;\&#x27;\      /&#x27;/&#x27;|   &#x27;| &#x27;|   &#x27;|</span>
+<span class="s plain-str">evo \|_|/   \|__|&#x27;__|/</span>
+<span class="s plain-str">Forever</span>
+<span class="s plain-str">l__/l     l\__l/    l   l   \&#x27;l     __l /</span>
+<span class="s plain-str">l__l   l__l\___l</span>
+<span class="s plain-str">is now idle</span>
+<span class="s plain-str">asdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyertasdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyertasdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyertasdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyertasdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyertasdfghjlqwertyuiopzxcvbnasdfghjkl;qwertyuiop123456789wertyui34567ertyert</span>
+<span class="s plain-str">.idleon</span>
+<span class="s plain-str">idle now on</span>
+<span class="s plain-str">.idleoff</span>
+<span class="s plain-str">(      .      )(      .      )ATTETION(      .      )(      .      )</span>
+<span class="s plain-str">&lt; a href=</span>
+<span class="s plain-str">DrawStyle</span>
+<span class="s plain-str">DrawMode</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">_extentx</span>
+<span class="s plain-str">_extenty</span>
+</details>
+<div class="stats">Total unique strings: 1386 · Interesting: 67 · Noise filtered: 933</div>
+</div></body></html>

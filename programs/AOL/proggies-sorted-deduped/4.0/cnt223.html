@@ -1,0 +1,636 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>cnt223.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/cnt223.zip">&#x2b07; Download cnt223.zip</a>
+</div>
+<div class="hero">
+<div><h1>cnt223</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">cnt11 SCAN THIS WITH JOTTI VIRUS SCANNER FIRST.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2002-09-12</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (12)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">ssa3d30.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">Mswinsck.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">ssa3d30.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">Mswinsck.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (22)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (250)</h2>
+<span class="s interesting-str">.Form cnucOmp</span>
+<span class="s interesting-str">checking your HD number, please wait..</span>
+<span class="s interesting-str">user verification check:</span>
+<span class="s interesting-str">verified users:</span>
+<span class="s interesting-str">lC:\Program Files\Sheridan\ActiveThreed Plus\ssa3d30.oca</span>
+<span class="s interesting-str">C:\Downloaded Files\Other Software\cn100\needed files\ocx-files\Mswinsck.oca</span>
+<span class="s interesting-str">Stat: crack-network <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">- [winsock phish checker] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">good phish: [0]</span>
+<span class="s interesting-str">check phish: [0/0]</span>
+<span class="s interesting-str">detailed socket data:</span>
+<span class="s interesting-str">total stats / info:</span>
+<span class="s interesting-str">verified user: [ukn.]</span>
+<span class="s interesting-str">total working combinations: [0]</span>
+<span class="s interesting-str">total screen-names attempted: [0]</span>
+<span class="s interesting-str">total passwords attempted: [0]</span>
+<span class="s interesting-str">sn/pw crack ses. info:</span>
+<span class="s interesting-str">on screen-name:</span>
+<span class="s interesting-str">on password:</span>
+<span class="s interesting-str">| random adv.</span>
+<span class="s interesting-str">| hide main win. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">detailed socket info:</span>
+<span class="s interesting-str">&amp;session stats</span>
+<span class="s interesting-str">sockets: [0]</span>
+<span class="s interesting-str">user: [none.]</span>
+<span class="s interesting-str">sn&#x27;s tried: [0]</span>
+<span class="s interesting-str">pw&#x27;s tried: [0]</span>
+<span class="s interesting-str">rate per min: [0]</span>
+<span class="s interesting-str">new cracks: [0]</span>
+<span class="s interesting-str">&amp;clear cracks</span>
+<span class="s interesting-str">Stat: welcome to crack-network</span>
+<span class="s interesting-str">- by future...</span>
+<span class="s interesting-str">| det. status win</span>
+<span class="s interesting-str">|  chat-send</span>
+<span class="s interesting-str">|  passwords</span>
+<span class="s interesting-str">|  screen-names</span>
+<span class="s interesting-str">check for updates</span>
+<span class="s interesting-str">random advertisement.</span>
+<span class="s interesting-str">dime&#x27;s method: [aol]</span>
+<span class="s interesting-str">switch mx servers</span>
+<span class="s interesting-str">use mx server: [01]</span>
+<span class="s interesting-str">use mx server: [02]</span>
+<span class="s interesting-str">use mx server: [03]</span>
+<span class="s interesting-str">use mx server: [04]</span>
+<span class="s interesting-str">use mx server: [05]</span>
+<span class="s interesting-str">form adjustment</span>
+<span class="s interesting-str">minimize form</span>
+<span class="s interesting-str">&amp;maximize form</span>
+<span class="s interesting-str">scroll stats.</span>
+<span class="s interesting-str">handle: [none.]</span>
+<span class="s interesting-str">new additions</span>
+<span class="s interesting-str">winsock phish checker</span>
+<span class="s interesting-str">cnt network [ip] chat</span>
+<span class="s interesting-str">cnt network chat: [run server]</span>
+<span class="s interesting-str">cnt network chat: [run client]</span>
+<span class="s interesting-str">set socket number</span>
+<span class="s interesting-str">cnt settings</span>
+<span class="s interesting-str">ip address: [none.]</span>
+<span class="s interesting-str">auto ping self - every 5 mins [reduces lag]</span>
+<span class="s interesting-str">auto-adjust feature</span>
+<span class="s interesting-str">build #: [2.23]</span>
+<span class="s interesting-str">load names list</span>
+<span class="s interesting-str">save names list</span>
+<span class="s interesting-str">clear names list</span>
+<span class="s interesting-str">remove duplicate names</span>
+<span class="s interesting-str">remove blank spaces from list</span>
+<span class="s interesting-str">load passwords list</span>
+<span class="s interesting-str">save passwords list</span>
+<span class="s interesting-str">clear passwords list</span>
+<span class="s interesting-str">remove duplicate passwords</span>
+<span class="s interesting-str">change ascii color</span>
+<span class="s interesting-str">current ascii color: [#000000]</span>
+<span class="s interesting-str">Aisual Studio\VB98\VB6.EXE</span>
+<span class="s interesting-str">L*\AC:\Downloaded Files\My VB Projects (Source)\crack!\cnt12.vbp</span>
+<span class="s interesting-str">How many sockets would you like to use?</span>
+<span class="s interesting-str">Socket Count</span>
+<span class="s interesting-str">crack network - settings</span>
+<span class="s interesting-str">\cracked.txt</span>
+<span class="s interesting-str">&lt;font face=Webdings&gt;&lt;font color=</span>
+<span class="s interesting-str">&lt;font color= <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Just type in the html color number below for example: &#x27;#000000&#x27; = black. You must type the ascii code in that format.</span>
+<span class="s interesting-str">change ascii color.</span>
+<span class="s interesting-str">current ascii color: [</span>
+<span class="s interesting-str">Stat: your ascii color is now [</span>
+<span class="s interesting-str">&gt;color&lt;/b&gt;&lt;font color=black&gt;]</span>
+<span class="s interesting-str">cnt network chat: [server running..]</span>
+<span class="s interesting-str">Are you sure you want to delete all of the screen-names in your list?</span>
+<span class="s interesting-str">- are you sure?..</span>
+<span class="s interesting-str">Stat: your screen-name list has been deleted..</span>
+<span class="s interesting-str">Are you sure you want to delete all of the passwords in your list?</span>
+<span class="s interesting-str">Stat: your password list has been deleted..</span>
+<span class="s interesting-str">air-in02.mx.aol.com</span>
+<span class="s interesting-str">air-in03.mx.aol.com</span>
+<span class="s interesting-str">air-in01.mx.aol.com</span>
+<span class="s interesting-str">air-id04.mx.aol.com</span>
+<span class="s interesting-str">air-id05.mx.aol.com</span>
+<span class="s interesting-str">air-id06.mx.aol.com</span>
+<span class="s interesting-str">ip address: [</span>
+<span class="s interesting-str">\settings.ini</span>
+<span class="s interesting-str">total names-tried</span>
+<span class="s interesting-str">total passes-tried</span>
+<span class="s interesting-str">What name do you go by?</span>
+<span class="s interesting-str">air-id11.mx.aol.com</span>
+<span class="s interesting-str">Stat: loading your cracked list. please wait..</span>
+<span class="s interesting-str">total screen-names attempted: [</span>
+<span class="s interesting-str">Stat: your cracked list has been loaded..</span>
+<span class="s interesting-str">new cracks: [</span>
+<span class="s interesting-str">pw&#x27;s tried: [</span>
+<span class="s interesting-str">sn&#x27;s tried: [</span>
+<span class="s interesting-str">total working combinations: [</span>
+<span class="s interesting-str">verified user: [</span>
+<span class="s interesting-str">total passwords attempted: [</span>
+<span class="s interesting-str">This option is not availible until cracking has stopped!</span>
+<span class="s interesting-str">All files (*.*)|*.*|Text Files (*.txt)|*.txt|List Files (*.lst)|*.lst|</span>
+<span class="s interesting-str">Load your Screen Name List.</span>
+<span class="s interesting-str">Load your Password List.</span>
+<span class="s interesting-str">Authoritative answer: Host not found</span>
+<span class="s interesting-str">Stat: you are dissconnected from the internet!</span>
+<span class="s interesting-str">The attempt to connect timed out</span>
+<span class="s interesting-str">Stat: you were rate limited!, position saved..</span>
+<span class="s interesting-str">No Screen Name Specified</span>
+<span class="s interesting-str">air-id12.mx.aol.com</span>
+<span class="s interesting-str">cia-id2.mx.aol.com <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">- &lt;font color=</span>
+<span class="s interesting-str">Stat: blank spaces removed from list.</span>
+<span class="s interesting-str">Stat: removing all duplicates please wait..</span>
+<span class="s interesting-str">rate per min: [</span>
+<span class="s interesting-str">&gt; is idle&lt;/b&gt;&lt;font color=black&gt;, cracking&lt;font color=</span>
+<span class="s interesting-str">Text Files (*.txt)|*.txt|List Files (*.lst)|*.lst|All files (*.*)|*.*|</span>
+<span class="s interesting-str">Save your Screen Name List.</span>
+<span class="s interesting-str">Stat: your screen-names list has been saved..</span>
+<span class="s interesting-str">Save your Password List.</span>
+<span class="s interesting-str">Stat: your passwords list has been saved..</span>
+<span class="s interesting-str">&lt;font face=&quot;</span>
+<span class="s interesting-str">Stat: loading your password list. please wait..</span>
+<span class="s interesting-str">Stat: your password list has been loaded..</span>
+<span class="s interesting-str">Stat: loading your screen-name list. please wait..</span>
+<span class="s interesting-str">Stat: your screen-name list has been loaded..</span>
+<span class="s interesting-str">Are you sure you want to delete all of the cracks in your list?</span>
+<span class="s interesting-str">Stat: your cracks have been deleted..</span>
+<span class="s interesting-str">connecting sockets..</span>
+<span class="s interesting-str">] has been added..</span>
+<span class="s interesting-str">Stat: the crack [</span>
+<span class="s interesting-str">Stat: waiting for sockets to close, please wait..</span>
+<span class="s interesting-str">&gt; is back&lt;/b&gt;&lt;font color=black&gt;, done cracking&lt;font color=</span>
+<span class="s interesting-str">Stat: sockets closed, cracking done!</span>
+<span class="s interesting-str">Stat: the name [</span>
+<span class="s interesting-str">] has been removed..</span>
+<span class="s interesting-str">What password do you want to add?</span>
+<span class="s interesting-str">- add password..</span>
+<span class="s interesting-str">Stat: the pass [</span>
+<span class="s interesting-str">Load your Cracks.</span>
+<span class="s interesting-str">Stat: your cracks list has been saved..</span>
+<span class="s interesting-str">What name do you want to add?</span>
+<span class="s interesting-str">- add screen-name..</span>
+<span class="s interesting-str">&gt;Instant Message*</span>
+<span class="s interesting-str">Instant Message*</span>
+<span class="s interesting-str">ignore member</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">&#x27;s on Mailbox</span>
+<span class="s interesting-str">Stat: all duplicates have been removed..</span>
+<span class="s interesting-str">Arts and Entertainment</span>
+<span class="s interesting-str">News, Sports &amp; Finance</span>
+<span class="s interesting-str">Special Interests</span>
+<span class="s interesting-str">Made in Hong Kong</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Fat people are hard to kidnap</span>
+<span class="s interesting-str">Cade wont stop begging for this!</span>
+<span class="s interesting-str">makes icc look like shit..</span>
+<span class="s interesting-str">harder than finding osama.</span>
+<span class="s interesting-str">so elite even your mom begs for it!</span>
+<span class="s interesting-str">hotter then a virgin on prom night!</span>
+<span class="s interesting-str">you suck, we dont!</span>
+<span class="s interesting-str">yes it even works on aol 8.</span>
+<span class="s interesting-str">lost your pw? I can give it to you.</span>
+<span class="s interesting-str">I can even change the color!</span>
+<span class="s interesting-str">look ma no proxies!</span>
+<span class="s interesting-str">wtf is a socket?</span>
+<span class="s interesting-str">whoa! my very own ip-chat?</span>
+<span class="s interesting-str">whoa! a winsock phish checker too?</span>
+<span class="s interesting-str">if you dont have this your new.</span>
+<span class="s interesting-str">my rank = locksmith!</span>
+<span class="s interesting-str">rush newbies like vietnam guerillas</span>
+<span class="s interesting-str">full contact cracker!</span>
+<span class="s interesting-str">so elite even Monitors wants a copy!</span>
+<span class="s interesting-str">dime be guerilla pimpin!</span>
+<span class="s interesting-str">xom be guerilla pimpin!</span>
+<span class="s interesting-str">sinz be guerilla pimpin!</span>
+<span class="s interesting-str">zo be guerilla pimpin!</span>
+<span class="s interesting-str">clone be guerilla pimpin!</span>
+<span class="s interesting-str">future be guerilla pimpin!</span>
+<span class="s interesting-str">, he owns you!</span>
+<span class="s interesting-str">get&#x27;em where it hurts, there pw!</span>
+<span class="s interesting-str">aol sluts fone bone for this!</span>
+<span class="s interesting-str">the future of cracking!</span>
+<span class="s interesting-str">the mothership of all pwc&#x27;s!</span>
+<span class="s interesting-str">one of a fuckin kind!</span>
+<span class="s interesting-str">You&#x27;re not a no0b, you just beg alot.</span>
+<span class="s interesting-str">you can buy this for 1000$!</span>
+<span class="s interesting-str">bought straight off of ebay!</span>
+<span class="s interesting-str">tEh best cracker evAr!</span>
+<span class="s interesting-str">Status: - password list has been cleaned..</span>
+<span class="s interesting-str">Stat: screen-name list has been cleaned..</span>
+<span class="s interesting-str">is on and able to receive</span>
+<span class="s interesting-str">Member Directory</span>
+<span class="s interesting-str">Member Directory Search Results</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">No Screenname</span>
+<span class="s interesting-str">Critical Connection Error</span>
+<span class="s interesting-str">EHLO AOL.COM</span>
+<span class="s interesting-str">Stat: phish: [ <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=tahoma&gt;&lt;font color=</span>
+<span class="s interesting-str">Stat: loading phish list. please wait..</span>
+<span class="s interesting-str">Stat: your phish list is loaded..</span>
+<span class="s interesting-str">Stat: phish has been checked.. [</span>
+<span class="s interesting-str">] good phish!</span>
+<span class="s interesting-str">Stat: checking: [</span>
+<span class="s interesting-str">error: delete selected phish in list: format &#x27;sn:pw&#x27;.</span>
+<span class="s interesting-str">Load your Phish List.</span>
+<span class="s interesting-str">Save your Phish List.</span>
+<span class="s interesting-str">Stat: your phish list has been saved..</span>
+<span class="s interesting-str">w&lt;/b&gt;&lt;font color=black&gt;insock &lt;font color=</span>
+<span class="s interesting-str">check phish: [</span>
+<span class="s interesting-str">good phish: [</span>
+<span class="s interesting-str">HD number is valid..</span>
+<span class="s interesting-str">Loading socket settings..</span>
+<span class="s interesting-str">Loading screen-name settings..</span>
+<span class="s interesting-str">Loading password settings..</span>
+<span class="s interesting-str">Loading cracked settings..</span>
+<span class="s interesting-str">Welcome to crack network [v2.22] by future..</span>
+<span class="s interesting-str">serial number was invalid, or no connection..</span>
+<span class="s interesting-str">Your computer does not have the rights to use this program or you do not have a connection to the internet, you need a internet connection so that your serial number can be verified. If you have a connection to the internet and you are still getting this error please give this number: [</span>
+<span class="s interesting-str">] to future, so that he can activate your copy. If your handle is not in the verified users box don&#x27;t bother asking me to activate your version.</span>
+<span class="s interesting-str">HD Protected..</span>
+<span class="s interesting-str">| show main win.</span>
+<span class="s interesting-str">No Password Specified</span>
+<span class="s interesting-str">Stat: unexpected error - auto resuming cracker..</span>
+<span class="s interesting-str">Stat: auto resuming cracker please wait..</span>
+<span class="s interesting-str">GET http://webmail.aol.com/rlogin.adp?user=</span>
+<span class="s interesting-str">Host: webmail.aol.com</span>
+<span class="s interesting-str">Connection: Close</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (241)</summary>
+<span class="s plain-str">.fuckMut</span>
+<span class="s plain-str">PDs;uQsh</span>
+<span class="s plain-str">Ps0XQsaUQs</span>
+<span class="s plain-str">UPstEDs</span>
+<span class="s plain-str">UQsPOQs</span>
+<span class="s plain-str">2-BAE8cnt22</span>
+<span class="s plain-str">F49FB}#1DumbAOL</span>
+<span class="s plain-str">GFleming <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">wrrwrrwrre``e``e``HDD300 <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">SSCommand7 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Threed.SSCommand <span style="color:#30363d;font-size:0.75em">×24</span></span>
+<span class="s plain-str">MSWinsockLib.Winsock <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">crack-network <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">cnt22.ucOmp <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">cnt22.DumbAOL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DumbAOL <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Caption <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Threed.SSPanel <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">SSPanel</span>
+<span class="s plain-str">SSCommand</span>
+<span class="s plain-str">MSComDlg.CommonDialog <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">CommonDialog</span>
+<span class="s plain-str">Winsock</span>
+<span class="s plain-str">CCAOLBas</span>
+<span class="s plain-str">waASSCommand1</span>
+<span class="s plain-str">SSCommand4 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SSCommand2 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SSCommand3 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SSCommand6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand5 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SSCommand8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand13 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand12 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand10 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand11 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand17 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand16 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand15 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand14 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MSWinsockLib</span>
+<span class="s plain-str">StartSession1</span>
+<span class="s plain-str">StartSession</span>
+<span class="s plain-str">TimeOut</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">Zsnpwframe</span>
+<span class="s plain-str">GetSystemMenu</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">SetForegroundWindow</span>
+<span class="s plain-str">SetWindowRgn</span>
+<span class="s plain-str">CreateRectRgn</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">CombineRgn</span>
+<span class="s plain-str">SetTimer</span>
+<span class="s plain-str">J`/addphish</span>
+<span class="s plain-str">FindInList</span>
+<span class="s plain-str">ConnectError</span>
+<span class="s plain-str">BadPassword</span>
+<span class="s plain-str">SignedOn</span>
+<span class="s plain-str">UserControl</span>
+<span class="s plain-str">Connect</span>
+<span class="s plain-str">MsgError</span>
+<span class="s plain-str">Qserial</span>
+<span class="s plain-str">GetVolumeInformationA</span>
+<span class="s plain-str">CheckSerial</span>
+<span class="s plain-str">VolumeSerialNumber</span>
+<span class="s plain-str">ErrorMsg</span>
+<span class="s plain-str">Courier New</span>
+<span class="s plain-str">Dumb        Ass</span>
+<span class="s plain-str">Tahoma, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;check! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSCommand1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">333ssskkkCCC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">666lllooohhh <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">BBBooovvvsss <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">222000VVVVVVzzz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">JJJJJJMMMQQQNNNQQQ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">OOOOOOSSSUUUQQQTTT <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">UUUWWWYYYYYYZZZUUU <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">WWWXXX[[[]]]```VVV <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">000(((eeegggjjjjjjnnnWWW <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">999000kkkkkklllpppsssYYY <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">EEE&lt;&lt;&lt;nnnooossstttzzziii <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">nnnSSS&amp;&amp;&amp;&amp;&amp;&amp;...222JJJJJJ222 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">JJJ@@@nnnqqqwwwzzzzzzrrr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">JJJEEEnnnvvvzzz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">JJJnnnVVVbbb <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">yyypppfff\\\SSSKKKDDD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">yyyqqqhhh```XXXPPP <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">bbb^^^TTTPPPLLLHHH&gt;&gt;&gt;QQQ</span>
+<span class="s plain-str">rrrhhhddd```YYYRRRNNNaaa</span>
+<span class="s plain-str">jjjOOOFFF&lt;&lt;&lt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">last crack:</span>
+<span class="s plain-str">exit win.</span>
+<span class="s plain-str">&amp;Commence! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">qqqhhh```XXX</span>
+<span class="s plain-str">nnnTTTPPPLLLHHH===</span>
+<span class="s plain-str">TTTPPPLLLDDD</span>
+<span class="s plain-str">KKKdddiiinnnsss{{{</span>
+<span class="s plain-str">PPPTTTUUUYYY\\\[[[[[[___rrr</span>
+<span class="s plain-str">BBB555JJJLLLPPPUUUFFF</span>
+<span class="s plain-str">JJJlllwwwyyyppp&amp;&amp;&amp;</span>
+<span class="s plain-str">999&gt;&gt;&gt;CCCGGG$$$</span>
+<span class="s plain-str">333;;;&gt;&gt;&gt;CCC&lt;&lt;&lt;</span>
+<span class="s plain-str">222777;;;&gt;&gt;&gt;CCCGGGLLLPPPUUUYYY^^^ddd:::hhhyyy</span>
+<span class="s plain-str">222777;;;&gt;&gt;&gt;===555</span>
+<span class="s plain-str">session: 00:00:00 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Tahoma&#x27; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">cracks: [0]</span>
+<span class="s plain-str">&amp;l.cracks</span>
+<span class="s plain-str">&amp;s.cracks</span>
+<span class="s plain-str">passes: [0/0]</span>
+<span class="s plain-str">Tahoma+ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">names: [0/0]</span>
+<span class="s plain-str">10:59:32 PM</span>
+<span class="s plain-str">exit cnt</span>
+<span class="s plain-str">silent mode</span>
+<span class="s plain-str">Duration</span>
+<span class="s plain-str">ScreenName</span>
+<span class="s plain-str">PassWord</span>
+<span class="s plain-str">ErrorText</span>
+<span class="s plain-str">CaseSensitive</span>
+<span class="s plain-str">RootPath</span>
+<span class="s plain-str">Hd9EZHkW</span>
+<span class="s plain-str">OLESCMLOCKMUTEX</span>
+<span class="s plain-str">CreateMutexA</span>
+<span class="s plain-str">GetModuleHandleA</span>
+<span class="s plain-str">n9000408CDBB9950111X</span>
+<span class="s plain-str">e9000408CDBB9950111X</span>
+<span class="s plain-str">28C4C820-401A-101B-A3C9-08002B2F49FB</span>
+<span class="s plain-str">2c49f800-c2dd-11cf-9ad6-0080c7e7b78d</span>
+<span class="s plain-str">205.188.192.152</span>
+<span class="s plain-str">ascii-color</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">205.188.192.47</span>
+<span class="s plain-str">205.188.192.48</span>
+<span class="s plain-str">205.188.192.49</span>
+<span class="s plain-str">205.188.192.52</span>
+<span class="s plain-str">205.188.192.53</span>
+<span class="s plain-str">205.188.192.54</span>
+<span class="s plain-str">205.188.192.57</span>
+<span class="s plain-str">205.188.192.58</span>
+<span class="s plain-str">205.188.192.59</span>
+<span class="s plain-str">205.188.192.153</span>
+<span class="s plain-str">205.188.192.154</span>
+<span class="s plain-str">205.188.192.157</span>
+<span class="s plain-str">205.188.192.158</span>
+<span class="s plain-str">handle: [</span>
+<span class="s plain-str">Socket(</span>
+<span class="s plain-str">sockets: [</span>
+<span class="s plain-str">names: [</span>
+<span class="s plain-str">passes: [</span>
+<span class="s plain-str">cracks: [</span>
+<span class="s plain-str">ListIndex</span>
+<span class="s plain-str">error..</span>
+<span class="s plain-str">205.188.159.153</span>
+<span class="s plain-str">session:</span>
+<span class="s plain-str">Welcome,*</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">&gt;IM From*</span>
+<span class="s plain-str">people here</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">RICHCNTLREADONLY</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">America on</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:62-2-</span>
+<span class="s plain-str">aol://2719:74-2-</span>
+<span class="s plain-str">aol://2719:63-2-</span>
+<span class="s plain-str">aol://2719:64-2-</span>
+<span class="s plain-str">aol://2719:65-2-</span>
+<span class="s plain-str">aol://2719:66-2-</span>
+<span class="s plain-str">aol://2719:67-2-</span>
+<span class="s plain-str">aol://2719:69-2-</span>
+<span class="s plain-str">aol://2719:71-2-</span>
+<span class="s plain-str">aol://2719:73-2-</span>
+<span class="s plain-str">aol://2719:77-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:22-2-</span>
+<span class="s plain-str">aol://2719:34-2-</span>
+<span class="s plain-str">aol://2719:23-2-</span>
+<span class="s plain-str">aol://2719:24-2-</span>
+<span class="s plain-str">aol://2719:25-2-</span>
+<span class="s plain-str">aol://2719:26-2-</span>
+<span class="s plain-str">aol://2719:27-2-</span>
+<span class="s plain-str">aol://2719:29-2-</span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://2719:31-2-</span>
+<span class="s plain-str">aol://2719:33-2-</span>
+<span class="s plain-str">aol://2719:37-2-</span>
+<span class="s plain-str">Town Square</span>
+<span class="s plain-str">Friends</span>
+<span class="s plain-str">Romance</span>
+<span class="s plain-str">Private</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Visible</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">aol://4950:0000010000|all:</span>
+<span class="s plain-str">No Password</span>
+<span class="s plain-str">AUTH PLAIN</span>
+<span class="s plain-str">] added..</span>
+<span class="s plain-str">] removed..</span>
+<span class="s plain-str">Congratulations</span>
+<span class="s plain-str">_extentx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">_extenty <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Future Inc.</span>
+<span class="s plain-str">Copyright 2001-2002</span>
+<span class="s plain-str">2.02.0003 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+</details>
+<div class="stats">Total unique strings: 1237 · Interesting: 250 · Noise filtered: 719</div>
+</div></body></html>

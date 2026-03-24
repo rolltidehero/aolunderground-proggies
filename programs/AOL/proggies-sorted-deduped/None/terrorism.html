@@ -1,0 +1,516 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>terrorism.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/unknown/terrorism.zip">&#x2b07; Download terrorism.zip</a>
+</div>
+<div class="hero">
+<div><h1>terrorism</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL unknown</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">SetupT1.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 1999-06-09</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (10)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">Msvbvm60.dll</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">KERNEL32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">USER32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">ADVAPI32.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">chatscan3.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">comdlg32.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSSTDFMT.DLL</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div style="padding:2px 0"><span class="api-name">vise32ex.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">msaldvb60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">FormShaper.ocx</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+
+
+
+<h2>&#x2b50; Interesting Strings (222)</h2>
+<span class="s interesting-str">runtime error</span>
+<span class="s interesting-str">DOMAIN error</span>
+<span class="s interesting-str">- unable to initialize heap</span>
+<span class="s interesting-str">- not enough space for lowio initialization</span>
+<span class="s interesting-str">- not enough space for stdio initialization</span>
+<span class="s interesting-str">- pure virtual function call</span>
+<span class="s interesting-str">- not enough space for _onexit/atexit table</span>
+<span class="s interesting-str">- unable to open console device</span>
+<span class="s interesting-str">- unexpected heap error</span>
+<span class="s interesting-str">- unexpected multithread lock error</span>
+<span class="s interesting-str">- not enough space for thread data</span>
+<span class="s interesting-str">abnormal program termination</span>
+<span class="s interesting-str">- not enough space for environment</span>
+<span class="s interesting-str">- not enough space for arguments</span>
+<span class="s interesting-str">- floating point not loaded</span>
+<span class="s interesting-str">Microsoft Visual C++ Runtime Library</span>
+<span class="s interesting-str">Runtime Error!</span>
+<span class="s interesting-str">&lt;program name unknown&gt;</span>
+<span class="s interesting-str">GetVersionExA</span>
+<span class="s interesting-str">GetVersion</span>
+<span class="s interesting-str">Static trees will be used (ERROR)</span>
+<span class="s interesting-str">Select LanguageN</span>
+<span class="s interesting-str">Please select the language that you would like to use during the installation.</span>
+<span class="s interesting-str">Support Files</span>
+<span class="s interesting-str">Typical Setup</span>
+<span class="s interesting-str">Compact Setup</span>
+<span class="s interesting-str">Silent Setup</span>
+<span class="s interesting-str">Ascii2.mk</span>
+<span class="s interesting-str">Big Lines.mk</span>
+<span class="s interesting-str">Black.mk</span>
+<span class="s interesting-str">I Fucking OWN YOU!!!.mk</span>
+<span class="s interesting-str">Ascii1.mk</span>
+<span class="s interesting-str">rainbow.mk</span>
+<span class="s interesting-str">adidas2.Hoe</span>
+<span class="s interesting-str">4degrees.Hoe</span>
+<span class="s interesting-str">acid.Hoe</span>
+<span class="s interesting-str">adidas.Hoe</span>
+<span class="s interesting-str">adidas3.Hoe</span>
+<span class="s interesting-str">aeka.Hoe</span>
+<span class="s interesting-str">akiron.Hoe</span>
+<span class="s interesting-str">alien.Hoe</span>
+<span class="s interesting-str">alien2.Hoe</span>
+<span class="s interesting-str">alien3.Hoe</span>
+<span class="s interesting-str">alien4.Hoe</span>
+<span class="s interesting-str">alien5.Hoe</span>
+<span class="s interesting-str">alien6.Hoe</span>
+<span class="s interesting-str">alien7.Hoe</span>
+<span class="s interesting-str">alvin.Hoe</span>
+<span class="s interesting-str">angel.Hoe</span>
+<span class="s interesting-str">angelica.Hoe</span>
+<span class="s interesting-str">asskiss.Hoe</span>
+<span class="s interesting-str">astro.Hoe</span>
+<span class="s interesting-str">audio.Hoe</span>
+<span class="s interesting-str">audio2.Hoe</span>
+<span class="s interesting-str">babs.Hoe</span>
+<span class="s interesting-str">baby.Hoe</span>
+<span class="s interesting-str">baldy.Hoe</span>
+<span class="s interesting-str">baloo.Hoe</span>
+<span class="s interesting-str">bambam.Hoe</span>
+<span class="s interesting-str">bamby.Hoe</span>
+<span class="s interesting-str">bart.Hoe</span>
+<span class="s interesting-str">bear.Hoe</span>
+<span class="s interesting-str">bear2.Hoe</span>
+<span class="s interesting-str">beast.Hoe</span>
+<span class="s interesting-str">beemine.Hoe</span>
+<span class="s interesting-str">belle.Hoe</span>
+<span class="s interesting-str">bevis.Hoe</span>
+<span class="s interesting-str">bomb.Hoe</span>
+<span class="s interesting-str">bong.Hoe</span>
+<span class="s interesting-str">bong2.Hoe</span>
+<span class="s interesting-str">booboo.Hoe</span>
+<span class="s interesting-str">brittany.Hoe</span>
+<span class="s interesting-str">budwiser.Hoe</span>
+<span class="s interesting-str">bugsndaffy.Hoe</span>
+<span class="s interesting-str">butterfly.Hoe</span>
+<span class="s interesting-str">byebye.Hoe</span>
+<span class="s interesting-str">caez.Hoe</span>
+<span class="s interesting-str">cartman.Hoe</span>
+<span class="s interesting-str">chef.Hoe</span>
+<span class="s interesting-str">chong.Hoe</span>
+<span class="s interesting-str">chronic2.Hoe</span>
+<span class="s interesting-str">cindy.Hoe</span>
+<span class="s interesting-str">circface.Hoe</span>
+<span class="s interesting-str">citrus.Hoe</span>
+<span class="s interesting-str">clown.Hoe</span>
+<span class="s interesting-str">creature.Hoe</span>
+<span class="s interesting-str">croc.Hoe</span>
+<span class="s interesting-str">cying.Hoe</span>
+<span class="s interesting-str">daze.Hoe</span>
+<span class="s interesting-str">death.Hoe</span>
+<span class="s interesting-str">deathrow.Hoe</span>
+<span class="s interesting-str">devil.Hoe</span>
+<span class="s interesting-str">devil2.Hoe</span>
+<span class="s interesting-str">disk.Hoe</span>
+<span class="s interesting-str">dolphin.Hoe</span>
+<span class="s interesting-str">dolphin2.Hoe</span>
+<span class="s interesting-str">doughboy.Hoe</span>
+<span class="s interesting-str">dracula.Hoe</span>
+<span class="s interesting-str">dragon.Hoe</span>
+<span class="s interesting-str">dragon2.Hoe</span>
+<span class="s interesting-str">elmer.Hoe</span>
+<span class="s interesting-str">elmo.Hoe</span>
+<span class="s interesting-str">epic.Hoe</span>
+<span class="s interesting-str">Evil Image.Hoe</span>
+<span class="s interesting-str">exclaim.Hoe</span>
+<span class="s interesting-str">face.Hoe</span>
+<span class="s interesting-str">face2.Hoe</span>
+<span class="s interesting-str">finger.Hoe</span>
+<span class="s interesting-str">finger2.Hoe</span>
+<span class="s interesting-str">fireman.Hoe</span>
+<span class="s interesting-str">freak.Hoe</span>
+<span class="s interesting-str">frog.Hoe</span>
+<span class="s interesting-str">garfield.Hoe</span>
+<span class="s interesting-str">genie.Hoe</span>
+<span class="s interesting-str">geno.Hoe</span>
+<span class="s interesting-str">ghost.Hoe</span>
+<span class="s interesting-str">girl.Hoe</span>
+<span class="s interesting-str">gnomish.Hoe</span>
+<span class="s interesting-str">goat.Hoe</span>
+<span class="s interesting-str">goku.Hoe</span>
+<span class="s interesting-str">gorilla.Hoe</span>
+<span class="s interesting-str">gotmail.Hoe</span>
+<span class="s interesting-str">hithere.Hoe</span>
+<span class="s interesting-str">Hoax.Hoe</span>
+<span class="s interesting-str">homer.Hoe</span>
+<span class="s interesting-str">huck.Hoe</span>
+<span class="s interesting-str">huckfinn.Hoe</span>
+<span class="s interesting-str">igor.Hoe</span>
+<span class="s interesting-str">impact.Hoe</span>
+<span class="s interesting-str">jaguar.Hoe</span>
+<span class="s interesting-str">jamaica.Hoe</span>
+<span class="s interesting-str">japan.Hoe</span>
+<span class="s interesting-str">jigga.Hoe</span>
+<span class="s interesting-str">jollyroger.Hoe</span>
+<span class="s interesting-str">kenny.Hoe</span>
+<span class="s interesting-str">kenny2.Hoe</span>
+<span class="s interesting-str">kennygas.Hoe</span>
+<span class="s interesting-str">kidd.Hoe</span>
+<span class="s interesting-str">kyle.Hoe</span>
+<span class="s interesting-str">lester.Hoe</span>
+<span class="s interesting-str">luigi.Hoe</span>
+<span class="s interesting-str">martini.Hoe</span>
+<span class="s interesting-str">medigun.Hoe</span>
+<span class="s interesting-str">misc.Hoe</span>
+<span class="s interesting-str">moon.Hoe</span>
+<span class="s interesting-str">moto.Hoe</span>
+<span class="s interesting-str">Nazi.Hoe</span>
+<span class="s interesting-str">nike.Hoe</span>
+<span class="s interesting-str">odie.Hoe</span>
+<span class="s interesting-str">oldman.Hoe</span>
+<span class="s interesting-str">pills.Hoe</span>
+<span class="s interesting-str">pluto.Hoe</span>
+<span class="s interesting-str">pokeball.Hoe</span>
+<span class="s interesting-str">pooh.Hoe</span>
+<span class="s interesting-str">reaper.Hoe</span>
+<span class="s interesting-str">rosie.Hoe</span>
+<span class="s interesting-str">rover.Hoe</span>
+<span class="s interesting-str">santa.Hoe</span>
+<span class="s interesting-str">scream.Hoe</span>
+<span class="s interesting-str">shadow.Hoe</span>
+<span class="s interesting-str">sharky.Hoe</span>
+<span class="s interesting-str">shotgun.Hoe</span>
+<span class="s interesting-str">shutup.Hoe</span>
+<span class="s interesting-str">sign.Hoe</span>
+<span class="s interesting-str">simba.Hoe</span>
+<span class="s interesting-str">skate.Hoe</span>
+<span class="s interesting-str">skateb.Hoe</span>
+<span class="s interesting-str">skater.Hoe</span>
+<span class="s interesting-str">skull.Hoe</span>
+<span class="s interesting-str">skull2.Hoe</span>
+<span class="s interesting-str">Smoka.Hoe</span>
+<span class="s interesting-str">Smoke.Hoe</span>
+<span class="s interesting-str">smokin.Hoe</span>
+<span class="s interesting-str">smurf.Hoe</span>
+<span class="s interesting-str">smurf2.Hoe</span>
+<span class="s interesting-str">snoopy.Hoe</span>
+<span class="s interesting-str">snowman.Hoe</span>
+<span class="s interesting-str">sonic.Hoe</span>
+<span class="s interesting-str">soviet.Hoe</span>
+<span class="s interesting-str">spawn.Hoe</span>
+<span class="s interesting-str">spiderman.Hoe</span>
+<span class="s interesting-str">stan.Hoe</span>
+<span class="s interesting-str">steak.Hoe</span>
+<span class="s interesting-str">steak2.Hoe</span>
+<span class="s interesting-str">stfu.Hoe</span>
+<span class="s interesting-str">stimpy.Hoe</span>
+<span class="s interesting-str">style.Hoe</span>
+<span class="s interesting-str">sword.Hoe</span>
+<span class="s interesting-str">thehand.Hoe</span>
+<span class="s interesting-str">thinker.Hoe</span>
+<span class="s interesting-str">vader.Hoe</span>
+<span class="s interesting-str">wakko.Hoe</span>
+<span class="s interesting-str">warner.Hoe</span>
+<span class="s interesting-str">whale.Hoe</span>
+<span class="s interesting-str">wizard.Hoe</span>
+<span class="s interesting-str">wizard2.Hoe</span>
+<span class="s interesting-str">wutang.Hoe</span>
+<span class="s interesting-str">yogi.Hoe</span>
+<span class="s interesting-str">Yoshi.Hoe</span>
+<span class="s interesting-str">ziggy.Hoe</span>
+<span class="s interesting-str">Favorite.add</span>
+<span class="s interesting-str">FavPR.add</span>
+<span class="s interesting-str">History.add</span>
+<span class="s interesting-str">Tmplt.add</span>
+<span class="s interesting-str">Auth.wav</span>
+<span class="s interesting-str">Bttn4.wav</span>
+<span class="s interesting-str">pound.wav</span>
+<span class="s interesting-str">star.wav</span>
+<span class="s interesting-str">mainface.jpg</span>
+<span class="s interesting-str">Intro1.bmp</span>
+<span class="s interesting-str">Intro2.bmp</span>
+<span class="s interesting-str">achter.jpg</span>
+<span class="s interesting-str">alienvortex.jpg</span>
+<span class="s interesting-str">Black Dragon Wallpaper.jpg</span>
+<span class="s interesting-str">Blue Dragons Wall Paper.jpg</span>
+<span class="s interesting-str">yinyang.bmp</span>
+<span class="s interesting-str">sm0ke.jpg</span>
+<span class="s interesting-str">Fish.Fish</span>
+<span class="s interesting-str">Fish2.Fish</span>
+<span class="s interesting-str">iface.ini</span>
+<span class="s interesting-str">LamerList.lame</span>
+<span class="s interesting-str">%TargetDir%\Terrorism.exe <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (177)</summary>
+<span class="s plain-str">L$0PQht</span>
+<span class="s plain-str">L$0PQhh</span>
+<span class="s plain-str">L$0PQhP</span>
+<span class="s plain-str">vBWSSSj</span>
+<span class="s plain-str">t/WWUPj</span>
+<span class="s plain-str">SS@SSPVSS</span>
+<span class="s plain-str">VC20XC00U</span>
+<span class="s plain-str">+ttHHtd</span>
+<span class="s plain-str">GAIsProcessorFeaturePresent</span>
+<span class="s plain-str">KERNEL32</span>
+<span class="s plain-str">TLOSS error</span>
+<span class="s plain-str">SING error</span>
+<span class="s plain-str">Program:</span>
+<span class="s plain-str">SunMonTueWedThuFriSat</span>
+<span class="s plain-str">JanFebMarAprMayJunJulAugSepOctNovDec</span>
+<span class="s plain-str">GetLastActivePopup</span>
+<span class="s plain-str">GetActiveWindow</span>
+<span class="s plain-str">MessageBoxA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">_lclose</span>
+<span class="s plain-str">SetFileTime</span>
+<span class="s plain-str">FindClose</span>
+<span class="s plain-str">FindFirstFileA</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">RemoveDirectoryA</span>
+<span class="s plain-str">FindNextFileA</span>
+<span class="s plain-str">DeleteFileA</span>
+<span class="s plain-str">SetFileAttributesA</span>
+<span class="s plain-str">LocalFileTimeToFileTime</span>
+<span class="s plain-str">DosDateTimeToFileTime</span>
+<span class="s plain-str">_lcreat</span>
+<span class="s plain-str">LoadLibraryA</span>
+<span class="s plain-str">GetProcAddress</span>
+<span class="s plain-str">FreeLibrary</span>
+<span class="s plain-str">GetLastError</span>
+<span class="s plain-str">GetCurrentProcess</span>
+<span class="s plain-str">_llseek</span>
+<span class="s plain-str">GetModuleFileNameA</span>
+<span class="s plain-str">GlobalFree</span>
+<span class="s plain-str">GlobalAlloc</span>
+<span class="s plain-str">wsprintfA</span>
+<span class="s plain-str">LoadIconA</span>
+<span class="s plain-str">ExitWindowsEx</span>
+<span class="s plain-str">AdjustTokenPrivileges</span>
+<span class="s plain-str">LookupPrivilegeValueA</span>
+<span class="s plain-str">OpenProcessToken</span>
+<span class="s plain-str">_hwrite</span>
+<span class="s plain-str">CreateDirectoryA</span>
+<span class="s plain-str">GetTimeZoneInformation</span>
+<span class="s plain-str">GetSystemTime</span>
+<span class="s plain-str">GetLocalTime</span>
+<span class="s plain-str">GetDriveTypeA</span>
+<span class="s plain-str">GetModuleHandleA</span>
+<span class="s plain-str">GetStartupInfoA</span>
+<span class="s plain-str">GetCommandLineA</span>
+<span class="s plain-str">ExitProcess</span>
+<span class="s plain-str">GetCPInfo</span>
+<span class="s plain-str">GetOEMCP</span>
+<span class="s plain-str">WideCharToMultiByte</span>
+<span class="s plain-str">TerminateProcess</span>
+<span class="s plain-str">GetFullPathNameA</span>
+<span class="s plain-str">GetCurrentDirectoryA</span>
+<span class="s plain-str">UnhandledExceptionFilter</span>
+<span class="s plain-str">FreeEnvironmentStringsA</span>
+<span class="s plain-str">FreeEnvironmentStringsW</span>
+<span class="s plain-str">GetEnvironmentStrings</span>
+<span class="s plain-str">GetEnvironmentStringsW</span>
+<span class="s plain-str">SetHandleCount</span>
+<span class="s plain-str">GetStdHandle</span>
+<span class="s plain-str">GetFileType</span>
+<span class="s plain-str">HeapDestroy</span>
+<span class="s plain-str">HeapCreate</span>
+<span class="s plain-str">VirtualFree</span>
+<span class="s plain-str">HeapFree</span>
+<span class="s plain-str">RtlUnwind</span>
+<span class="s plain-str">WriteFile</span>
+<span class="s plain-str">HeapAlloc</span>
+<span class="s plain-str">MultiByteToWideChar</span>
+<span class="s plain-str">LCMapStringA</span>
+<span class="s plain-str">LCMapStringW</span>
+<span class="s plain-str">GetStringTypeA</span>
+<span class="s plain-str">GetStringTypeW</span>
+<span class="s plain-str">CompareStringA</span>
+<span class="s plain-str">CompareStringW</span>
+<span class="s plain-str">SetEnvironmentVariableA</span>
+<span class="s plain-str">VirtualAlloc</span>
+<span class="s plain-str">HeapReAlloc</span>
+<span class="s plain-str">%s~visxxxx</span>
+<span class="s plain-str">%s~vis0%s</span>
+<span class="s plain-str">%s~vis00%s</span>
+<span class="s plain-str">%s~vis000%s</span>
+<span class="s plain-str">ViseMain</span>
+<span class="s plain-str">SeShutdownPrivilege</span>
+<span class="s plain-str">WIMPLANT_SIGNED</span>
+<span class="s plain-str">WIMPLANT_ALREADY</span>
+<span class="s plain-str">WIMPLANT_FAILED</span>
+<span class="s plain-str">WIMPLANT_NO_SECTION</span>
+<span class="s plain-str">WIMPLANT_NOT_PE_FILE</span>
+<span class="s plain-str">WIMPLANT_WRITE_ERROR</span>
+<span class="s plain-str">WIMPLANT_READ_ERROR</span>
+<span class="s plain-str">WIMPLANT_FILE_NOT_FOUND</span>
+<span class="s plain-str">WIMPLANT_NO_MEMORY</span>
+<span class="s plain-str">WIMPLANT_NO_ERROR</span>
+<span class="s plain-str">_mvdata</span>
+<span class="s plain-str">FlushBlock</span>
+<span class="s plain-str">@wwwwwwxwpw</span>
+<span class="s plain-str">zLP@!`i&#x27;4</span>
+<span class="s plain-str">+b.NC=a(]</span>
+<span class="s plain-str">nVtk3Bh</span>
+<span class="s plain-str">Kz3Q~EV+u</span>
+<span class="s plain-str">B)tRgMj</span>
+<span class="s plain-str">]rFnnui</span>
+<span class="s plain-str">6g0&amp;aqmlQV,0</span>
+<span class="s plain-str">Hdzoz%^</span>
+<span class="s plain-str">gsmI\zYa</span>
+<span class="s plain-str">cl{O,lkR&gt;~-7</span>
+<span class="s plain-str">zx)Ebtj</span>
+<span class="s plain-str">7gJB5.;6x</span>
+<span class="s plain-str">G|m&gt;QUSUs</span>
+<span class="s plain-str">T(@F-EZS6</span>
+<span class="s plain-str">xGZCL(K</span>
+<span class="s plain-str">qNO-j)6*&gt;</span>
+<span class="s plain-str">X_?&quot;h	/B{</span>
+<span class="s plain-str">^r8=+U[FR</span>
+<span class="s plain-str">(REEo5H</span>
+<span class="s plain-str">rw&#x27;Buxx</span>
+<span class="s plain-str">X(	N`3`&#x27;U</span>
+<span class="s plain-str">t_ q&lt;&#x27;~hY</span>
+<span class="s plain-str">l%8xahOv</span>
+<span class="s plain-str">&gt;zIb/Pk[75</span>
+<span class="s plain-str">@nJKxtf</span>
+<span class="s plain-str">%fi!R&lt;&amp;&gt;Vq</span>
+<span class="s plain-str">`z&gt;_KQpt6[R</span>
+<span class="s plain-str">v]%lxyf</span>
+<span class="s plain-str">p$Zqti$</span>
+<span class="s plain-str">2CWSld?</span>
+<span class="s plain-str">kFaEq18</span>
+<span class="s plain-str">iTaqdlt</span>
+<span class="s plain-str">PqJO#\z</span>
+<span class="s plain-str">&amp;DBESca</span>
+<span class="s plain-str">$5q&lt;4$kxl</span>
+<span class="s plain-str">_X&#x27;&quot;1]{nN</span>
+<span class="s plain-str">qB0e SK8o</span>
+<span class="s plain-str">5=#~}!_dh</span>
+<span class="s plain-str">P:w29a^ip</span>
+<span class="s plain-str">PUHUR#T</span>
+<span class="s plain-str">ENGLISH.VLGV&#x27;</span>
+<span class="s plain-str">KDC&#x27;ovRK</span>
+<span class="s plain-str">8{6$vwvvvf7</span>
+<span class="s plain-str">ENGLISH</span>
+<span class="s plain-str">English</span>
+<span class="s plain-str">rebootnt.exe4&quot;</span>
+<span class="s plain-str">%2&#x27;g$WJ/J</span>
+<span class="s plain-str">sMNMI]N</span>
+<span class="s plain-str">zAcaRT)</span>
+<span class="s plain-str">!dZD3p2T8</span>
+<span class="s plain-str">n&#x27;qXFSY</span>
+<span class="s plain-str">eqUy	yg</span>
+<span class="s plain-str">xZVV\Yf</span>
+<span class="s plain-str">default.bmp4&quot;</span>
+<span class="s plain-str">Terrorism <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">%DefProgramFolder%</span>
+<span class="s plain-str">sc8nvzZV</span>
+<span class="s plain-str">SX#qUn&lt;*IX</span>
+<span class="s plain-str">&amp;MMDJPRi</span>
+<span class="s plain-str">rPyVOVA\Y</span>
+<span class="s plain-str">tQsnV@z</span>
+<span class="s plain-str">FMNA{sG</span>
+<span class="s plain-str">!f39iZx?r</span>
+<span class="s plain-str">4~b[r\@k&amp;O</span>
+<span class="s plain-str">uuIiB8&quot;</span>
+<span class="s plain-str">~Z|EMvl||</span>
+<span class="s plain-str">,WRTX&gt;u</span>
+<span class="s plain-str">IVnR;A+</span>
+<span class="s plain-str">dt&amp; 66;V&amp;</span>
+<span class="s plain-str">L*@G!hD&quot;6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">TaXfm# ,0[</span>
+<span class="s plain-str">o^g&quot;|&amp;&lt;K/)</span>
+</details>
+<div class="stats">Total unique strings: 4905 · Interesting: 222 · Noise filtered: 4495</div>
+</div></body></html>

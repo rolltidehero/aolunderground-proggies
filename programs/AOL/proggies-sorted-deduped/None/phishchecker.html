@@ -1,0 +1,353 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>phishchecker.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/unknown/phishchecker.zip">&#x2b07; Download phishchecker.zip</a>
+</div>
+<div class="hero">
+<div><h1>PhishChecker</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL unknown</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">PhishChecker.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-12-26</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (6)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">CHIP3.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (98)</h2>
+<span class="s interesting-str">Phish Checker v1[agc]</span>
+<span class="s interesting-str">Check Account</span>
+<span class="s interesting-str">C-Com:  check [sn], [pw]</span>
+<span class="s interesting-str">DESTaoC:\PROGRAM FILES\MICROSOFT VISUAL STUDIO\VB98\MSWINSCK.oca</span>
+<span class="s interesting-str">C:\PROGRAM FILES\MICROSOFT VISUAL STUDIO\VB98\CHIP3.oca</span>
+<span class="s interesting-str">GetVersion</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot; color=#424d6c&gt;&lt;b&gt;Checking: &lt;/b&gt;&lt;i&gt;</span>
+<span class="s interesting-str">americaOnline.aol.com</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot; color=#424d6c&gt;&lt;b&gt;Phish Checker v1 [agc]; Load&lt;/b&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot; color=#424d6c&gt;&lt;b&gt;Phish Checker v1 [agc]; Unload&lt;/b&gt;</span>
+<span class="s interesting-str">Invalid password</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot; color=#424d6c&gt;&lt;i&gt;</span>
+<span class="s interesting-str">Invalid Password</span>
+<span class="s interesting-str">Invalid account</span>
+<span class="s interesting-str">Invalid Account</span>
+<span class="s interesting-str">Valid PW, but is in use</span>
+<span class="s interesting-str">mail.earthlink.net</span>
+<span class="s interesting-str">Valid Password</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot; color=#424d6c&gt;Some Kind of Error Has Occured&lt;/b&gt;</span>
+<span class="s interesting-str">metal_man123@yahoo.com</span>
+<span class="s interesting-str">Stolen account from:</span>
+<span class="s interesting-str">set CDAudio door closed</span>
+<span class="s interesting-str">set CDAudio door open</span>
+<span class="s interesting-str">&lt;font face=&quot;</span>
+<span class="s interesting-str">No Option Selected Or None Exist</span>
+<span class="s interesting-str">No Checkboxes Selected Or None Exist</span>
+<span class="s interesting-str">http://www.george.cx</span>
+<span class="s interesting-str">c:\windows\command\start.exe</span>
+<span class="s interesting-str">Are you sure that you want to exit?</span>
+<span class="s interesting-str">www.george.cx|www.wheresgeorge.com|www.cybertears.net|www.redrival.com/wgf|www.mrdoobie.com|www.hecklers.com|unity2k.cjb.net|www.humor.com|www.cruel.com|www.epitaph.com|www.dj-tiesto.com|www.djspooky.com|www.okayplayer.com|www.brain-damage.net|www.dajoker.net|www.abbot3000.com|www.vertek.net|www.djshadow.com|www.grooveinjun.com</span>
+<span class="s interesting-str">Abadi MT Condensed</span>
+<span class="s interesting-str">Abadi MT Condensed Light</span>
+<span class="s interesting-str">Arial Narrow</span>
+<span class="s interesting-str">Arial Rounded MT Bold</span>
+<span class="s interesting-str">Beesknees ITC</span>
+<span class="s interesting-str">Book Antiqua</span>
+<span class="s interesting-str">Bookman Old Style</span>
+<span class="s interesting-str">Bradley Hand ITC</span>
+<span class="s interesting-str">Brush Script MT</span>
+<span class="s interesting-str">Century Gothic</span>
+<span class="s interesting-str">Century Schoolbook</span>
+<span class="s interesting-str">Comic Sans MS</span>
+<span class="s interesting-str">Copperplate Gothic Bold</span>
+<span class="s interesting-str">Copperplate Gothic Light</span>
+<span class="s interesting-str">Engravers MT</span>
+<span class="s interesting-str">Eras Bold ITC</span>
+<span class="s interesting-str">Eras Demi ITC</span>
+<span class="s interesting-str">Eras Light ITC</span>
+<span class="s interesting-str">Eras Medium ITC</span>
+<span class="s interesting-str">Eras Ultra ITC</span>
+<span class="s interesting-str">Felix Titling</span>
+<span class="s interesting-str">Franklin Gothic Book</span>
+<span class="s interesting-str">Franklin Gothic Demi</span>
+<span class="s interesting-str">Franklin Gothic Demi Cond</span>
+<span class="s interesting-str">Franklin Gothic Heavy</span>
+<span class="s interesting-str">Franklin Gothic Medium</span>
+<span class="s interesting-str">Franklin Gothic Medium Cond</span>
+<span class="s interesting-str">French Script MT</span>
+<span class="s interesting-str">Gill Sans MT</span>
+<span class="s interesting-str">Gill Sans MT Condensed</span>
+<span class="s interesting-str">Gill Sans MT Ext Condensed Bold</span>
+<span class="s interesting-str">Gill Sans Ultra Bold</span>
+<span class="s interesting-str">Gill Sans Ultra Bold Condensed</span>
+<span class="s interesting-str">Gloucester MT Extra Condensed</span>
+<span class="s interesting-str">Goudy Old Style</span>
+<span class="s interesting-str">Imprint MT Shadow</span>
+<span class="s interesting-str">Lucida Console</span>
+<span class="s interesting-str">Lucida Handwriting</span>
+<span class="s interesting-str">Lucida Sans Typewriter</span>
+<span class="s interesting-str">Lucida Sans Unicode</span>
+<span class="s interesting-str">Monotype Sorts</span>
+<span class="s interesting-str">MS Sans Serif</span>
+<span class="s interesting-str">News Gothic MT</span>
+<span class="s interesting-str">OCR A Extended</span>
+<span class="s interesting-str">Palace Script MT</span>
+<span class="s interesting-str">Perpetua Titling MT</span>
+<span class="s interesting-str">Rockwell Condensed</span>
+<span class="s interesting-str">Rockwell Extra Bold</span>
+<span class="s interesting-str">Script MT Bold</span>
+<span class="s interesting-str">Tempus Sans ITC</span>
+<span class="s interesting-str">Times New Roman</span>
+<span class="s interesting-str">Trebuchet MS</span>
+<span class="s interesting-str">Tw Cen MT Condensed</span>
+<span class="s interesting-str">Tw Cen MT Condensed Extra Bold</span>
+<span class="s interesting-str">Viner Hand ITC</span>
+<span class="s interesting-str">&lt;Font color=#</span>
+<span class="s interesting-str">bottles of beer on the wall,</span>
+<span class="s interesting-str">bottles of beer. Take on down, pass it around,</span>
+<span class="s interesting-str">bottles of beer on the wall.</span>
+<span class="s interesting-str">So much beer!</span>
+<span class="s interesting-str">You gave up with</span>
+<span class="s interesting-str">bottles of beer on the wall. Thats sad man.</span>
+<span class="s interesting-str">You&#x27;re an Assclown      &gt;:0</span>
+<span class="s interesting-str">do you know where your  children are?</span>
+<span class="s interesting-str">&lt;FONT COLOR=&quot;#FFFFFF&quot;&gt;</span>
+<span class="s interesting-str">&lt;FONT COLOR=&quot;&amp;H0000FFFF&amp;&quot;&gt;</span>
+<span class="s interesting-str">&lt;FONT COLOR=&quot;&amp;H00FFFFFF&amp;&quot;&gt;</span>
+<span class="s interesting-str">http://www.knk4life.com</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (139)</summary>
+<span class="s plain-str">PhishChecker <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">DESTao:O</span>
+<span class="s plain-str">Winsock2</span>
+<span class="s plain-str">MSWinsockLib.Winsock <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Password</span>
+<span class="s plain-str">Screenname</span>
+<span class="s plain-str">Winsock1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DESTaoJ</span>
+<span class="s plain-str">DESTaoL</span>
+<span class="s plain-str">Winsock</span>
+<span class="s plain-str">[DESTao <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">[DESTao%w</span>
+<span class="s plain-str">Module1</span>
+<span class="s plain-str">DESTaoWinsock2</span>
+<span class="s plain-str">MSWinsockLib</span>
+<span class="s plain-str">Command1_Click</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">mciExecute</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">GetProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">GetNextWindow</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">_extentx</span>
+<span class="s plain-str">_extenty</span>
+<span class="s plain-str">2c49f800-c2dd-11cf-9ad6-0080c7e7b78d</span>
+<span class="s plain-str">5A413800347F7FA3036B0100F5000000050F00002152CBCA070A1000080400000000035F0000010004000300080000000000000000000000020D</span>
+<span class="s plain-str">Only one</span>
+<span class="s plain-str">5AD69400411010A044640015000100010A0400000001010B04000000010301</span>
+<span class="s plain-str">20011D00011D00010A04000000020301</span>
+<span class="s plain-str">011D000002000D</span>
+<span class="s plain-str">1010A044640015000100010A0400000001010B04000000010301</span>
+<span class="s plain-str">5A3A0A00031018A40D</span>
+<span class="s plain-str">Master Tool</span>
+<span class="s plain-str">5A3A0A00031018A40D5AC6910008111CA079610701010D5A5C340022121CA0746C00170001000A0F04007BB5E80A10041DA6DDF20A4504000000070002000D5A6F4A000D131CA0534300150001000002000D</span>
+<span class="s plain-str">Subject:</span>
+<span class="s plain-str">mail from:&lt;</span>
+<span class="s plain-str">rcpt to:&lt;</span>
+<span class="s plain-str">&lt;sup&gt;str&lt;/sup&gt;</span>
+<span class="s plain-str">&lt;strike&gt;</span>
+<span class="s plain-str">&lt;sub&gt;str&lt;/sub&gt;</span>
+<span class="s plain-str">&lt;b&gt;str&lt;/b&gt;</span>
+<span class="s plain-str">&lt;i&gt;str&lt;/i&gt;</span>
+<span class="s plain-str">&lt;u&gt;str&lt;/u&gt;</span>
+<span class="s plain-str">Visible</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">Arial Black</span>
+<span class="s plain-str">Rage Italic</span>
+<span class="s plain-str">Calisto MT</span>
+<span class="s plain-str">Courier New</span>
+<span class="s plain-str">Curlz MT</span>
+<span class="s plain-str">Elephant</span>
+<span class="s plain-str">Fixedsys</span>
+<span class="s plain-str">PrestigeFixed</span>
+<span class="s plain-str">Garamond</span>
+<span class="s plain-str">Georgia</span>
+<span class="s plain-str">Rockwell</span>
+<span class="s plain-str">Haettenschweiler</span>
+<span class="s plain-str">Juice ITC</span>
+<span class="s plain-str">Lucida Sans</span>
+<span class="s plain-str">Maiandra GD</span>
+<span class="s plain-str">Marlett</span>
+<span class="s plain-str">Matisse ITC</span>
+<span class="s plain-str">MS LineDraw</span>
+<span class="s plain-str">Perpetua</span>
+<span class="s plain-str">Small Fonts</span>
+<span class="s plain-str">Snap ITC</span>
+<span class="s plain-str">Terminal</span>
+<span class="s plain-str">SelItalic</span>
+<span class="s plain-str">Webdings</span>
+<span class="s plain-str">Westminster</span>
+<span class="s plain-str">Wide Latin</span>
+<span class="s plain-str">Wingdings</span>
+<span class="s plain-str">Wingdings 2</span>
+<span class="s plain-str">Wingdings 3</span>
+<span class="s plain-str">SelStart</span>
+<span class="s plain-str">SelLength</span>
+<span class="s plain-str">SelText</span>
+<span class="s plain-str">SelBold</span>
+<span class="s plain-str">SelUnderline</span>
+<span class="s plain-str">SelStrikeThru</span>
+<span class="s plain-str">SelColor</span>
+<span class="s plain-str">SelFontName</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">AutoRedraw</span>
+<span class="s plain-str">ScaleWidth</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">ForeColor</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">ListIndex</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">Warning:</span>
+<span class="s plain-str">&lt;FONT COLOR=&quot;#0000FF&quot;&gt;</span>
+<span class="s plain-str">&lt;FONT COLOR=&quot;#FF0000&quot;&gt;</span>
+<span class="s plain-str">&lt;FONT COLOR=&quot;#008000&quot;&gt;</span>
+<span class="s plain-str">&lt;FONT COLOR=&quot;&amp;H00C000C0&amp;&quot;&gt;</span>
+<span class="s plain-str">SelCount</span>
+<span class="s plain-str">http://come.to/Dipsvbworld</span>
+</details>
+<div class="stats">Total unique strings: 530 · Interesting: 98 · Noise filtered: 285</div>
+</div></body></html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>gta.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/gta.zip">&#x2b07; Download gta.zip</a>
+</div>
+<div class="hero">
+<div><h1>gta&#x27;s nauti tools</h1><span class="author">by <b>gta+</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">gta&#x27;s nauti tools.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-02-17</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (3)</h2>
+<span class="s author-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+made by: gta+~~</span>
+<span class="s author-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Made by GTA+~~</span>
+<span class="s author-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Made by gta+~~</span>
+<h2>&#x1f4e6; Dependencies (6)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">CHATSCAN3.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (27)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Palette</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">FindWindowChildA</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+<div class="api-item"><span class="api-name">_Aol_Palette</span></div>
+<div class="api-item"><span class="api-name">_Aol_Icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_ICON</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (263)</h2>
+<span class="s interesting-str">gta&#x27;s nauti tools <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Faster Scroller</span>
+<span class="s interesting-str">Sound Annoyance</span>
+<span class="s interesting-str">Invisible Sounds</span>
+<span class="s interesting-str">Musica Sounds</span>
+<span class="s interesting-str">Robotz Sounds</span>
+<span class="s interesting-str">Jungle Sounds</span>
+<span class="s interesting-str">System Start</span>
+<span class="s interesting-str">Windows 98 song</span>
+<span class="s interesting-str">joes program <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">DESTapC:\JOE&#x27;S FOLDER\CHATSCAN3.oca</span>
+<span class="s interesting-str">gta&#x27;s nauti phader <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">afk &amp; reason</span>
+<span class="s interesting-str">phade and text</span>
+<span class="s interesting-str">K*\AC:\Joe&#x27;s Folder\joes program.vbp</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti tools+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;mailto:GTA84@yahoo.com&quot;&gt;send a mail to request it&lt;/a&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+</span>
+<span class="s interesting-str">&#x27;s ims are now on+~~</span>
+<span class="s interesting-str">&#x27;s ims are now off+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti phader loaded+~~</span>
+<span class="s interesting-str">How many sounds do you want to do?</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s sound annoyance loaded+~~</span>
+<span class="s interesting-str">is going to do</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s im</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s goodbye</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s welcome</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s systemstart</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s systemexit</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s filedone</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s ygp</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s buddyin</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s buddyout</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s drop</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s gotmail</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s mailbeep</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s media\tada</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;{s inactive</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti sound annoyance has ended+~~</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s buddyin</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~6</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+GTA&#x27;s nauti tools+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;www.angelfire.com/nv/gta/gtasnautitools.zip&quot;&gt;~~+Loaded by:</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;www.angelfire.com/nv/gta/gtasnautitools.zip&quot;&gt;~~+Now unloaded+~~&lt;/a&gt;</span>
+<span class="s interesting-str">Like the crappy art?</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;www.angelfire.com/nv/gta/gtasnautitools.zip&quot;&gt;click here to get it!!&lt;/a&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Chat Cleared By</span>
+<span class="s interesting-str">has turned c-com mode off+~~</span>
+<span class="s interesting-str">has turned c-com mode on+~~</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s application data\microsoft\welcome\welcom98</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s inactive</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s mailbeep</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s buddyout</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s filedone</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s drop</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s systemexit</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s goodbye</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s im</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~1</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~2</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~3</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~4</span>
+<span class="s interesting-str">There is no Musica 2 also.</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~5</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~7</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~8</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\jungle~9</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~1</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~3</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~4</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~5</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~6</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~7</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~8</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\musica~9</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s ygp</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~1</span>
+<span class="s interesting-str">I don&#x27;t know why but there is no Robotz 2. Sorry</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~4</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~5</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~6</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~7</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~8</span>
+<span class="s interesting-str">Web address...</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~9</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s systemstart</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s media\tada</span>
+<span class="s interesting-str">&lt;font color=&quot;#fefefe&quot;&gt; {s welcome</span>
+<span class="s interesting-str">Please input some text.</span>
+<span class="s interesting-str">What&#x27;s the web address?</span>
+<span class="s interesting-str">What do you want the link to say?</span>
+<span class="s interesting-str">Link will say...</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt;font color=&quot;#fefefe&quot;&gt; {s media\robotz~3</span>
+<span class="s interesting-str">Just kidding about the virus.</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti scroller loaded+~~</span>
+<span class="s interesting-str">What would you like to scroll?</span>
+<span class="s interesting-str">Text to scroll.</span>
+<span class="s interesting-str">Text to scroll...</span>
+<span class="s interesting-str">wassup? thanks for using my prog even though it sucks. im 15 years old i will get better at programming i promise. shout outs go to chow, brandon, mike, and all those other people i didnt want to mention. maybe next time. =/ peace out. oh yeah if you try loading the c-com more than once it won&#x27;t work. i didnt know how to fix this. if you do know how to fix it e-mail me. thanks. to view the commands in c-com mode there is no trigger and the command is show to view the commands! also special thanks goes to zer0 for helping with the c-com!!</span>
+<span class="s interesting-str">You can e-mail me at GTA84@yahoo.com. These are the only screen names I have so if anyone poses to be me, I don&#x27;t think no one will, you know they are lying. E-mail me at GTA84@yahoo.com and tell me who&#x27;s posing as me.</span>
+<span class="s interesting-str">Contact me...</span>
+<span class="s interesting-str">I take no responsibility for what you do with this. It is for learning purposes only. It can teach how you can program with AOL.</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Now unloaded by:</span>
+<span class="s interesting-str">You get a virus for doing that.</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+now unloaded by:</span>
+<span class="s interesting-str">is checking out his new mail+~~</span>
+<span class="s interesting-str">is checking out his old mail+~~</span>
+<span class="s interesting-str">is checking out his sent mail+~~</span>
+<span class="s interesting-str">this prog sucks</span>
+<span class="s interesting-str">You hurt my feelings.</span>
+<span class="s interesting-str">My web site isnt too pretty because im knew to html but i didnt use one of those weak little programs that make your web site for you. my web site&#x27;s at www.angelfire.com/wi2/gta</span>
+<span class="s interesting-str">Try a prompt and see if you get anything...</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">Text to scroll</span>
+<span class="s interesting-str">What private room are you in?</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti scroller+~~</span>
+<span class="s interesting-str">&lt;Font Color=#</span>
+<span class="s interesting-str">Error: Attempting to fade less than one color.</span>
+<span class="s interesting-str">What would you like to phade?</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;b&gt;</span>
+<span class="s interesting-str">has been idle for [</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti phader unloaded+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Reason is [</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti toolz+~~</span>
+<span class="s interesting-str">is done viewing the commands+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta&#x27;s nauti tools~~+</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;&lt; a href=&quot;www.angelfire.com/wi2/gta&quot;&gt;click here to get it!!&lt;/a&gt;</span>
+<span class="s interesting-str">is learning about me and the prog+~~</span>
+<span class="s interesting-str">is viewing the commands+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+gta nauti tools+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+c-com mode now unloaded+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+Aiight I&#x27;m back+~~</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt; &quot;~~+I was gone for</span>
+<span class="s interesting-str">America  Online</span>
+<span class="s interesting-str">Get Member Inf&amp;o</span>
+<span class="s interesting-str">&#x27;s Buddy List</span>
+<span class="s interesting-str">Join me in this Buddy Chat.</span>
+<span class="s interesting-str">&lt;Font Face=&quot;Times New Roman&quot;&gt;</span>
+<span class="s interesting-str">&lt;html&gt;&lt;Font Color=#</span>
+<span class="s interesting-str">C:\aol40\waol.exe</span>
+<span class="s interesting-str">C:\aol40a\waol.exe</span>
+<span class="s interesting-str">C:\aol40b\waol.exe</span>
+<span class="s interesting-str">Read &amp;New Mail</span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Read</span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Sent</span>
+<span class="s interesting-str">Send an Instant Message</span>
+<span class="s interesting-str">Compose Mail</span>
+<span class="s interesting-str">twenty three</span>
+<span class="s interesting-str">twenty seven</span>
+<span class="s interesting-str">twenty eight</span>
+<span class="s interesting-str">thirty three</span>
+<span class="s interesting-str">thirty seven</span>
+<span class="s interesting-str">thirty eight</span>
+<span class="s interesting-str">fourty three</span>
+<span class="s interesting-str">fourty seven</span>
+<span class="s interesting-str">fourty eight</span>
+<span class="s interesting-str">&lt;b&gt;&lt;Font Color=#</span>
+<span class="s interesting-str">set CDAudio door closed</span>
+<span class="s interesting-str">set CDAudio door open</span>
+<span class="s interesting-str">&#x27;s Online Mailbox</span>
+<span class="s interesting-str">Online Mailbox</span>
+<span class="s interesting-str">&gt;Instant Message From:</span>
+<span class="s interesting-str">Instant Message From:</span>
+<span class="s interesting-str">&lt;Font Color=#FFFFFE&gt;</span>
+<span class="s interesting-str">&lt;FONT COLOR=#FFFFF0&gt;.&lt;p=</span>
+<span class="s interesting-str">&lt;html&gt; &lt;/html&gt;</span>
+<span class="s interesting-str">Ignoring Ims From</span>
+<span class="s interesting-str">Unignoring Ims From</span>
+<span class="s interesting-str">\idb\main.idx</span>
+<span class="s interesting-str">You have to choose a word to scramble</span>
+<span class="s interesting-str">You Got it Correct!</span>
+<span class="s interesting-str">Important Message About Chat Rooms</span>
+<span class="s interesting-str">meeh owns you</span>
+<span class="s interesting-str">* has entered the room.*</span>
+<span class="s interesting-str">, You will win the lottery and spend it all on BEER!</span>
+<span class="s interesting-str">, You will kill Steve Case and take over AoL!</span>
+<span class="s interesting-str">, You will marry Carmen Electra!</span>
+<span class="s interesting-str">, You will DL a PWS and get thousands of bucks charged on your account!</span>
+<span class="s interesting-str">, You will end up werking at McDonalds and die a lonely man</span>
+<span class="s interesting-str">, You will get a check for ONE MILLION $$ from me! Yeah right!</span>
+<span class="s interesting-str">, You will be OWNED by shlep</span>
+<span class="s interesting-str">, You will be OWNED by epa</span>
+<span class="s interesting-str">, You will get an OH and delete Steve Case&#x27;s SN!</span>
+<span class="s interesting-str">, You will slip on a banana peel in Japan and land on some egg foo yung!</span>
+<span class="s interesting-str">Vote &quot;Yes&quot; For Yes And &quot;No&quot; For No</span>
+<span class="s interesting-str">Your Vote Was Recorded</span>
+<span class="s interesting-str">There have been</span>
+<span class="s interesting-str">Votes For Yes</span>
+<span class="s interesting-str">And there have been</span>
+<span class="s interesting-str">Votes For No</span>
+<span class="s interesting-str">&lt;font face=&quot;Abadi MT Condensed&quot;&gt;&lt;Font Color=&quot;#0000AA&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Face=&quot;Abadi MT Condensed&quot;&gt;&lt;Font Color=&quot;#990000&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Face=&quot;Abadi MT Condensed&quot;&gt;&lt;Font Color=&quot;#005500&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#CCFF00&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#CC33CC&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#CC66FF&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#33CCFF&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#FFCC00&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#FF66FF&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#FFCCFF&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#FF00FF&quot;&gt;</span>
+<span class="s interesting-str">&lt;Font Color=&quot;#BBBBBB&quot;&gt;</span>
+<span class="s interesting-str">&lt;FONT COLOR=#FFFFF0&gt;&lt;p=</span>
+<span class="s interesting-str">C:\AOL 25\idb</span>
+<span class="s interesting-str">C:\AOL 25a\idb</span>
+<span class="s interesting-str">C:\AOL 25b\idb</span>
+<span class="s interesting-str">C:\AOL 25i\idb</span>
+<span class="s interesting-str">C:\AOL 25\Organize</span>
+<span class="s interesting-str">C:\AOL 25a\Organize</span>
+<span class="s interesting-str">C:\AOL 25b\Organize</span>
+<span class="s interesting-str">C:\AOL 25i\Organize</span>
+<span class="s interesting-str">C:\AOL 25\Tool</span>
+<span class="s interesting-str">C:\AOL 25a\Tool</span>
+<span class="s interesting-str">C:\AOL 25b\Tool</span>
+<span class="s interesting-str">C:\AOL 25i\Tool</span>
+<span class="s interesting-str">C:\AOL 30\idb</span>
+<span class="s interesting-str">C:\AOL 30a\idb</span>
+<span class="s interesting-str">C:\AOL 30b\idb</span>
+<span class="s interesting-str">C:\AOL 30\Organize</span>
+<span class="s interesting-str">C:\AOL 30a\Organize</span>
+<span class="s interesting-str">C:\AOL 30b\Organize</span>
+<span class="s interesting-str">C:\AOL 30\Tool</span>
+<span class="s interesting-str">C:\AOL 30a\Tool</span>
+<span class="s interesting-str">C:\AOL 30b\Tool</span>
+<span class="s interesting-str">C:\AOL 40\idb</span>
+<span class="s interesting-str">C:\AOL 40a\idb</span>
+<span class="s interesting-str">C:\AOL 40b\idb</span>
+<span class="s interesting-str">C:\AOL 40\Organize</span>
+<span class="s interesting-str">C:\AOL 40a\Organize</span>
+<span class="s interesting-str">C:\AOL 40b\Organize</span>
+<span class="s interesting-str">C:\AOL 40\Tool</span>
+<span class="s interesting-str">C:\AOL 40a\Tool</span>
+<span class="s interesting-str">C:\AOL 40b\Tool</span>
+<span class="s interesting-str">C:\Program Files\AIM95</span>
+<span class="s interesting-str">C:\Program Files\AIM95a</span>
+<span class="s interesting-str">C:\Program Files\AIM95b</span>
+<span class="s interesting-str">C:\Program Files</span>
+<span class="s interesting-str">C:\Autoexec.bat</span>
+<span class="s interesting-str">C:\AOL 40\Winsock</span>
+<span class="s interesting-str">C:\AOL 40a\Winsock</span>
+<span class="s interesting-str">C:\AOL 40b\Winsock</span>
+<span class="s interesting-str">C:\AOL 30\Winsock</span>
+<span class="s interesting-str">C:\AOL 30a\Winsock</span>
+<span class="s interesting-str">C:\AOL 30b\Winsock</span>
+<span class="s interesting-str">C:\AOL 25\Winsock</span>
+<span class="s interesting-str">C:\AOL 25a\Winsock</span>
+<span class="s interesting-str">C:\AOL 25b\Winsock</span>
+<span class="s interesting-str">C:\AOL 25i\Winsock</span>
+<span class="s interesting-str">gta&#x27;s nauti tools.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (315)</summary>
+<span class="s plain-str">mnuFileAbout <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuFileContact <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Contact Me</span>
+<span class="s plain-str">mnuFileDisclaimer <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Disclaimer</span>
+<span class="s plain-str">mnuFileExit <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuIMIMsOn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuIMIMsOff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuMailNew <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">New Mail</span>
+<span class="s plain-str">mnuMailOld <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Old Mail</span>
+<span class="s plain-str">mnuMailSent <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Sent Mail</span>
+<span class="s plain-str">mnuChatCom <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatComsOn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatComsOff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatClear <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Eat Chat</span>
+<span class="s plain-str">mnuChatMacro <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Macro Kill</span>
+<span class="s plain-str">mnuChatLink <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Link Sender</span>
+<span class="s plain-str">mnuChatScroll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatScroll2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Scroller 2</span>
+<span class="s plain-str">mnuChatScroller3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Scroller 3</span>
+<span class="s plain-str">mnuChatAdv <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Advertise</span>
+<span class="s plain-str">mnuChatPhade <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatIn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInMus <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInMus1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 1</span>
+<span class="s plain-str">mnuChatInMus2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 2</span>
+<span class="s plain-str">mnuChatInMus3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 3</span>
+<span class="s plain-str">mnuChatInMus4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 4</span>
+<span class="s plain-str">mnuChatInMus5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 5</span>
+<span class="s plain-str">mnuChatInMus6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 6</span>
+<span class="s plain-str">mnuChatInMus7 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 7</span>
+<span class="s plain-str">mnuChatInMus8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 8</span>
+<span class="s plain-str">mnuChatInMus9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Musica 9</span>
+<span class="s plain-str">mnuChatInRob <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInRob1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 1</span>
+<span class="s plain-str">mnuChatInRob2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 2</span>
+<span class="s plain-str">mnuChatRob3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 3</span>
+<span class="s plain-str">mnuChatInRob4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 4</span>
+<span class="s plain-str">mnuChatInRob5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 5</span>
+<span class="s plain-str">mnuChatInRob6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 6</span>
+<span class="s plain-str">mnuChatInRob7 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 7</span>
+<span class="s plain-str">mnuChatInRob8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 8</span>
+<span class="s plain-str">mnuChatInRob9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Robotz 9</span>
+<span class="s plain-str">mnuChatInJungle <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInJungle1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 1</span>
+<span class="s plain-str">mnuChatInJungle2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 2</span>
+<span class="s plain-str">mnuChatInJungle3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 3</span>
+<span class="s plain-str">mnuChatInJungle4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 4</span>
+<span class="s plain-str">mnuChatInJungle5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 5</span>
+<span class="s plain-str">ChatInJungle6 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 6</span>
+<span class="s plain-str">mnuChatInJungle7 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 7</span>
+<span class="s plain-str">mnuChatInJungle8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 8</span>
+<span class="s plain-str">mnuChatInJungle9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Jungle 9</span>
+<span class="s plain-str">mnuChatInIM <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInDrop <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Buddy In</span>
+<span class="s plain-str">mnuChatInBudO <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Buddy Out</span>
+<span class="s plain-str">mnuChatInStart <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInExit <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">System Exit</span>
+<span class="s plain-str">mnuChatInWel <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">mnuChatInBeep <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mail Beep</span>
+<span class="s plain-str">mnuChatInTada <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuChatInGot <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Got Mail</span>
+<span class="s plain-str">mnuChatInPics <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Got pics</span>
+<span class="s plain-str">mnuChatInAct <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Inactive</span>
+<span class="s plain-str">mnuChatInDone <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">File Done</span>
+<span class="s plain-str">mnuChatInGood <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Goodbye</span>
+<span class="s plain-str">mnuChatIn98 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOther <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOtherMy <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">My Web Site</span>
+<span class="s plain-str">OtherPrompt <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Prompt....</span>
+<span class="s plain-str">MonkEFade</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">SystemParametersInfoA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">ExitWindowsEx</span>
+<span class="s plain-str">.Label2</span>
+<span class="s plain-str">DESTapChat1</span>
+<span class="s plain-str">ReleaseDC</span>
+<span class="s plain-str">GetWindowDC</span>
+<span class="s plain-str">SwapMouseButton</span>
+<span class="s plain-str">ENumChildWindow</span>
+<span class="s plain-str">CreateSolidBrush</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">GetKeyState</span>
+<span class="s plain-str">GetKeyboardState</span>
+<span class="s plain-str">SetKeyboardState</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">SelectObject</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">Rectangle</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">Scroller</span>
+<span class="s plain-str">Commands <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sound(s)+~~</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">No Robotz 2</span>
+<span class="s plain-str">Disclaimer...</span>
+<span class="s plain-str">Prompt...</span>
+<span class="s plain-str">My web site</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">SelUnderline</span>
+<span class="s plain-str">SelBold</span>
+<span class="s plain-str">SelItalic</span>
+<span class="s plain-str">font face</span>
+<span class="s plain-str">What room?</span>
+<span class="s plain-str">SelStart</span>
+<span class="s plain-str">font color</span>
+<span class="s plain-str">SelStrikeThru</span>
+<span class="s plain-str">SelColor</span>
+<span class="s plain-str">SelLength</span>
+<span class="s plain-str">SelFontName</span>
+<span class="s plain-str">SelText</span>
+<span class="s plain-str">&lt;font face=</span>
+<span class="s plain-str">phade *</span>
+<span class="s plain-str">is idle+~~</span>
+<span class="s plain-str">] minute(s)+~~</span>
+<span class="s plain-str">minute(s)+~~</span>
+<span class="s plain-str">_Oscar_BuddyListWin</span>
+<span class="s plain-str">_Oscar_Locate</span>
+<span class="s plain-str">_Oscar_PersistantComb</span>
+<span class="s plain-str">WndAte32Class</span>
+<span class="s plain-str">Ate32Class</span>
+<span class="s plain-str">AIM_ChatWnd</span>
+<span class="s plain-str">_Oscar_Separator</span>
+<span class="s plain-str">_Oscar_TabGroup</span>
+<span class="s plain-str">_Oscar_IconBtn</span>
+<span class="s plain-str">AIM_IMessage</span>
+<span class="s plain-str">Ate32class</span>
+<span class="s plain-str">AIM_ChatInviteSendWnd</span>
+<span class="s plain-str">Ims Are Off</span>
+<span class="s plain-str">Ims Are on!</span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">Subject:</span>
+<span class="s plain-str">twenty one</span>
+<span class="s plain-str">twenty two</span>
+<span class="s plain-str">twenty four</span>
+<span class="s plain-str">twenty five</span>
+<span class="s plain-str">twenty six</span>
+<span class="s plain-str">twenty nine</span>
+<span class="s plain-str">thirty four</span>
+<span class="s plain-str">thirty five</span>
+<span class="s plain-str">thirty nine</span>
+<span class="s plain-str">fourty one</span>
+<span class="s plain-str">fourty two</span>
+<span class="s plain-str">fourty four</span>
+<span class="s plain-str">fourty five</span>
+<span class="s plain-str">fourty six</span>
+<span class="s plain-str">fourty nine</span>
+<span class="s plain-str">&lt; A href=&quot;</span>
+<span class="s plain-str">&quot; &gt;&lt;/u&gt;&lt;b&gt;</span>
+<span class="s plain-str">Shell_TrayWnd</span>
+<span class="s plain-str">aol://2719:62-2-</span>
+<span class="s plain-str">aol://2719:74-2-</span>
+<span class="s plain-str">aol://2719:63-2-</span>
+<span class="s plain-str">aol://2719:64-2-</span>
+<span class="s plain-str">aol://2719:65-2-</span>
+<span class="s plain-str">aol://2719:66-2-</span>
+<span class="s plain-str">aol://2719:67-2-</span>
+<span class="s plain-str">aol://2719:22-2-</span>
+<span class="s plain-str">aol://2719:34-2-</span>
+<span class="s plain-str">aol://2719:23-2-</span>
+<span class="s plain-str">aol://2719:24-2-</span>
+<span class="s plain-str">aol://2719:25-2-</span>
+<span class="s plain-str">aol://2719:26-2-</span>
+<span class="s plain-str">aol://2719:27-2-</span>
+<span class="s plain-str">{enter}</span>
+<span class="s plain-str">aol://3548:</span>
+<span class="s plain-str">&lt; a href=</span>
+<span class="s plain-str">DrawStyle</span>
+<span class="s plain-str">DrawMode</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">New User</span>
+<span class="s plain-str">Unscramble:</span>
+<span class="s plain-str">&lt;b&gt;&lt;s&gt;&lt;i&gt;&lt;u&gt;</span>
+<span class="s plain-str">&lt;b&gt;&lt;/i&gt;&lt;/u&gt;</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">OnlineHost</span>
+<span class="s plain-str">/fortune</span>
+<span class="s plain-str">Minutes</span>
+<span class="s plain-str">&lt;Font Color=&quot;#007700&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#0066FF&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#CC0000&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#FF0000&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#000066&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#00CC00&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#000000&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#996600&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#990099&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#FF9900&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#FF6600&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#999999&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#555555&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#0000AA&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#990000&quot;&gt;</span>
+<span class="s plain-str">&lt;Font Color=&quot;#005500&quot;&gt;</span>
+<span class="s plain-str">Has ims on</span>
+<span class="s plain-str">Has ims off</span>
+<span class="s plain-str">C:\Windows</span>
+<span class="s plain-str">_extentx</span>
+<span class="s plain-str">_extenty</span>
+</details>
+<div class="stats">Total unique strings: 1024 · Interesting: 263 · Noise filtered: 411</div>
+</div></body></html>

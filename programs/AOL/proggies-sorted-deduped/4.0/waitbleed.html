@@ -1,0 +1,655 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>waitbleed.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/waitbleed.zip">&#x2b07; Download waitbleed.zip</a>
+</div>
+<div class="hero">
+<div><h1>Wait&amp;BLeeD</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB5</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Wait&amp;BLeeD.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-07-27</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (3)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (66)</h2>
+<span class="s phishing-str">Hi, I&#x27;m with AOL&#x27;s Online Security. We have found hackers trying to get into your MailBox. Please verify your password immediately to avoid account termination.     Thank you.                                    AOL Staff</span>
+<span class="s phishing-str">Hello. I am with AOL&#x27;s billing department. Due to some invalid information, we need you to verify your log-on password to avoid account cancellation. Thank you, and continue to enjoy America Online.</span>
+<span class="s phishing-str">Hello, I am the Head Of AOL&#x27;s XPI Link Department. Due to a configuration error in your version of AOL, I need you to verify your log-on password to me, to prevent account suspension and possible termination.  Thank You.</span>
+<span class="s phishing-str">Good evening, I am with the America Online User Department, and due to a system crash, we have lost your information, for out records please click &#x27;respond&#x27; and state your Screen Name, and logon Password.  Thank you, and enjoy your time on AOL.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error in your log on we failed to recieve your logon password, for our records, please click &#x27;respond&#x27; then state your Screen Name and Password.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Hi, I am with the America Online Hacker enforcement group, we have detected hackers using your account, we need to verify your identity, so we can catch the illicit users of your account, to prove your identity, please click &#x27;respond&#x27; then state your Screen Name, Personal Password, Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Hi, I&#x27;m Alex Troph of America Online Sevice Department. Your online account, #3560028, is displaying a billing error. We need you to respond back with your name, address, card number, expiration date, and daytime phone number. Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error caused by SprintNet, we failed to receive your log on password, for our records. Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Please click &#x27;respond&#x27; then state your Screen Name and Password. Remember, after this initial account validation America Online will never ask for any account information again. Thank you.  :-)</span>
+<span class="s phishing-str">Hello I am a represenative of the Visa Corp. emp# C8205183W. Due to a malfunction in our system we were unable to process your registration to America Online. In order to correct this mistake, we ask that you hit the &#x27;Respond&#x27; key, and reply with the following information: Name, Address, Telephone#, Visa Card#, and Expiration date. If this information is not processed promptly your account will be terminated. For any further questions please contact us at 1-800-336-8427. Thank You.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation Department.  I am happy to inform you that your validation process is almost complete.  To complete your validation process I need you to please hit the `Respond` key and reply with the following information: Name, Address, Phone Number, City, State, Zip Code,  Credit Card Number, Expiration Date, and Bank Name.  Thank you for your time and cooperation and we hope that you enjoy America Online. :-)</span>
+<span class="s phishing-str">Hello, I am an America Online Administrator.  Due to a problem we&#x27;re experiencing with the Sprint Network, we need you to verify your log-in password to me so that you can continue this log-in session with America Online.  We apologize for this inconvenience, and thank you for cooperation.</span>
+<span class="s phishing-str">Hello, this is the America Online Billing Department.  Due to a System Crash, we have lost your billing information.  Please hit respond, then enter your Credit Card Number, and experation date.  Thank You, and sorry for the inconvience.</span>
+<span class="s phishing-str">ATTENTION:  This is the America Online billing department.  Due to an error that occured in your Membership Enrollment process we did not receieve your billing information.  We need you to reply back with your Full name, Credit card number with Expiration date, and your telephone number.  We are very sorry for this inconvenience and hope that you continue to enjoy America Online in the future.</span>
+<span class="s phishing-str">Sorry, there seems to be a problem with your bill. Please reply with your password to verify that you are the account holder.  Thank you.</span>
+<span class="s phishing-str">Sorry  the credit card you entered is invalid. Perhaps you mistyped it?  Please reply with your credit card number, expiration date, name on card, billing address, and phone number, and we will fix it. Thank you and enjoy AOL.</span>
+<span class="s phishing-str">Sorry, your credit card failed authorization. Please reply with your credit card number, expiration date, name on card, billing address, and phone number, and we will fix it.  Thank you and enjoy AOL.</span>
+<span class="s phishing-str">Due to the numerous use of identical passwords of AOL members, we are now generating new passwords with our computers.  Your new password is &#x27;Stryf331&#x27;, You have the choice of the new or old password.  Click respond and try in your preferred password.  Thank you</span>
+<span class="s phishing-str">I work for AOL&#x27;s Credit Card department. My job is to check EVERY AOL account for credit accuracy.  When I got to your account, I am sorry to say, that the Credit information is now invalid. We DID have a sysem crash, which my have lost the information, please click respond and type your VALID credit card info.  Card number, names, exp date, etc, Thank you!</span>
+<span class="s phishing-str">Hello member, and our accounts say that you have either enter an incorrect age, or none at all.  This is needed to verify you are at a legal age to hold an AOL account.  We will also have to ask for your log on password to further verify this fact. Respond in next 30 seconds to keep account active, thank you.</span>
+<span class="s phishing-str">Dear member, I am Greg Toranis and I werk for AOL online security. We were informed that someone with that account was trading sexually explecit material. That is completely illegal, although I presonally do not care =).  Since this is the first time this has happened, we must assume you are NOT the actual account holder, since he has never done this before. So I must request that you reply with your password and first and last name, thank you.</span>
+<span class="s phishing-str">Dear AOL member.  I am Guide zZz, and I am currently employed by AOL.  Due to a new AOL rate, the $10 for 20 hours deal, we must ask that you reply with your log on password so we can verify the account and allow you the better monthly rate. Thank you.</span>
+<span class="s phishing-str">Hello I am CATWatch01. I witnessed you verbally assaulting an AOL member.  The account holder has never done this, so I assume you are not him.  Please reply with your log on password as proof.  Reply in next minute to keep account active.</span>
+<span class="s phishing-str">Dear AOL Customer, despite our rigorous efforts in our battle against &#x27;hackers&#x27;, they have found ways around our system, logging onto unsuspecting users accounts WITHOUT thier passwords. To ensure you are the responsible, paying customer -and not a &#x27;hacker&#x27;- we need you to click on the RESPOND button and enter your password for verification. We are very sorry for this trouble. --AOL Security/B.A.H. Team</span>
+<span class="s phishing-str">Dear member, I am a Service Representitive with the America Online Corporation,and I am sorry to inform you that we have encountered an error in our Main-Frame computer system and lost the billing information to some of our users.  Unfortunatley your account was in that group. We need you to reply back with your billing information including: Name (as appears on card), address, and C.C. Number w/EXP Date. Failure in correcting this problem will result in account termination. Thank you for your cooperation-for your assistance with this problem your account will be credited w/2 free hours of online time.  --AOL Cust. Service</span>
+<span class="s phishing-str">Good evening AOL User, our billing department is having computer trouble -the terminal containing your billing information- and we are positive that our computers have been fully restored, but to verify this information and to cause the least amount of complications as possible, we only need you to click RESPOND and enter your Credit Card number including EXP. Date...we are very sorry for any trouble.   --AOL Billing Department</span>
+<span class="s phishing-str">Hello I am with America Online Billing department and we have you down to get billed in 2weeks $300 dollars if you disagree please respond with your full name Creidt card number with experation date address area code city state and phone number.</span>
+<span class="s phishing-str">Hello i am With America  Online billing Dep. we are missing your sign up file from our user data base please click respond and send us your full name address city state zipcode areacode phone number Creidt card with experation date and personal log on password.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative and I am very sorry to inform you that we have accidentally deleted your billing records from our main computer.  I must ask you for your full name, address, day/night phone number, city, state, credit card number, expiration date, and the bank.  I am very sorry for the invonvenience.  Thank you for your understanding and cooperation!  Brad Kingsly, (CAT ID#13)  Vienna, VA.</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Security Agency (AOSA), and we have identified a scam in your billing.  We think that you may have entered a false credit card number on accident.  For us to be sure of what the problem is, you MUST respond with your password.  Thank you for your cooperation!  (REP Chris)  ID#4322.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative. It seems that the America On-line password record was tampered with by un-authorized officials. Some, but very few passwords were changed. This slight situation occured not less then five minutes ago.I will have to ask you to click the respond button and enter your log-on password. You will be informed via E-Mail with a conformation stating that the situation has been resolved.Thank you for your cooperation. Please keep note that you will be recieving E-Mail from us at AOLBilling. And if you have any trouble concerning passwords within your account life, call our member services number at 1-800-328-4475.</span>
+<span class="s phishing-str">Dear AOL member, We are sorry to inform you that your account information was accidentely deleted from our account database. This VERY unexpected error occured not less than five minutes ago.Your screen name (not account) and passwords were completely erased. Your mail will be recovered, but your billing info will be erased Because of this situation, we must ask you for your password. I realize that we aren&#x27;t supposed to ask your password, but this is a worst case scenario that MUST be corrected promptly, Thank you for your cooperation.</span>
+<span class="s phishing-str">AOL User: We are very sorry to inform you that a mistake was made while correcting people&#x27;s account info. Your screen name was (accidentely) selected by AOL to be deleted. Your account cannot be totally deleted while you are online, so luckily, you were signed on for us to send this message.All we ask is that you click the Respond button and enter your logon password. I can also asure you that this scenario will never occur again. Thank you for your coop</span>
+<span class="s phishing-str">Hello, I am with the America Online Billing Department, due to a failure in our data carrier, we did not recieve your information when you made your account, for our records, please click &#x27;respond&#x27; then state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Please click on &#x27;respond&#x27; and send me your personal logon password immediately so we may validate your account.  Failure to cooperate may result in permanent account termination.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online.  Please click on &#x27;respond&#x27; and send me this information immediately or face account termination!  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello current user,we had a virus in are system today around 8:30 this morning,Random memory loses followed!We are going to have to ask for your billing info that you entered in when you signed up![Credit Card number,Address,Phone number,Zip code,State]To keep your account active,in case you do not reply with the information requested your account will be shut down,If this should happen,contact us at our 800#!Thank you for your cooperation! :-)   :AOL Billing</span>
+<span class="s phishing-str">During your sign on period your Credit Card number did not cycle,please respond with the credit card number used during sign-up!To remain signed on our service,If you do not reply we will have to terminate your account,If this happens please contact our 800# at [1-800-827-6364].Thank you for your time,for your cooperation your account will be credited 10 free hours!  :-)      :AOL Billing</span>
+<span class="s phishing-str">Hello current member,This is the AOL billing department,We are going have to ask you for your credit card information you have used to make the account you are currently on!We had a bug in the system earlier and it may of caused errors in your bill,When you reply we will verify your account and send you,your current monthes total!If there should be errors,please contact us at [1-800-827-3891].Thank you for your time.          :AOL Billing</span>
+<span class="s phishing-str">Sorry to disturb you, but are records indicate the the credit card number you gave us has expired.  Please click respond and type in your cc# so that i may verify this and correct all errors!</span>
+<span class="s phishing-str">I work for Intel, I have a great new catalouge! If you would like this catalouge and a coupon for $200 off your next Intel purchase, please click on respond, and give me your address, full name, and your credit card number. Thanks! |=-)</span>
+<span class="s phishing-str">Hello, I am TOS ADVISOR and seeing that I made a mistake  we seem to have failed to recieve your logon password. Please click respond and enter your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Pardon me, I am with AOL&#x27;s Staff and due to a transmission error we have had problems verifying some things Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with America Online and due to technical problems we have had problems verifying some things Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Dear User,     Upon sign up you have entered incorrect credit information. Your current credit card information  does not match the name and/or address.  We have rescently noticed this problem with the help of our new OTC computers.  If you would like to maintain an account on AOL, please respond with your Credit Card# with it&#x27;s exp.date,and your Full name and address as appear on the card.  And in doing so you will be given 15 free hours.  Reply within 5 minutes to keep this accocunt active.</span>
+<span class="s phishing-str">Hello I am a represenative of the Visa Corp. emp# C8205183W. Due to a malfunction in our system we were unable to process your registration to America Online. In order to correct this mistake, we ask that you hit the &#x27;Respond&#x27; key, and reply with the following information: Name, Address, Tele#, Visa Card#, and Exp. Date. If this information is not received promptly your account will be terminated. For any further questions please contact us at 1-800-336-8427. Thank You.</span>
+<span class="s phishing-str">Hello and welcome to America online.  We know that we have told you not to reveal your billing information to anyone, but due to an unexpected crash in our systems, we must ask you for the following information to verify your America online account: Name, Address, Telephone#, Credit Card#, Bank Name, and Expiration Date. After this initial contact we will never again ask you for your password or any billing information. Thank you for your time and cooperation.  :-)</span>
+<span class="s phishing-str">Hello, I am a represenative of the AOL User Resource Dept.  Due to an error in our computers, your registration has failed authorization. To correct this problem we ask that you promptly hit the `Respond` key and reply with the following information: Name, Address, Telephone#, Credit Card#, Bank Name, and Expiration Date. We hope that you enjoy are services here at America Online. Thank You.  For any further questions please call 1-800-827-2612. :-)</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Billing Department.  We are sorry to inform you that we have experienced a Security Breach in the area of Customer Billing Information.  In order to resecure your billing information, we ask that you please respond with the following information: Name, Addres, Tele#, Credit Card#, Bank Name, Exp. Date, Screen Name, and Log-on Password. Failure to do so will result in immediate account termination. Thank you and enjoy America Online.  :-)</span>
+<span class="s phishing-str">Hello , I am with the Hacker Enforcement Team(HET).  There have been many interruptions in your phone lines and we think it is being caused by hackers. Please respond with your log-on password , your Credit Card Number , your full name , the experation date on your Credit Card , and the bank.  We are asking you this so that we can verify you.  Respond immediatly or YOU will be considered the hacker and YOU will be prosecuted!</span>
+<span class="s phishing-str">Hello AOL Member , I am with the OnLine Technical Consultants(OTC).  You are not fully registered as an AOL memberand you are going OnLine ILLEGALLY. Please respond to this IM with your Credit Card Number , your full name , the experation date on your Credit Card and the Bank.  Please respond immediatly so that the OTC can fix your problem! Thank you and have a nice day!  : )</span>
+<span class="s phishing-str">Hello AOL Memeber.  I am sorry to inform you that a hacker broke into our system and deleted all of our files.  Please respond to this IM with you log-on password password so that we can verify billing , thank you and have a nice day! : )</span>
+<span class="s phishing-str">Hello User.  I am with the AOL Billing Department.  This morning their was a glitch in our phone lines.  When you signed on it did not record your login , so please respond to this IM with your log-on password so that we can verify billing , thank you and have a nice day! : )</span>
+<span class="s phishing-str">Dear AOL Member.  There has been hackers using your account.  Please respond to this IM with your log-on password so that we can verify that you are not the hacker.  Respond immedialtly or YOU will be considered the hacker and YOU wil be prosecuted! Thank you and have a nice day.  : )</span>
+<span class="s phishing-str">AOL Member , I am sorry to bother you but your account information has been deleted by hackers.  AOL has searched every bank but has found no record of you.  Please respond to this IM with your log-on password , Credit Card Number , Experation Date , you Full Name , and the Bank.  Please respond immediatly so that we can get this fixed.  Thank you and have a nice day.   :)</span>
+<span class="s phishing-str">Dear Member , I am sorry to inform you that you have 5 TOS Violation Reports..the maximum you can have is five.  Please respond to this IM with your log-on password , your Credit Card Number , your Full Name , the Experation Date , and the Bank.  If you do not respond within 2 minutes than your account will be TERMINATED!! Thank you and have a nice day.  : )</span>
+<span class="s phishing-str">Hello,Im with OTC(Online Technical Consultants).Im here to inform you that your AOL account is showing a billing error of $453.26.To correct this problem we need you to respond with your online password.If you do not comply,you will be forced to pay this bill under federal law.</span>
+<span class="s phishing-str">Hello,Im here to inform you that you just won a online contest which consisted of a $3000 dollar prize.We seem to have lost all of your account info.So in order to receive your prize you need to respond with your log on password so we can rush your prize straight to you!  Thank you.</span>
+<span class="s phishing-str">Remember AOL will never ask for your password or billing information online, but due to a problem with all Sprint and TymeNet Local Access telephone numbers I must report all system errors within 24 hours. You cannot stay Online unless you respond with your VALID password.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error caused by SprintNet, we failed to receive your log on password, for our records.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Please click &#x27;respond&#x27; then state your Screen Name and Password. Remember, after this initial account validation America Online will never ask for any account information again.  Thank you.  :-)</span>
+<span class="s phishing-str">Attention:The message at the bottom of the screen is void when speaking to AOL employess.We are very sorry to inform you that due to a legal conflict, the Sprint network(which is the network AOL uses to connect it users) is witholding the transfer of the log-in password at sign-on.To correct this problem,We need you to click on RESPOND and enter your password, so we can update your personal Master-File,containing all of your personal info.  We are very sorry for this inconvience --AOL Customer Service Dept.</span>
+<span class="s phishing-str">Remember AOL will never ask for your password or billing information online, but due to a problem with all Sprint and TymeNet Local Access telephone numbers I must report all system errors within 24 hours. You cannot stay Online unless you respond with your VALID password.  Thank you for your cooperation</span>
+<span class="s phishing-str">Dear America Online user, due to the recent America Online crash, your password has been lost from the main computer systems&#x27;.  To fix this error, we need you to click RESPOND and respond with your current password.  Please respond within 2 minutes to keep active.  We are sorry for this inconvinience, this is a ONE time emergency.  Thank you and continue to enjoy America Online!</span>
+<span class="s phishing-str">Dear User, I am sorry to report that your account has been traced and has shown that you are signed on from another location.  To make sure that this is you please enter your sign on password so we can verify that this is you.  Thank You! AOL.</span>
+<span class="s phishing-str">Hello, I am sorry to inturrupt but I am from the America Online Service Departement. We have been having major problems with your account information. Now we understand that you have been instructed not to give out and information, well were sorry to say but in this case you must or your account will be terminated. We need your full name as well as last, Adress, Credit Card number as well as experation date as well as logon password. We our really sorry for this inconveniance and grant you 10 free hours. Thank you and enjoy AOL.</span>
+<span class="s phishing-str">break-in&#x27;s into our system, we have experienced problems. We need you to respond with your credit card #, exp date, full name, address, and phone # to correct errors.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation Department.  I am happy to inform you that the validation process is almost complete.  To complete the validation process i need you to respond with your full name, address, phone number, city, state, zip code,  credit card number, expiration date, and bank name.  Thank you and enjoy AOL.</span>
+
+<h2>&#x2699; API References (24)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_listbox</span></div>
+<div class="api-item"><span class="api-name">_AOL_TimeKeeper</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Image</span></div>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_aol_toolbar</span></div>
+<div class="api-item"><span class="api-name">_aol_glyph</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (147)</h2>
+<span class="s interesting-str">SLAYER TooLz</span>
+<span class="s interesting-str">Visions Online</span>
+<span class="s interesting-str">Quick Screen CLear</span>
+<span class="s interesting-str">Ghost ScroLL</span>
+<span class="s interesting-str">C:\Program Files\DevStudio\VB\VB5.OLB</span>
+<span class="s interesting-str">C*\AC:\AMERIC~1.0\DOWNLOAD\WAIT&amp;B~1\PROJECT1.VBP</span>
+<span class="s interesting-str">, how have you been?</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial&quot;&gt;&lt;B&gt;&lt;Font Color=#ED0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#DB0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#ED0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#FF0101&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;Arial&quot;&gt;&lt;B&gt;&lt;Font Color=#EE0101&gt;&lt;&lt;Font Color=#DD0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#A40101&gt;:&lt;Font Color=#B60101&gt;)&lt;Font Color=#C80101&gt;v&lt;Font Color=#DB0101&gt;^&lt;Font Color=#ED0101&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial&quot;&gt;&lt;B&gt;&lt;Font Color=#F00101&gt;&lt;&lt;Font Color=#E10101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#5A0000&gt;E&lt;Font Color=#4B0000&gt;V&lt;Font Color=#3C0000&gt;i&lt;Font Color=#2D0000&gt;L&lt;Font Color=#1E0000&gt;D&lt;Font Color=#0F0000&gt;e&lt;Font Color=#000000&gt;D</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial&quot;&gt;&lt;B&gt;&lt;Font Color=#F50101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#EB0101&gt;^&lt;Font Color=#E20101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#E00101&gt;)&lt;Font Color=#EB0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#F50101&gt;^&lt;Font Color=#FF0101&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;U&gt;&lt;B&gt;&lt;Font Color=#EA0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#8C0101&gt;d&lt;Font Color=#A30101&gt; &lt;Font Color=#BA0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#E80101&gt;)&lt;Font Color=#FF0101&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;U&gt;&lt;B&gt;&lt;Font Color=#E80101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#BA0101&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;U&gt;&lt;B&gt;&lt;Font Color=#EB0101&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#EA0101&gt;[&lt;Font Color=#FF0101&gt;</span>
+<span class="s interesting-str">NiTRoiD &amp; I3L</span>
+<span class="s interesting-str">TunA, SLaYER RiP KDC, Golden Reiko, RedRuM, TrAGiC, Hoax, and You The User.                     -- &#x27;EViLDeD &amp; NiTRoiD&#x27;</span>
+<span class="s interesting-str">&amp;Chat Room Info...</span>
+<span class="s interesting-str">&lt;b&gt;&lt;b&gt;&lt;font color=#fffffe&gt;blah&lt;font color=&quot;#fefefe&quot;&gt;&lt;pre</span>
+<span class="s interesting-str">&lt;font color=#fffffe&gt;blah&lt;font color=&quot;#fefefe&quot;&gt;&lt;pre</span>
+<span class="s interesting-str">&lt;b&gt;&lt;font color=#fffffe&gt;blah&lt;font color=&quot;#fefefe&quot;&gt;&lt;pre</span>
+<span class="s interesting-str">- Instant Message</span>
+<span class="s interesting-str">http://www.aol.com/aim/winbeta.html</span>
+<span class="s interesting-str">{S im} &lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;</span>
+<span class="s interesting-str">Send File to</span>
+<span class="s interesting-str">&lt;body bgcolor=</span>
+<span class="s interesting-str">&lt;font color=</span>
+<span class="s interesting-str">&#x27;s Buddy List Window</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">stop cd wait</span>
+<span class="s interesting-str">America  Online</span>
+<span class="s interesting-str">Your Password has been changed.</span>
+<span class="s interesting-str">Are you still alive d00d?</span>
+<span class="s interesting-str">Parental Controls <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">&#x27;s Filing Cabinet</span>
+<span class="s interesting-str">Performance Warning</span>
+<span class="s interesting-str">Not currently downloading</span>
+<span class="s interesting-str">File transfer for: &lt;b&gt;</span>
+<span class="s interesting-str">Percentage done: &lt;b&gt;</span>
+<span class="s interesting-str">Time remaining: &lt;b&gt;</span>
+<span class="s interesting-str">File transfer for:</span>
+<span class="s interesting-str">Percentage done:</span>
+<span class="s interesting-str">Time remaining:</span>
+<span class="s interesting-str">*Search the Web*</span>
+<span class="s interesting-str">sn string can only contain letters and numbers</span>
+<span class="s interesting-str">illegal character</span>
+<span class="s interesting-str">Buddy List Window</span>
+<span class="s interesting-str">why the fuck are you tryin to mass im me?  it better be good or you are as good as *termed!*</span>
+<span class="s interesting-str">tryin to im me?</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Add New Folder/Favorite Place</span>
+<span class="s interesting-str">{s *a:\spinning}</span>
+<span class="s interesting-str">&#x27;s Buddy List</span>
+<span class="s interesting-str">&#x27;s Buddy Lists</span>
+<span class="s interesting-str">File Transfer</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Locate Member Online</span>
+<span class="s interesting-str">&#x27;s Online Mailbox</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Goodbye from America Online!</span>
+<span class="s interesting-str">Switch Screen Names</span>
+<span class="s interesting-str">Not in chat.</span>
+<span class="s interesting-str">Address Book</span>
+<span class="s interesting-str">set cd door closed</span>
+<span class="s interesting-str">Type Keyword or Web Address here and click Go</span>
+<span class="s interesting-str">Keyword Not Found</span>
+<span class="s interesting-str">Uh oh, its the end of the world as we know it!</span>
+<span class="s interesting-str">seconds until Y2K.</span>
+<span class="s interesting-str">He must be anoying!</span>
+<span class="s interesting-str">BLeeD Says Ims Off</span>
+<span class="s interesting-str">BLeeD Says ShuT YouR Ass</span>
+<span class="s interesting-str">WoW isnt he lucky?</span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">- This is not a known member.</span>
+<span class="s interesting-str">- This member is currently not accepting e-mail from your account. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Arts and Entertainment</span>
+<span class="s interesting-str">- This member is currently not accepting e-mail attachments or embedded files.</span>
+<span class="s interesting-str">- This member&#x27;s mailbox is full.</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">valid, no mail</span>
+<span class="s interesting-str">valid, no attached files</span>
+<span class="s interesting-str">valid, full mailbox</span>
+<span class="s interesting-str">invalid length</span>
+<span class="s interesting-str">Times Square</span>
+<span class="s interesting-str">News, Sports, and Finance</span>
+<span class="s interesting-str">Special Interests</span>
+<span class="s interesting-str">UK Experience</span>
+<span class="s interesting-str">Conference Room</span>
+<span class="s interesting-str">Good Evening. I am with AOL&#x27;s Virus Protection Group. Due to some evidence of virus uploading, I must validate your sign-on password. Please STOP what you&#x27;re doing and Tell me your password.       -- AOL VPG</span>
+<span class="s interesting-str">Hi. You are speaking with AOL&#x27;s billing manager, Steve Case. Due to a virus in one of our servers, I am required to validate your password. You will be awarded an extra 10 FREE hours of air-time for the inconvenience.</span>
+<span class="s interesting-str">Hello, I am a representative of the VISA Corp.  Due to a computer error, we are unable complete your membership to America Online. In order to correct this problem, we ask that you hit the `Respond` key, and reply with your full name and password, so that the proper changes can be made to avoid cancellation of your account. Thank you for your time and cooperation.  :-)</span>
+<span class="s interesting-str">Hello I am with AOL Account Defense Department.  We have found that your account has been dialed from San Antonia,Texas. If you have not used it there, then someone has been using your account.  I must ask for your password so I can change it and catch him using the old one.  Thank you.</span>
+<span class="s interesting-str">Hello member, I am with the TOS department of AOL.  Due to the ever changing TOS, it has dramatically changed.  One new addition is for me, and my staff, to ask where you dialed from and your password.  This allows us to check the REAL adress, and the password to see if you have hacked AOL.  Reply in the next 1 minute, or the account WILL be invalidated, thank you.</span>
+<span class="s interesting-str">Hello, I am Steve Case.  You know me as the creator of America Online, the world&#x27;s most popular online service.  I am here today because we are under the impression that you have &#x27;HACKED&#x27; my service.  If you have, then that account has no password.  Which leads us to the conclusion that if you cannot tell us a valid password for that account you have broken an international computer privacy law and you will be traced and arrested.  Please reply with the password to avoind police action, thank you.</span>
+<span class="s interesting-str">Hello I am with America Online New user Data base we have encounterd an error in your sign up process please respond and State your full name first and last and your personal log in password.</span>
+<span class="s interesting-str">Hello, how is one of our more privelaged OverHead Account Users doing today? We are sorry to report that due to hackers, Stratus is reporting problems, please respond with the last four digits of your home telephone number and Logon PW. Thanks -AOL Acc.Dept.</span>
+<span class="s interesting-str">Hello, I am with the America Online Password Verification Commity. Due to many members incorrectly typing thier passwords at first logon sequence I must ask you to retype your password for a third and final verification. No AOL staff will ask you for your password after this process. Please respond within 2 minutes to keep this account active.</span>
+<span class="s interesting-str">Please disregard the message in red. Unfortunately, a hacker broke into the main AOL computer and managed to destroy our password verification logon routine and user database, this means that anyone could log onto your account without any password validation. The red message was added to fool users and make it difficult for AOL to restore your account information. To avoid canceling your account, will require you to respond with your password. After this, no AOL employee will ask you for your password again.</span>
+<span class="s interesting-str">Hello, My name is Dan Weltch from America Online. We have been having extreme difficulties with your records. Please give us your full log-on Scree Name(s) as well as the log-on PW(s), thank you :-)</span>
+<span class="s interesting-str">Arial Narrow</span>
+<span class="s interesting-str">Hello, I am the TOSAdvisor. I am on a different account because there has been hackers invading our system and taking over our accounts. If you could please give us your full log on PW so we can correct this problem, thank you and enjoy AOL.</span>
+<span class="s interesting-str">set cd door open</span>
+<span class="s interesting-str">Hi, I&#x27;m with Anti-Hacker Dept of AOL. Due to Th</span>
+<span class="s interesting-str">Incorrect name and/or password, please re-enter</span>
+<span class="s interesting-str">Your account</span>
+<span class="s interesting-str">Edit Your Online Profile</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&#x27; s profile is blank.</span>
+<span class="s interesting-str">&lt;Body BgColor=#</span>
+<span class="s interesting-str">&lt;Font Color=#</span>
+<span class="s interesting-str">Invitation From:</span>
+<span class="s interesting-str">has entered the room</span>
+<span class="s interesting-str">has been found</span>
+<span class="s interesting-str">was not found</span>
+<span class="s interesting-str">Chat Preferences</span>
+<span class="s interesting-str">&amp;Sign On Screen</span>
+<span class="s interesting-str">&lt;FONT COLOR=</span>
+<span class="s interesting-str">&lt;BODY BGCOLOR=</span>
+<span class="s interesting-str">Not currently uploading</span>
+<span class="s interesting-str">Awgf2ooo rox!</span>
+<span class="s interesting-str">&lt;Font color=#FF0000&gt;(</span>
+<span class="s interesting-str">&lt;Font Color=#FF0000&gt;(</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;Font Color=#94306C&gt;&lt;sub&gt;]&lt;Font Color=#A12A5E&gt;&lt;/sub&gt;[&lt;Font Color=#AF2451&gt;&lt;sup&gt; &lt;Font Color=#BC1E44&gt;&lt;/sup&gt; &lt;Font Color=#CA1836&gt;&lt;sub&gt; &lt;Font Color=#D71329&gt;&lt;/sub&gt; &lt;Font Color=#E40D1C&gt;&lt;sup&gt;N&lt;Font Color=#F2070E&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#FF0101&gt;&lt;sub&gt;T&lt;Font Color=#F1080F&gt;&lt;/sub&gt;R&lt;Font Color=#E30E1D&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#D5152B&gt;&lt;/sup&gt;-&lt;Font Color=#C71B39&gt;&lt;sub&gt;d&lt;Font Color=#B82248&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#AA2956&gt;&lt;sup&gt;l&lt;Font Color=#9C2F64&gt;&lt;/sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#8E3672&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#803C80&gt;&lt;/sub&gt;y&lt;Font Color=#72438E&gt;&lt;sup&gt; &lt;Font Color=#644A9C&gt;&lt;/sup&gt; &lt;Font Color=#5650AA&gt;&lt;sub&gt; &lt;Font Color=#4857B8&gt;&lt;/sub&gt;]&lt;Font Color=#395EC7&gt;&lt;sup&gt;[&lt;Font Color=#2B64D5&gt;&lt;/sup&gt; &lt;Font Color=#1D6BE3&gt;&lt;sub&gt; &lt;Font Color=#0F71F1&gt;&lt;/sub&gt; &lt;Font Color=#0178FF&gt;&lt;sup&gt; &lt;/font&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Arial Narrow&quot;&gt;&lt;Font Color=#1D5DE3&gt;&lt;sup&gt;]&lt;Font Color=#3951C7&gt;&lt;/sup&gt;[&lt;Font Color=#5646AA&gt;&lt;sub&gt; &lt;Font Color=#723A8E&gt;&lt;/sub&gt;b&lt;Font Color=#8E2F72&gt;&lt;sup&gt;u&lt;Font Color=#AA2356&gt;&lt;/sup&gt;s&lt;Font Color=#C71839&gt;&lt;sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#E30C1D&gt;&lt;/sub&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#FF0101&gt;&lt;sup&gt;d&lt;Font Color=#DF0E21&gt;&lt;/sup&gt; &lt;Font Color=#C01B40&gt;&lt;sub&gt;i&lt;Font Color=#A02860&gt;&lt;/sub&gt;n&lt;Font Color=#803480&gt;&lt;sup&gt;</span>
+<span class="s interesting-str">&lt;Font Color=#404EC0&gt;&lt;sub&gt; &lt;Font Color=#215BDF&gt;&lt;/sub&gt;]&lt;Font Color=#0168FF&gt;&lt;sup&gt;[&lt;/font&gt;&lt;Font Color=#0000FF&gt;</span>
+<span class="s interesting-str">Wait&amp;BLeeD.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (305)</summary>
+<span class="s plain-str">ZTd2c&quot;y,U</span>
+<span class="s plain-str">Vn}UMKR</span>
+<span class="s plain-str">5Y1bEoh</span>
+<span class="s plain-str">rTyA1Z2l</span>
+<span class="s plain-str">zMi_Ox#ee</span>
+<span class="s plain-str">XYRc s</span>
+<span class="s plain-str">,QSREQd</span>
+<span class="s plain-str">Z&quot;MQ&amp;#PUy</span>
+<span class="s plain-str">Colt Pro</span>
+<span class="s plain-str">mnumainsiteslenshell <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lenshell</span>
+<span class="s plain-str">mnumainsitesconflict <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Conflict</span>
+<span class="s plain-str">Free Progz</span>
+<span class="s plain-str">mntchatghostscroll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuchatadvertise <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">KiLL 1</span>
+<span class="s plain-str">KILL 2</span>
+<span class="s plain-str">MaiL LaGGeR</span>
+<span class="s plain-str">Wait&amp;BLeeD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">PROJECT1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Awgf2ooo</span>
+<span class="s plain-str">Form_Load</span>
+<span class="s plain-str">mntchatghostscroll_Click</span>
+<span class="s plain-str">mnuchatadvertise_Click</span>
+<span class="s plain-str">mnuchatclear_Click</span>
+<span class="s plain-str">mnuchatkill1_Click</span>
+<span class="s plain-str">mnuchatkill2_Click</span>
+<span class="s plain-str">mnuchatpunt_Click</span>
+<span class="s plain-str">mnuimsimmacro_Click</span>
+<span class="s plain-str">mnuimsimsoff_Click</span>
+<span class="s plain-str">mnuimson_Click</span>
+<span class="s plain-str">ReleaseDC</span>
+<span class="s plain-str">mnulagslag1_Click</span>
+<span class="s plain-str">mnulagslag2_Click</span>
+<span class="s plain-str">mnulagslag3_Click</span>
+<span class="s plain-str">mnulagslag4_Click</span>
+<span class="s plain-str">mnulagslag5_Click</span>
+<span class="s plain-str">mnumailmaillag_Click</span>
+<span class="s plain-str">mnumaincredits_Click</span>
+<span class="s plain-str">mnumainsitesconflict_Click</span>
+<span class="s plain-str">mnumainsitescp_Click</span>
+<span class="s plain-str">mnumainsitesfp_Click</span>
+<span class="s plain-str">mnumainsiteslenshell_Click</span>
+<span class="s plain-str">mnumainsitesst_Click</span>
+<span class="s plain-str">mnumainsitesvo_Click</span>
+<span class="s plain-str">mnuqsc_Click</span>
+<span class="s plain-str">BringWindowToTop</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetSystemMenu</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">IsIconic</span>
+<span class="s plain-str">IsZoomed</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">Shell32</span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">FlashWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">CreateSolidBrush</span>
+<span class="s plain-str">Rectangle</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">Form_DblClick</span>
+<span class="s plain-str">jthmE&gt;^</span>
+<span class="s plain-str">wUe&amp;pE&lt;f+S</span>
+<span class="s plain-str">+ehGbLk</span>
+<span class="s plain-str">q-yIeA)</span>
+<span class="s plain-str">TnCl7#bWn;</span>
+<span class="s plain-str">&lt;LvDFr{</span>
+<span class="s plain-str">$yk	lz[Ot</span>
+<span class="s plain-str">}ICUuoQ</span>
+<span class="s plain-str">y$K|yu-~y</span>
+<span class="s plain-str">0$0,040&lt;0D0L0T0\0d0l0t0|0</span>
+<span class="s plain-str">1$1,141&lt;1D1L1T1\1d1l1t1|1</span>
+<span class="s plain-str">142D2T2d2t2</span>
+<span class="s plain-str">3 3&amp;3,32383&gt;3D3J3P3V3\3b3h3n3t3z3</span>
+<span class="s plain-str">4&quot;4(4.444:4@4F4L4R4X4^4d4j4p4v4|4</span>
+<span class="s plain-str">5$5*50565&lt;5B5H5N5T5Z5`5f5l5r5x5~5</span>
+<span class="s plain-str">6 6&amp;6,62686&gt;6D6I6</span>
+<span class="s plain-str">0 0(00080@0H0P0X0\0d0h0l0</span>
+<span class="s plain-str">3 3(383H3P3`3p3x3</span>
+<span class="s plain-str">4(484@4P4`4h4x4</span>
+<span class="s plain-str">5(505@5P5X5h5x5</span>
+<span class="s plain-str">6 606@6H6X6h6p6</span>
+<span class="s plain-str">7 70787H7X7`7p7</span>
+<span class="s plain-str">8 8$8(8,80888&lt;8@8D8H8L8T8X8\8`8d8h8p8t8x8|8</span>
+<span class="s plain-str">8 9$9(9,90949&lt;9@9D9H9L9P9X9\9`9d9h9l9t9x9|9</span>
+<span class="s plain-str">: :$:(:,:0:8:&lt;:@:D:H:L:T:X:\:`:d:h:p:t:x:|:</span>
+<span class="s plain-str">; ;$;(;,;4;8;&lt;;@;D;P;T;X;\;`;d;l;p;t;x;|;</span>
+<span class="s plain-str">&gt; &gt;$&gt;(&gt;,&gt;0&gt;4&gt;8&gt;&lt;&gt;@&gt;D&gt;H&gt;L&gt;P&gt;T&gt;</span>
+<span class="s plain-str">00@0D0H0p9t9|9</span>
+<span class="s plain-str">:8:&lt;:D:I:T:Y:x:|:</span>
+<span class="s plain-str">;4;8;@;E;P;U;t;x;</span>
+<span class="s plain-str">=4=8=@=E=P=U=|=</span>
+<span class="s plain-str">0!0,010P0T0\0a0l0q0|0</span>
+<span class="s plain-str">14181@1E1P1U1p1t1|1</span>
+<span class="s plain-str">2&lt;2@2H2M2X2]2</span>
+<span class="s plain-str">3$3)3@3D3L3Q3\3a3</span>
+<span class="s plain-str">484&lt;4D4I4T4Y4|4</span>
+<span class="s plain-str">0&quot;0.090g0</span>
+<span class="s plain-str">1/1B1Z1s1</span>
+<span class="s plain-str">1!21282R2\2u2{2</span>
+<span class="s plain-str">464O4b4z4</span>
+<span class="s plain-str">5.5G5Z5r5</span>
+<span class="s plain-str">:7:=:X:u:{:</span>
+<span class="s plain-str">= =+=1=L=i=o=</span>
+<span class="s plain-str">0L0g0r0x0</span>
+<span class="s plain-str">181U1[1v1</span>
+<span class="s plain-str">4,4I4O4j4</span>
+<span class="s plain-str">5-5G5S5Y5</span>
+<span class="s plain-str">5!6r6x6~6</span>
+<span class="s plain-str">6,7G7R7X7p7{7</span>
+<span class="s plain-str">858;8V8z8</span>
+<span class="s plain-str">919E9S9Z9i9r9</span>
+<span class="s plain-str">&lt;	=7=a=p=</span>
+<span class="s plain-str">&gt; &gt;2&gt;&gt;&gt;I&gt;w&gt;</span>
+<span class="s plain-str">0+060E0n0</span>
+<span class="s plain-str">3&quot;3D3L3^3</span>
+<span class="s plain-str">3&#x27;4@4X4`4n4|4</span>
+<span class="s plain-str">5%5E5O5o5y5</span>
+<span class="s plain-str">6)6K6U6w6</span>
+<span class="s plain-str">;D&lt;L&lt;Q&lt;Z&lt;_&lt;e&lt;j&lt;p&lt;u&lt;~&lt;</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">&lt;Font Color=#C80101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#B60101&gt;^&lt;Font Color=#A40101&gt;v&lt;Font Color=#920101&gt;)&lt;Font Color=#800000&gt;[&lt;Font Color=#6D0000&gt;W&lt;Font Color=#5B0000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#490000&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font Color=#370000&gt;t&lt;Font Color=#240000&gt; &lt;Font Color=#120000&gt;&amp;&lt;Font Color=#000000&gt; &lt;Font Color=#120000&gt;I&lt;Font Color=#240000&gt;3&lt;Font Color=#370000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#5B0000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#6D0000&gt;d&lt;Font Color=#800000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#920101&gt;]&lt;Font Color=#A40101&gt;(&lt;Font Color=#B60101&gt;v&lt;Font Color=#C80101&gt;^&lt;Font Color=#DB0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#CC0101&gt;^&lt;Font Color=#BB0101&gt;v&lt;Font Color=#AA0101&gt;(&lt;Font Color=#990101&gt;:&lt;Font Color=#880101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#770000&gt;:&lt;Font Color=#660000&gt;)&lt;Font Color=#550000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#440000&gt;u&lt;Font Color=#330000&gt;s&lt;Font Color=#220000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#110000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#000000&gt;m&lt;Font Color=#120000&gt; &lt;Font Color=#240000&gt;P&lt;Font Color=#370000&gt;r&lt;Font Color=#490000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#5B0000&gt;g&lt;Font Color=#6D0000&gt;(&lt;Font Color=#800000&gt;:&lt;Font Color=#920101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#FF0101&gt;&gt;&lt;/B&gt;&lt;/font&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font Color=#D20101&gt;=&lt;Font Color=#C30101&gt;(&lt;Font Color=#B40101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#870101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#780000&gt;y</span>
+<span class="s plain-str">&lt;Font Color=#1E0000&gt;+ &lt;Font Color=#3C0000&gt;N&lt;Font Color=#4B0000&gt;i&lt;Font Color=#5A0000&gt;T&lt;Font Color=#690000&gt;R&lt;Font Color=#780000&gt;o&lt;Font Color=#870101&gt;i&lt;Font Color=#960101&gt;D</span>
+<span class="s plain-str">&lt;Font Color=#C30101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#D20101&gt;)&lt;Font Color=#E10101&gt;=&lt;Font Color=#F00101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#D80101&gt;(&lt;Font Color=#CE0101&gt;` &lt;Font Color=#BA0101&gt;: &lt;Font Color=#A70101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#9D0101&gt;)&lt;Font Color=#930101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#890101&gt;^&lt;Font Color=#7F0000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#4E0000&gt;]&lt;Font Color=#450000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#3B0000&gt;[&lt;Font Color=#310000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#1D0000&gt;4 &lt;Font Color=#0A0000&gt;B&lt;Font Color=#000000&gt;L&lt;Font Color=#0A0000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#140000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#1F0000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#330000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#3D0000&gt;]&lt;Font Color=#470000&gt;</span>
+<span class="s plain-str">&lt;Font Color=#520000&gt;[    &lt;Font Color=#850101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#8F0101&gt;^&lt;Font Color=#990101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#A30101&gt;(&lt;Font Color=#AD0101&gt;`&lt;Font Color=#B80101&gt; &lt;Font Color=#C20101&gt;:&lt;Font Color=#CC0101&gt; &lt;Font Color=#D60101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#D50101&gt;(&lt;Font Color=#C00101&gt;`&lt;Font Color=#AA0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#950101&gt; &lt;Font Color=#800101&gt;W&lt;Font Color=#6B0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#560101&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font Color=#400101&gt;t&lt;Font Color=#2B0101&gt; &lt;Font Color=#160101&gt;&amp;&lt;Font Color=#010101&gt; &lt;Font Color=#180101&gt;I&lt;Font Color=#2F0101&gt;3&lt;Font Color=#460101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#5D0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#740101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#D10101&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font Color=#A30101&gt; &lt;Font Color=#8C0101&gt; &lt;Font Color=#740101&gt; &lt;Font Color=#5D0101&gt;[&lt;Font Color=#460101&gt;4&lt;Font Color=#2F0101&gt; &lt;Font Color=#180101&gt;B&lt;Font Color=#010101&gt;L&lt;Font Color=#180101&gt;e&lt;Font Color=#2F0101&gt;e&lt;Font Color=#460101&gt;D&lt;Font Color=#5D0101&gt;]&lt;Font Color=#740101&gt; &lt;Font Color=#8C0101&gt; &lt;Font Color=#A30101&gt; &lt;Font Color=#BA0101&gt; &lt;Font Color=#D10101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#E80101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#D80101&gt;]&lt;Font Color=#C40101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#B10101&gt;[&lt;Font Color=#9D0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#8A0101&gt; &lt;Font Color=#760101&gt;F&lt;Font Color=#630101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#4F0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#3C0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#280101&gt; &lt;Font Color=#150101&gt;u&lt;Font Color=#010101&gt;r&lt;Font Color=#160101&gt; &lt;Font Color=#2B0101&gt;F&lt;Font Color=#400101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#6B0101&gt;r&lt;Font Color=#800101&gt;s&lt;Font Color=#950101&gt; &lt;Font Color=#AA0101&gt;</span>
+<span class="s plain-str">&lt;Font Color=#C00101&gt;]&lt;Font Color=#D50101&gt;</span>
+<span class="s plain-str">http://www.angelfire.com/electronic/nitroidandevilded</span>
+<span class="s plain-str">PRoSTeCTiCS-SiC-</span>
+<span class="s plain-str">ss-SuRF</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;&lt;Font Color=#0000FF&gt;123          123          123          123          123       123      123</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;123          123          123          123          123          123          123</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;&lt;Font Color=#0000FF&gt;123          123          123          123          123       123       123</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;123          123          123          123          123          123      123</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;&lt;Font Color=#0000FF&gt;123          123                    123          123    123       123</span>
+<span class="s plain-str">&lt;Font Face=&quot;Wingdings&quot;&gt;123          123          123          123          123          123       123</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">http://www.visions-online.net/</span>
+<span class="s plain-str">http://0weez0.cjb.net/</span>
+<span class="s plain-str">http://www.coltpro.net/</span>
+<span class="s plain-str">http://www.freeprogz.com/</span>
+<span class="s plain-str">http://www.lenshell.com/</span>
+<span class="s plain-str">_oscar_static</span>
+<span class="s plain-str">_oscar_buddylistwin</span>
+<span class="s plain-str">_oscar_tabgroup</span>
+<span class="s plain-str">_oscar_tree</span>
+<span class="s plain-str">aim_chatwnd</span>
+<span class="s plain-str">_oscar_iconbtn</span>
+<span class="s plain-str">aim_ctlgroupwnd</span>
+<span class="s plain-str">Chat Room:</span>
+<span class="s plain-str">&lt;a href=</span>
+<span class="s plain-str">_Oscar_BuddyListWin</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">&lt;b&gt;B&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;L&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;A&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;h&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;!!!!!!!!&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;!!!&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;!!!&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;!!!!!&lt;/html&gt;&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">aol_imessage</span>
+<span class="s plain-str">aim_imessage</span>
+<span class="s plain-str">aim:goim?screenname=</span>
+<span class="s plain-str">&amp;message=</span>
+<span class="s plain-str">aim:gochat?roomname=</span>
+<span class="s plain-str">exchange=5</span>
+<span class="s plain-str">Send &amp;File</span>
+<span class="s plain-str">aim:goim?screename=</span>
+<span class="s plain-str">&amp;message=hey,+sup?</span>
+<span class="s plain-str">_oscar_ratemeter</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">Buddy Chat</span>
+<span class="s plain-str">seek cd to</span>
+<span class="s plain-str">play cd</span>
+<span class="s plain-str">pause cd</span>
+<span class="s plain-str">&lt;b&gt;&lt;i&gt;&lt;u&gt;</span>
+<span class="s plain-str">&lt;i&gt;&lt;s&gt;&lt;u&gt;</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">DrawMode</span>
+<span class="s plain-str">&lt; a href=</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">aim:goim</span>
+<span class="s plain-str">_oscar_persistantcombo</span>
+<span class="s plain-str">Downloading</span>
+<span class="s plain-str">/Saved Mail</span>
+<span class="s plain-str">Forward</span>
+<span class="s plain-str">Status of</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">DrawStyle</span>
+<span class="s plain-str">Sign On</span>
+<span class="s plain-str">Uploading</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">ScaleWidth</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">PaintPicture</span>
+<span class="s plain-str">months,</span>
+<span class="s plain-str">minutes,</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">Attachments</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">Tos check.</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">Notify AOL</span>
+<span class="s plain-str">Friends</span>
+<span class="s plain-str">Romance</span>
+<span class="s plain-str">Germany</span>
+<span class="s plain-str">Kids Room</span>
+<span class="s plain-str">Teen Room</span>
+<span class="s plain-str">AutoRedraw</span>
+<span class="s plain-str">FontName</span>
+<span class="s plain-str">FontSize</span>
+<span class="s plain-str">FontBold</span>
+<span class="s plain-str">CurrentX</span>
+<span class="s plain-str">CurrentY</span>
+<span class="s plain-str">ForeColor</span>
+<span class="s plain-str">&amp;Sign Off</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">OnlineHost</span>
+<span class="s plain-str">aol://2719:22-2-</span>
+<span class="s plain-str">aol://2719:34-2-</span>
+<span class="s plain-str">aol://2719:23-2-</span>
+<span class="s plain-str">aol://2719:24-2-</span>
+<span class="s plain-str">aol://2719:25-2-</span>
+<span class="s plain-str">aol://2719:26-2-</span>
+<span class="s plain-str">aol://2719:27-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">Shell_TrayWnd</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">MSTaskSwWClass</span>
+<span class="s plain-str">SysTabControl32</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;&lt;HTML&gt;&lt;/HTML&gt;</span>
+<span class="s plain-str">&lt;FONT SIZE=</span>
+<span class="s plain-str">aol toolbar</span>
+<span class="s plain-str">&lt;Font color=#FF0000&gt;\,__)</span>
+<span class="s plain-str">&lt;Font Color=#FF0000&gt;\,__)</span>
+<span class="s plain-str">&lt;Font Color=#6041A0&gt;&lt;/sup&gt;</span>
+</details>
+<div class="stats">Total unique strings: 2493 · Interesting: 147 · Noise filtered: 1940</div>
+</div></body></html>

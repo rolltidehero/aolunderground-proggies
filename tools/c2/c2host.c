@@ -1,0 +1,213 @@
+/* c2host.c — Standalone C2 host for screenshot automation.
+ * Same protocol as c2dll.c but runs as its own process.
+ * No injection needed — FindWindow/BitBlt are system-wide.
+ *
+ * Build: i686-w64-mingw32-gcc -O2 -o c2host.exe c2host.c -luser32 -lgdi32
+ */
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define CMD_FILE "C:\\c2s_cmd.txt"
+#define RES_FILE "C:\\c2s_res.txt"
+
+static char result[65536];
+static int rlen;
+
+static void res_clear(void) { rlen = 0; result[0] = 0; }
+static void res_printf(const char *fmt, ...) {
+    va_list ap; va_start(ap, fmt);
+    rlen += vsprintf(result + rlen, fmt, ap);
+    va_end(ap);
+}
+static void write_result(void) {
+    FILE *f = fopen(RES_FILE, "w");
+    if (f) { fputs(result, f); fclose(f); }
+}
+static void chomp(char *s) {
+    int n = strlen(s);
+    while (n > 0 && (s[n-1]=='\r'||s[n-1]=='\n'||s[n-1]==' ')) s[--n]=0;
+}
+static char *split1(char *s, char **rest) {
+    char *p = strchr(s, ' ');
+    if (p) { *p=0; *rest=p+1; } else { *rest=""; }
+    return s;
+}
+
+static BOOL CALLBACK enum_cb(HWND hw, LPARAM lp) {
+    (void)lp;
+    WCHAR wcls[256]={0}, wtxt[512]={0};
+    char ucls[512]={0}, utxt[1024]={0};
+    GetClassNameW(hw, wcls, 255);
+    GetWindowTextW(hw, wtxt, 511);
+    WideCharToMultiByte(CP_UTF8,0,wcls,-1,ucls,sizeof(ucls),NULL,NULL);
+    WideCharToMultiByte(CP_UTF8,0,wtxt,-1,utxt,sizeof(utxt),NULL,NULL);
+    res_printf("%u|%s|%d|%s\n", (unsigned)hw, ucls, GetDlgCtrlID(hw), utxt);
+    return TRUE;
+}
+
+static void handle_cmd(char *line) {
+    char *rest, *verb = split1(line, &rest);
+    res_clear();
+
+    if (!stricmp(verb,"PING")) {
+        res_printf("PONG pid=%lu C2HOST\n", GetCurrentProcessId());
+    } else if (!stricmp(verb,"EXIT")) {
+        res_printf("BYE\n"); write_result(); ExitProcess(0);
+    } else if (!stricmp(verb,"FINDWINDOW")) {
+        char *c,*t; c=split1(rest,&t);
+        res_printf("%u\n",(unsigned)FindWindowA(strcmp(c,"*")?c:NULL,strcmp(t,"*")?t:NULL));
+    } else if (!stricmp(verb,"FINDWINDOWEX")) {
+        char *a1,*a2,*a3,*a4,*t1,*t2;
+        a1=split1(rest,&t1);a2=split1(t1,&t2);a3=split1(t2,&a4);
+        res_printf("%u\n",(unsigned)FindWindowExA(
+            (HWND)(UINT_PTR)strtoul(a1,NULL,0),(HWND)(UINT_PTR)strtoul(a2,NULL,0),
+            strcmp(a3,"*")?a3:NULL,strcmp(a4,"*")?a4:NULL));
+    } else if (!stricmp(verb,"GETTEXT")) {
+        HWND hw=(HWND)(UINT_PTR)strtoul(rest,NULL,0);
+        WCHAR b[512]={0}; char u[1024]={0};
+        GetWindowTextW(hw,b,511);
+        WideCharToMultiByte(CP_UTF8,0,b,-1,u,sizeof(u),NULL,NULL);
+        res_printf("%s\n",u);
+    } else if (!stricmp(verb,"GETCLASS")) {
+        HWND hw=(HWND)(UINT_PTR)strtoul(rest,NULL,0);
+        WCHAR b[256]={0}; char u[512]={0};
+        GetClassNameW(hw,b,255);
+        WideCharToMultiByte(CP_UTF8,0,b,-1,u,sizeof(u),NULL,NULL);
+        res_printf("%s\n",u);
+    } else if (!stricmp(verb,"ENUMCHILDREN")) {
+        EnumChildWindows((HWND)(UINT_PTR)strtoul(rest,NULL,0),enum_cb,0);
+        if(rlen==0) res_printf("(none)\n");
+    } else if (!stricmp(verb,"SCREENSHOT")) {
+        /* SCREENSHOT hwnd path [client]
+           If "client" flag present, capture client area only (no title bar) */
+        char *shw, *tail; shw = split1(rest, &tail);
+        char *path, *flags; path = split1(tail, &flags);
+        int client_only = (flags && !stricmp(flags, "client"));
+        HWND hw = (HWND)(UINT_PTR)strtoul(shw, NULL, 0);
+        RECT rc;
+        int w, h, sx = 0, sy = 0;
+        if (hw) {
+            if (client_only) {
+                GetClientRect(hw, &rc);
+                POINT pt = {0, 0};
+                ClientToScreen(hw, &pt);
+                sx = pt.x; sy = pt.y;
+            } else {
+                GetWindowRect(hw, &rc);
+                sx = rc.left; sy = rc.top;
+            }
+            w = rc.right - rc.left; h = rc.bottom - rc.top;
+            SetForegroundWindow(hw);
+            BringWindowToTop(hw);
+            Sleep(50);
+        } else {
+            w = GetSystemMetrics(SM_CXSCREEN);
+            h = GetSystemMetrics(SM_CYSCREEN);
+        }
+        if (w <= 0 || h <= 0) {
+            res_printf("ERR: bad window or size %dx%d\n", w, h);
+        } else {
+            HDC hdcScreen = GetDC(NULL);
+            HDC hdcMem = CreateCompatibleDC(hdcScreen);
+            HBITMAP hbm = CreateCompatibleBitmap(hdcScreen, w, h);
+            SelectObject(hdcMem, hbm);
+            BitBlt(hdcMem, 0, 0, w, h, hdcScreen, sx, sy, SRCCOPY);
+            ReleaseDC(NULL, hdcScreen);
+            BITMAPINFOHEADER bi = {0};
+            bi.biSize = sizeof(bi);
+            bi.biWidth = w;
+            bi.biHeight = h;
+            bi.biPlanes = 1;
+            bi.biBitCount = 24;
+            bi.biCompression = BI_RGB;
+            int stride = ((w * 3 + 3) & ~3);
+            int imgsize = stride * h;
+            bi.biSizeImage = imgsize;
+            char *bits = (char*)malloc(imgsize);
+            GetDIBits(hdcMem, hbm, 0, h, bits, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+            BITMAPFILEHEADER bf = {0};
+            bf.bfType = 0x4D42;
+            bf.bfOffBits = sizeof(bf) + sizeof(bi);
+            bf.bfSize = bf.bfOffBits + imgsize;
+            FILE *fp = fopen(path, "wb");
+            if (fp) {
+                fwrite(&bf, sizeof(bf), 1, fp);
+                fwrite(&bi, sizeof(bi), 1, fp);
+                fwrite(bits, imgsize, 1, fp);
+                fclose(fp);
+                res_printf("OK %dx%d %d bytes\n", w, h, (int)bf.bfSize);
+            } else {
+                res_printf("ERR: cannot write %s\n", path);
+            }
+            free(bits);
+            DeleteObject(hbm);
+            DeleteDC(hdcMem);
+        }
+    } else if (!stricmp(verb,"SLEEP")) {
+        Sleep(atoi(rest)); res_printf("OK\n");
+    } else if (!stricmp(verb,"GETRECT")) {
+        /* GETRECT hwnd — returns x y w h (screen coordinates) */
+        HWND hw=(HWND)(UINT_PTR)strtoul(rest,NULL,0);
+        RECT rc; GetWindowRect(hw,&rc);
+        res_printf("%d %d %d %d\n",rc.left,rc.top,rc.right-rc.left,rc.bottom-rc.top);
+    } else if (!stricmp(verb,"POSTMSG")) {
+        /* POSTMSG hwnd msg wparam lparam */
+        char *a1,*a2,*a3,*a4,*t1,*t2;
+        a1=split1(rest,&t1);a2=split1(t1,&t2);a3=split1(t2,&a4);
+        HWND hw=(HWND)(UINT_PTR)strtoul(a1,NULL,0);
+        UINT msg=(UINT)strtoul(a2,NULL,0);
+        WPARAM wp=(WPARAM)strtoul(a3,NULL,0);
+        LPARAM lp=(LPARAM)strtoul(a4,NULL,0);
+        BOOL ok=PostMessageA(hw,msg,wp,lp);
+        res_printf("%s %u\n",ok?"OK":"ERR",(unsigned)ok);
+    } else if (!stricmp(verb,"ENUMMENUS")) {
+        /* ENUMMENUS <hwnd> — enumerate all menu items with their command IDs */
+        HWND hw = (HWND)(UINT_PTR)strtoul(rest, NULL, 0);
+        HMENU hMenu = GetMenu(hw);
+        if (!hMenu) { res_printf("ERR: no menu\n"); }
+        else {
+            int topN = GetMenuItemCount(hMenu);
+            for (int i = 0; i < topN && i < 20; i++) {
+                char topName[256] = {0};
+                GetMenuStringA(hMenu, i, topName, 255, MF_BYPOSITION);
+                HMENU hSub = GetSubMenu(hMenu, i);
+                if (!hSub) continue;
+                int subN = GetMenuItemCount(hSub);
+                for (int j = 0; j < subN && j < 30; j++) {
+                    char subName[256] = {0};
+                    GetMenuStringA(hSub, j, subName, 255, MF_BYPOSITION);
+                    int id = GetMenuItemID(hSub, j);
+                    if (id > 0)
+                        res_printf("%s|%s|%d\n", topName, subName, id);
+                }
+            }
+            if (rlen == 0) res_printf("EMPTY\n");
+        }
+    } else {
+        res_printf("ERR: unknown: %s\n",verb);
+    }
+    write_result();
+}
+
+int main(void) {
+    DeleteFileA(CMD_FILE);
+    res_clear();
+    res_printf("C2HOST READY pid=%lu\n", GetCurrentProcessId());
+    write_result();
+
+    for (;;) {
+        Sleep(50);
+        FILE *f = fopen(CMD_FILE, "r");
+        if (!f) continue;
+        char line[4096]={0};
+        fgets(line, sizeof(line), f);
+        fclose(f);
+        DeleteFileA(CMD_FILE);
+        chomp(line);
+        if (line[0]) handle_cmd(line);
+    }
+    return 0;
+}

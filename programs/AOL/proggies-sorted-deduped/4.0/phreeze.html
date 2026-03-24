@@ -1,0 +1,696 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>phreeze.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phreeze.zip">&#x2b07; Download phreeze.zip</a>
+</div>
+<div class="hero">
+<div><h1>Phreeze!</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB5</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Phreeze!.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 1998-04-28</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (5)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (12)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Palette</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (82)</h2>
+<span class="s interesting-str">Phreeze! v1a by De\\&#x27;!</span>
+<span class="s interesting-str">Macro KiLLers</span>
+<span class="s interesting-str">Wavy Talker Blue Black</span>
+<span class="s interesting-str">Wavy Talker Red Green</span>
+<span class="s interesting-str">Come to the Phreeze! Chat Room!</span>
+<span class="s interesting-str">Anti 45 Min. Timer</span>
+<span class="s interesting-str">Phreeze v1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">C:\Program Files\DevStudio\VB\VB5.OLB</span>
+<span class="s interesting-str">Phreeze!  Mass IMer</span>
+<span class="s interesting-str">WaVy Talker!</span>
+<span class="s interesting-str">Attention! for AOL 4.0</span>
+<span class="s interesting-str">Wavy Red and Green Talker!</span>
+<span class="s interesting-str">What to say?</span>
+<span class="s interesting-str">What do u wanna say to your Favorite Programmer?</span>
+<span class="s interesting-str">Secret Area!</span>
+<span class="s interesting-str">Bust In a Chat Room</span>
+<span class="s interesting-str">MS Sans SerifA</span>
+<span class="s interesting-str">What room r u in?</span>
+<span class="s interesting-str">What to Scroll?</span>
+<span class="s interesting-str">Phreeze Punta!</span>
+<span class="s interesting-str">Your Own Code!</span>
+<span class="s interesting-str">Who to Punt?</span>
+<span class="s interesting-str">Phreeze! v1a by De\\&#x27;</span>
+<span class="s interesting-str">Beta Testers:  De\\&#x27;, PoiS0n, SunJin, Stock, OG, FROG, Decifer</span>
+<span class="s interesting-str">Coding and Coding Help :  De\\&#x27;, PoiS0n, Stock</span>
+<span class="s interesting-str">Version 1a</span>
+<span class="s interesting-str">G*\AC:\Program Files\DevStudio\VB\Phreeze v1.vbp</span>
+<span class="s interesting-str">America  Online</span>
+<span class="s interesting-str">Buddy List Window</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">&lt;FONT COLOR=</span>
+<span class="s interesting-str">Phreeze! Attention</span>
+<span class="s interesting-str">&gt;Instant Message From:</span>
+<span class="s interesting-str">Instant Message From:</span>
+<span class="s interesting-str">&lt;b&gt;&lt;FONT COLOR=</span>
+<span class="s interesting-str">aol40\gotmail.wav</span>
+<span class="s interesting-str">Are you sure?</span>
+<span class="s interesting-str">This is rather complicated so I didn&#x27;t implement it.  The other two methods work relatively well.</span>
+<span class="s interesting-str">windows\Media\Utopia Recycle.wav</span>
+<span class="s interesting-str">c:\windows\Media\Utopia Recycle.wav</span>
+<span class="s interesting-str">Phreeze! for AOL 4.0</span>
+<span class="s interesting-str">Status Loaded</span>
+<span class="s interesting-str">AOL version:  4.0</span>
+<span class="s interesting-str">Why do you wanna leave, so soon?</span>
+<span class="s interesting-str">Status UnLoaded</span>
+<span class="s interesting-str">Unloaded by:</span>
+<span class="s interesting-str">windows\Media\Musica Menu Popup.wav</span>
+<span class="s interesting-str">c:\windows\Media\Musica Menu Popup.wav</span>
+<span class="s interesting-str">!  There has been a few changes thanx to PoiS0n&#x27;s Suggestions...You will probably notice that the main form has been changed please mail me and tell me what form you like the best...I have added the Up and UnUp chat to it...I have recruited a few new Beta Testers for it...I will try to get all of the bugs out of it...I would Like to Thank StocK for his helping me in making a Mass IMer...Thanx, De\\&#x27;</span>
+<span class="s interesting-str">, De\\&#x27;, Phro a.k.a. OG, PoiS0n a.k.a. JiZZy, Stock, DreThug, Decifer, Frogoat, Ry, pMz, BoNes, KiD BLast, Six-O-Nine, All yal Skaters, NoVa (Got me started programming), Glitch, THung, Sunjin, Throbrx, Merlin, Hermit, POE, ButterUup, Swager, SteW, and everyone else who I forgot, sorry!</span>
+<span class="s interesting-str">c:\Phreeze!\Laser!.wav</span>
+<span class="s interesting-str">Phreeze!\Laser!.wav</span>
+<span class="s interesting-str">phreezev1@hotmail.com</span>
+<span class="s interesting-str">c:\phreeze!\sendaletter.wav</span>
+<span class="s interesting-str">phreeze!\sendaletter.wav</span>
+<span class="s interesting-str">Phreeze!\SendALetter.wav</span>
+<span class="s interesting-str">Stopped Punting:</span>
+<span class="s interesting-str">c:\Phreeze!\SendALetter.wav</span>
+<span class="s interesting-str">PhreezeV1@hotmail.com</span>
+<span class="s interesting-str">c:\aol40\gotmail.wav</span>
+<span class="s interesting-str">Elite Talker!</span>
+<span class="s interesting-str">Backwards Talker!</span>
+<span class="s interesting-str">Hacker Talker!</span>
+<span class="s interesting-str">Spaced Talker!</span>
+<span class="s interesting-str">What to Say?</span>
+<span class="s interesting-str">windows\Media\The Microsoft Sound.wav</span>
+<span class="s interesting-str">c:\windows\Media\The Microsoft Sound.wav</span>
+<span class="s interesting-str">Remember!  You have to put your code in the spot where it says &lt;--Your Code</span>
+<span class="s interesting-str">aol40\im.wav</span>
+<span class="s interesting-str">c:\aol40\im.wav</span>
+<span class="s interesting-str">Now Punting:</span>
+<span class="s interesting-str">Method:  Lag!</span>
+<span class="s interesting-str">Method:  Scroll!</span>
+<span class="s interesting-str">Method:  Count!</span>
+<span class="s interesting-str">Method:  Their Code!</span>
+<span class="s interesting-str">Method:  Ghost!</span>
+<span class="s interesting-str">{ Phreeze! SuP Bot }</span>
+<span class="s interesting-str">Sorry, wrong PW!</span>
+<span class="s interesting-str">!  You have found a secret area to this program, since it is a secret, you can&#x27;t tell anyone the password or where it is located!  I couldn&#x27;t really think of much to put on here, so I just added the Server KiLLer, for now!  Look for a new one, with more junk on it, when I get more ideas!</span>
+<span class="s interesting-str">{ Phreeze! Server KiLL! }</span>
+<span class="s interesting-str">Phreeze!.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (486)</summary>
+<span class="s plain-str">\JOLT\Project1</span>
+<span class="s plain-str">DESTao:O <span style="color:#30363d;font-size:0.75em">×18</span></span>
+<span class="s plain-str">&amp;Phreeze!</span>
+<span class="s plain-str">Mail De\\&#x27; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Minimize</span>
+<span class="s plain-str">SuP! Bot!</span>
+<span class="s plain-str">Attention</span>
+<span class="s plain-str">KiLL 1</span>
+<span class="s plain-str">Dice Roller</span>
+<span class="s plain-str">Room Busta&#x27;</span>
+<span class="s plain-str">Scroller</span>
+<span class="s plain-str">Mass IMer</span>
+<span class="s plain-str">&amp;Mail Junk</span>
+<span class="s plain-str">Mail Punter <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Anti-Idle</span>
+<span class="s plain-str">KiLL Glyph</span>
+<span class="s plain-str">KiLL Wait</span>
+<span class="s plain-str">KiLL MoDaL</span>
+<span class="s plain-str">Hide AOL</span>
+<span class="s plain-str">&amp;Minimize</span>
+<span class="s plain-str">Phreeze! <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">DESTaoText2</span>
+<span class="s plain-str">DESTao__vbaStrCopy</span>
+<span class="s plain-str">DESTao__vbaStrMove</span>
+<span class="s plain-str">Form_Load</span>
+<span class="s plain-str">DESTaoPicture2</span>
+<span class="s plain-str">DESTaoE</span>
+<span class="s plain-str">Form_QueryUnload</span>
+<span class="s plain-str">Form_Unload</span>
+<span class="s plain-str">Label1_MouseMove</span>
+<span class="s plain-str">mnu609_Click</span>
+<span class="s plain-str">mnu609m_Click</span>
+<span class="s plain-str">mnua45_Click</span>
+<span class="s plain-str">mnuabout_Click</span>
+<span class="s plain-str">mnuanti_Click</span>
+<span class="s plain-str">mnuattn_Click</span>
+<span class="s plain-str">mnubetachat_Click</span>
+<span class="s plain-str">mnubusta_Click</span>
+<span class="s plain-str">mnuchat_Click</span>
+<span class="s plain-str">mnuDew_Click</span>
+<span class="s plain-str">mnuglyph_Click</span>
+<span class="s plain-str">mnugreets_Click</span>
+<span class="s plain-str">mnuhide_Click</span>
+<span class="s plain-str">mnuimz_Click</span>
+<span class="s plain-str">mnukill1_Click</span>
+<span class="s plain-str">mnumail_Click</span>
+<span class="s plain-str">mnumailme1_Click</span>
+<span class="s plain-str">mnumailme2_Click</span>
+<span class="s plain-str">mnumassimz_Click</span>
+<span class="s plain-str">mnumini_Click</span>
+<span class="s plain-str">mnumodal_Click</span>
+<span class="s plain-str">mnumpunt_Click</span>
+<span class="s plain-str">mnumsc_Click</span>
+<span class="s plain-str">mnuoff_Click</span>
+<span class="s plain-str">mnuon_Click</span>
+<span class="s plain-str">mnuPunter_Click</span>
+<span class="s plain-str">mnupunter1_Click</span>
+<span class="s plain-str">mnured_Click</span>
+<span class="s plain-str">mnuscroll_Click</span>
+<span class="s plain-str">mnushow_Click</span>
+<span class="s plain-str">mnusice_Click</span>
+<span class="s plain-str">mnusmall_Click</span>
+<span class="s plain-str">mnusup_Click</span>
+<span class="s plain-str">mnutalk_Click</span>
+<span class="s plain-str">mnuwaitk_Click</span>
+<span class="s plain-str">mnuwavy_Click</span>
+<span class="s plain-str">DESTao$ <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">DESTao#</span>
+<span class="s plain-str">DESTaoB</span>
+<span class="s plain-str">DESTao.</span>
+<span class="s plain-str">DESTao-</span>
+<span class="s plain-str">DESTaol</span>
+<span class="s plain-str">DESTao( <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DESTaon</span>
+<span class="s plain-str">DESTao&quot;</span>
+<span class="s plain-str">DESTao! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DESTaotxtPassword</span>
+<span class="s plain-str">addname_Click</span>
+<span class="s plain-str">addroom_Click</span>
+<span class="s plain-str">Command3_Click</span>
+<span class="s plain-str">Command4_Click</span>
+<span class="s plain-str">Command5_Click</span>
+<span class="s plain-str">DESTao2</span>
+<span class="s plain-str">DESTao&amp;</span>
+<span class="s plain-str">DESTao% <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DESTaoText3</span>
+<span class="s plain-str">Text3_MouseMove</span>
+<span class="s plain-str">DESTao,</span>
+<span class="s plain-str">DESTao+</span>
+<span class="s plain-str">DESTao*</span>
+<span class="s plain-str">DESTao) <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">DESTao0</span>
+<span class="s plain-str">DESTao/</span>
+<span class="s plain-str">DESTaoOption6</span>
+<span class="s plain-str">SharnayBlack <span style="color:#30363d;font-size:0.75em">×46</span></span>
+<span class="s plain-str">Message?</span>
+<span class="s plain-str">Who to add?</span>
+<span class="s plain-str">remove name</span>
+<span class="s plain-str">clear list</span>
+<span class="s plain-str">add room</span>
+<span class="s plain-str">add name</span>
+<span class="s plain-str">Say What?</span>
+<span class="s plain-str">Subject</span>
+<span class="s plain-str">Mail De\\&#x27;!</span>
+<span class="s plain-str">Subject?</span>
+<span class="s plain-str">SharnayBlack0</span>
+<span class="s plain-str">Scroller!</span>
+<span class="s plain-str">Password?</span>
+<span class="s plain-str">&amp;Password:</span>
+<span class="s plain-str">Talker! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Backwards</span>
+<span class="s plain-str">KiLL Server</span>
+<span class="s plain-str">Server?</span>
+<span class="s plain-str">How Many?</span>
+<span class="s plain-str">UpChat!</span>
+<span class="s plain-str">Tmw3t }**</span>
+<span class="s plain-str">CQosUd cv=</span>
+<span class="s plain-str">)dnIhI#</span>
+<span class="s plain-str">Pvwwn7&lt;</span>
+<span class="s plain-str">-kb0rRMF;x</span>
+<span class="s plain-str">Icon:  De\\&#x27;</span>
+<span class="s plain-str">Art:  De\\&#x27;</span>
+<span class="s plain-str">UnloadMode</span>
+<span class="s plain-str">LoginSucceeded</span>
+<span class="s plain-str">0(0,0&lt;0H0L0T0\0`0d0h0l0p0t0x0|0</span>
+<span class="s plain-str">1(1,181&lt;1D1L1P1T1X1\1`1d1h1l1p1t1x1|1</span>
+<span class="s plain-str">2(2,2&lt;2L2\2l2|2</span>
+<span class="s plain-str">3$3,34383H3L3T3\3d3p3t3|3</span>
+<span class="s plain-str">4$4,444&lt;4D4T4\4d4l4t4|4</span>
+<span class="s plain-str">5$5,545&lt;5D5L5T5\5d5l5t5|5</span>
+<span class="s plain-str">6$6,6&lt;6D6H6L6T6\6d6l6t6|6</span>
+<span class="s plain-str">7$7,747&lt;7D7H7L7\7d7h7t7|7</span>
+<span class="s plain-str">8$8,848&lt;8D8L8T8\8`8l8t8|8</span>
+<span class="s plain-str">9 9&amp;9,92989&gt;9D9J9P9V9\9b9h9n9t9z9</span>
+<span class="s plain-str">6 6(60686@6H6P6X6`6h6p6x6</span>
+<span class="s plain-str">7 7(70787@7H7P7X7`7h7p7x7</span>
+<span class="s plain-str">:L;P;T;X;\;</span>
+<span class="s plain-str">;d&lt;l&lt;x&lt;|&lt;</span>
+<span class="s plain-str">= =(=8=H=P=X=\=`=h=l=p=t=x=</span>
+<span class="s plain-str">0$0(0,00040P0</span>
+<span class="s plain-str">0,1014181&lt;1D1</span>
+<span class="s plain-str">2$2,242@2D2P2T2`2p2x2</span>
+<span class="s plain-str">5 50585H5X5`5p5</span>
+<span class="s plain-str">5 6$6(6,606L6</span>
+<span class="s plain-str">6d7l7x7|7</span>
+<span class="s plain-str">8 8(888H8P8X8\8`8d8h8l8t8x8|8</span>
+<span class="s plain-str">9P:X:d:h:</span>
+<span class="s plain-str">&lt;p&lt;t&lt;x&lt;|&lt;</span>
+<span class="s plain-str">&gt; &gt;$&gt;0&gt;@&gt;H&gt;X&gt;h&gt;p&gt;</span>
+<span class="s plain-str">0l0p0t0x0|0</span>
+<span class="s plain-str">1 1,101H1P1X1`1h1p1|1</span>
+<span class="s plain-str">2$2,24282&lt;2@2D2H2P2T2X2\2`2</span>
+<span class="s plain-str">2@3D3H3L3P3l3</span>
+<span class="s plain-str">5,545D5T5\5l5|5</span>
+<span class="s plain-str">5X6\6`6d6h6</span>
+<span class="s plain-str">7h7l7p7t7x7T8\8h8l8</span>
+<span class="s plain-str">9(989@9P9`9h9x9</span>
+<span class="s plain-str">: :$:(:D:</span>
+<span class="s plain-str">=L&gt;P&gt;T&gt;X&gt;\&gt;</span>
+<span class="s plain-str">1 10181H1X1`1p1</span>
+<span class="s plain-str">2 2(20282&lt;2@2D2H2</span>
+<span class="s plain-str">3X3\3`3d3h3</span>
+<span class="s plain-str">3L4P4T4X4\4</span>
+<span class="s plain-str">; ;(;0;&lt;;@;L;P;\;l;t;</span>
+<span class="s plain-str">&lt;4=8=&lt;=@=D=H=</span>
+<span class="s plain-str">&gt;P?T?X?\?`?</span>
+<span class="s plain-str">,0004080&lt;0@0</span>
+<span class="s plain-str">1 1(101&lt;1@1L1P1\1l1t1</span>
+<span class="s plain-str">2$242&lt;2L2\2d2t2</span>
+<span class="s plain-str">2(3L3P3T3X3\3</span>
+<span class="s plain-str">3T4X4\4`4d4</span>
+<span class="s plain-str">4054585&lt;5@5H5</span>
+<span class="s plain-str">6H6l6p6t6x6|6</span>
+<span class="s plain-str">6\7d7p7t7</span>
+<span class="s plain-str">8 808@8H8X8h8p8</span>
+<span class="s plain-str">9 90989H9X9`9p9</span>
+<span class="s plain-str">94:8:&lt;:@:D:</span>
+<span class="s plain-str">; ;p;t;x;|;</span>
+<span class="s plain-str">;0&lt;4&lt;8&lt;&lt;&lt;@&lt;</span>
+<span class="s plain-str">=P=T=X=\=`=</span>
+<span class="s plain-str">0,0&lt;0D0T0d0l0t0x0|0</span>
+<span class="s plain-str">2 2$2(2t2x2|2</span>
+<span class="s plain-str">2H3L3P3T3X3</span>
+<span class="s plain-str">4 4$4(4,444</span>
+<span class="s plain-str">6$646D6L6\6l6t6</span>
+<span class="s plain-str">7$747&lt;7L7\7d7t7</span>
+<span class="s plain-str">8$8,8&lt;8L8T8d8t8|8</span>
+<span class="s plain-str">9,9&lt;9D9T9d9l9|9</span>
+<span class="s plain-str">? ?$?(?,?4?8?&lt;?@?D?l?</span>
+<span class="s plain-str">0 0$0(0,00080</span>
+<span class="s plain-str">1 1(1,1014181&lt;1D1H1L1P1T1X1`1d1h1l1p1t1|1</span>
+<span class="s plain-str">2$2(2,20242P2X2\2</span>
+<span class="s plain-str">3 3(3,3034383@3</span>
+<span class="s plain-str">3 4$4(4,40484</span>
+<span class="s plain-str">5 5$5(505</span>
+<span class="s plain-str">5,6064686&lt;6@6H6L6P6T6X6\6d6h6l6p6t6</span>
+<span class="s plain-str">64787&lt;7@7D7H7P7T7X7\7`7d7l7p7t7x7|7</span>
+<span class="s plain-str">7 8$8(8,80848&lt;8@8D8H8L8P8X8\8`8d8h8p8</span>
+<span class="s plain-str">9 9(9,9094989&lt;9D9H9L9P9T9X9</span>
+<span class="s plain-str">= =$=(=,=0=H=P=`=h=x=</span>
+<span class="s plain-str">&gt; &gt;(&gt;8&gt;@&gt;P&gt;X&gt;h&gt;p&gt;</span>
+<span class="s plain-str">1014181&lt;1@1D1H1L1P1T1X1`1l1p1x1|1</span>
+<span class="s plain-str">2 24282&lt;2H2L2P2T2X2\2`2d2t2x2|2</span>
+<span class="s plain-str">4X4\4d4i4t4y4</span>
+<span class="s plain-str">5 5(5-585=5\5`5h5m5x5}5</span>
+<span class="s plain-str">6$6)64696P6T6\6a6l6q6</span>
+<span class="s plain-str">7 7$7,717&lt;7A7h7l7t7y7</span>
+<span class="s plain-str">8&lt;8@8H8M8X8]8|8</span>
+<span class="s plain-str">989&lt;9D9I9T9Y9</span>
+<span class="s plain-str">9 :$:,:1:&lt;:A:\:`:h:m:x:}:</span>
+<span class="s plain-str">; ;%;0;5;X;\;d;i;t;y;</span>
+<span class="s plain-str">&lt; &lt;%&lt;0&lt;5&lt;\&lt;`&lt;h&lt;m&lt;x&lt;}&lt;</span>
+<span class="s plain-str">&lt; &lt;$&lt;,&lt;@&lt;H&lt;L&lt;P&lt;l&lt;</span>
+<span class="s plain-str">0,0@0H0L0P0l0</span>
+<span class="s plain-str">1 1$1(1,1014181&lt;1@1D1H1L1P1T1\1`1h1l1</span>
+<span class="s plain-str">2 2$2(2,2024282&lt;2D2P2T2\2`2d2h2l2t2x2|2</span>
+<span class="s plain-str">3)404U4z4</span>
+<span class="s plain-str">9%9,9a9h9</span>
+<span class="s plain-str">;2;7;H;d;</span>
+<span class="s plain-str">&lt; &lt;&#x27;&lt;5&lt;C&lt;K&lt;T&lt;m&lt;r&lt;</span>
+<span class="s plain-str">=2=@=H=T=Z=g=</span>
+<span class="s plain-str">0 1+141[1r1</span>
+<span class="s plain-str">2&quot;222E2R2[2</span>
+<span class="s plain-str">3$3,383&gt;3N3~3</span>
+<span class="s plain-str">7/7D7K7Y7a7{7</span>
+<span class="s plain-str">8!8*848j8w8</span>
+<span class="s plain-str">;7;n;v;|;</span>
+<span class="s plain-str">2&quot;292E2T2_2j2</span>
+<span class="s plain-str">223N3Z3u3</span>
+<span class="s plain-str">8S9h9s9|9</span>
+<span class="s plain-str">:7:_:t:{:</span>
+<span class="s plain-str">2@2N2X2_2</span>
+<span class="s plain-str">5)555F5R5l5|5</span>
+<span class="s plain-str">6,6;6G6X6d6v6~6</span>
+<span class="s plain-str">898E8N8W8`8i8r8~8</span>
+<span class="s plain-str">9=:C:I:v:</span>
+<span class="s plain-str">;G;N;Y;v;</span>
+<span class="s plain-str">0&#x27;1@1S1c1y1</span>
+<span class="s plain-str">2/2=2E2Q2W2d2</span>
+<span class="s plain-str">3I3_3d3o3</span>
+<span class="s plain-str">4&quot;4+404;4E4g4</span>
+<span class="s plain-str">5)515O5]5e5q5w5</span>
+<span class="s plain-str">686K6V6f6</span>
+<span class="s plain-str">8(808=8I8U8`8r8}8</span>
+<span class="s plain-str">9G9s9Q:X:^:o:</span>
+<span class="s plain-str">1/1G1Q1Y1_1e1</span>
+<span class="s plain-str">3.393B3K3V3a3l3w3</span>
+<span class="s plain-str">4!4,4:4E4S4^4l4w4</span>
+<span class="s plain-str">5&amp;545?5M5X5f5q5</span>
+<span class="s plain-str">6 6.696G6R6`6k6y6</span>
+<span class="s plain-str">7(737A7L7Z7e7s7~7</span>
+<span class="s plain-str">8&quot;8-8;8F8T8_8r8}8</span>
+<span class="s plain-str">8$979h9w9</span>
+<span class="s plain-str">0 0(030=0w0</span>
+<span class="s plain-str">1$111&lt;1C1H1N1W1d1t1|1</span>
+<span class="s plain-str">3-3D3L3^3q3</span>
+<span class="s plain-str">4*4?4\4t4</span>
+<span class="s plain-str">7L7U7l7w7</span>
+<span class="s plain-str">8$8)8/858J8R8k8</span>
+<span class="s plain-str">9*9?9\9t9</span>
+<span class="s plain-str">3*323K3a3i3r3</span>
+<span class="s plain-str">4&lt;4T4a4l4s4x4~4</span>
+<span class="s plain-str">6@6O6X6_6m6</span>
+<span class="s plain-str">8B8S8^8x8</span>
+<span class="s plain-str">:A:K:P:V:\:u:}:</span>
+<span class="s plain-str">;A;P;p;u;{;</span>
+<span class="s plain-str">3!3,353I3</span>
+<span class="s plain-str">919@9I9N9T9Z9</span>
+<span class="s plain-str">9!:0:@:R:^:i:</span>
+<span class="s plain-str">=1=A=F=L=R=</span>
+<span class="s plain-str">&gt;4&gt;F&gt;i&gt;t&gt;</span>
+<span class="s plain-str">4!4&lt;4T4f4</span>
+<span class="s plain-str">6,6&gt;6b6}6</span>
+<span class="s plain-str">1A1P1Y1^1d1j1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">212A2\2t2</span>
+<span class="s plain-str">7!818K8_8q8</span>
+<span class="s plain-str">030&lt;0A0G0M0</span>
+<span class="s plain-str">212@2I2N2T2Z2</span>
+<span class="s plain-str">515X5a5s5}5</span>
+<span class="s plain-str">5(606&lt;6N6</span>
+<span class="s plain-str">7(7&gt;7C7O7T7Z7`7</span>
+<span class="s plain-str">8A8P8Y8^8d8j8</span>
+<span class="s plain-str">9!939=9X9n9s9</span>
+<span class="s plain-str">&lt; &lt;,&lt;&gt;&lt;w&lt;</span>
+<span class="s plain-str">2.2D2J2\2p2</span>
+<span class="s plain-str">2&#x27;3Q3`3q3v3|3</span>
+<span class="s plain-str">6,6C6K6]6p6</span>
+<span class="s plain-str">7&quot;7(7=7E7^7t7z7</span>
+<span class="s plain-str">9 9)9P9v9</span>
+<span class="s plain-str">&lt;5&lt;G&lt;S&lt;^&lt;</span>
+<span class="s plain-str">=	&gt;&amp;&gt;.&gt;I&gt;Q&gt;a&gt;p&gt;</span>
+<span class="s plain-str">&gt;3?Z?b?~?</span>
+<span class="s plain-str">%000J0\0r0z0</span>
+<span class="s plain-str">1&quot;1+1;1U1[1</span>
+<span class="s plain-str">2&#x27;2D2Z2l2~2</span>
+<span class="s plain-str">313@3T3Y3_3e3z3</span>
+<span class="s plain-str">3&quot;4E4L4]4e4n4z4</span>
+<span class="s plain-str">5%5.5:5E5w5</span>
+<span class="s plain-str">6&quot;7R7X7q7|7</span>
+<span class="s plain-str">8%808F8f8|8</span>
+<span class="s plain-str">8&quot;9I9f9n9</span>
+<span class="s plain-str">9&quot;:E:L:]:e:n:z:</span>
+<span class="s plain-str">0&lt;0T0a0l0s0x0~0</span>
+<span class="s plain-str">2)202T2t2</span>
+<span class="s plain-str">3&quot;4.4&gt;4j4</span>
+<span class="s plain-str">5&amp;5,525Q5]5</span>
+<span class="s plain-str">7&quot;7*717&lt;7B7H7g7s7</span>
+<span class="s plain-str">8#8)8N8Z8j8</span>
+<span class="s plain-str">90989@9G9R9X9^9}9</span>
+<span class="s plain-str">:A:I:R:W:e:v:|:</span>
+<span class="s plain-str">&lt;G&lt;d&lt;l&lt;y&lt;</span>
+<span class="s plain-str">2+272T2n2</span>
+<span class="s plain-str">3!3-3S3g3</span>
+<span class="s plain-str">3&#x27;4Q4`4t4y4</span>
+<span class="s plain-str">5!606D6I6O6U6j6r6</span>
+<span class="s plain-str">7 7)7.747:7</span>
+<span class="s plain-str">;6;&gt;;C;L;Q;W;];v;~;</span>
+<span class="s plain-str">&#x27;0Q0`0t0y0</span>
+<span class="s plain-str">223S3[3c3q3w3</span>
+<span class="s plain-str">4#4)4N4Z4</span>
+<span class="s plain-str">5H5i5q5y5</span>
+<span class="s plain-str">6#6+696?6d6p6</span>
+<span class="s plain-str">81898A8O8U8z8</span>
+<span class="s plain-str">9&amp;:G:O:W:e:k:</span>
+<span class="s plain-str">1;1C1K1Y1_1</span>
+<span class="s plain-str">203Q3Y3a3o3u3</span>
+<span class="s plain-str">4!4&#x27;4L4X4</span>
+<span class="s plain-str">5F5g5o5w5</span>
+<span class="s plain-str">6!6)676=6b6n6</span>
+<span class="s plain-str">8/878?8M8S8x8</span>
+<span class="s plain-str">9$:E:M:U:c:i:</span>
+<span class="s plain-str">191A1I1W1]1</span>
+<span class="s plain-str">2.3O3W3_3m3s3</span>
+<span class="s plain-str">5D5e5m5u5</span>
+<span class="s plain-str">6&#x27;656;6`6l6</span>
+<span class="s plain-str">8-858=8K8Q8v8</span>
+<span class="s plain-str">9&quot;:C:K:S:a:g:</span>
+<span class="s plain-str">;8&lt;Y&lt;a&lt;i&lt;w&lt;}&lt;</span>
+<span class="s plain-str">171?1G1U1[1</span>
+<span class="s plain-str">2,3M3U3]3k3q3</span>
+<span class="s plain-str">5B5c5k5s5</span>
+<span class="s plain-str">6%63696^6j6</span>
+<span class="s plain-str">8+838;8I8O8t8</span>
+<span class="s plain-str">9 :A:I:Q:_:e:</span>
+<span class="s plain-str">;6&lt;W&lt;_&lt;g&lt;u&lt;{&lt;</span>
+<span class="s plain-str">&gt;L&gt;m&gt;u&gt;}&gt;</span>
+<span class="s plain-str">151=1E1S1Y1~1</span>
+<span class="s plain-str">2*3K3S3[3i3o3</span>
+<span class="s plain-str">5@5a5i5q5</span>
+<span class="s plain-str">6#61676\6h6</span>
+<span class="s plain-str">7&#x27;7D7d7q7</span>
+<span class="s plain-str">7	8E8f8n8v8</span>
+<span class="s plain-str">9 9(969&lt;9a9m9</span>
+<span class="s plain-str">&gt;9?Z?b?j?x?~?</span>
+<span class="s plain-str">0*000U0a0</span>
+<span class="s plain-str">2&quot;2*222@2F2k2w2</span>
+<span class="s plain-str">484@4H4V4\4</span>
+<span class="s plain-str">5-6N6V6^6l6r6</span>
+<span class="s plain-str">8C8d8l8t8</span>
+<span class="s plain-str">9&amp;949:9_9k9</span>
+<span class="s plain-str">&gt;7?X?`?h?v?|?</span>
+<span class="s plain-str">0(0.0S0_0</span>
+<span class="s plain-str">1M1n1v1~1</span>
+<span class="s plain-str">1 2(202&gt;2D2i2u2</span>
+<span class="s plain-str">464&gt;4F4T4Z4</span>
+<span class="s plain-str">5+6L6T6\6j6p6</span>
+<span class="s plain-str">8A8b8j8r8</span>
+<span class="s plain-str">9$92989]9i9</span>
+<span class="s plain-str">:	;*;2;:;H;N;s;</span>
+<span class="s plain-str">&gt;5?V?^?f?t?z?</span>
+<span class="s plain-str">0&amp;0,0Q0]0</span>
+<span class="s plain-str">1K1l1t1|1</span>
+<span class="s plain-str">2&amp;2.2&lt;2B2g2s2</span>
+<span class="s plain-str">444&lt;4D4R4X4}4</span>
+<span class="s plain-str">5)6J6R6Z6h6n6</span>
+<span class="s plain-str">8?8`8h8p8~8</span>
+<span class="s plain-str">9&quot;90969[9g9</span>
+<span class="s plain-str">0;0C0K0Y0_0</span>
+<span class="s plain-str">102Q2Y2a2o2u2</span>
+<span class="s plain-str">3!3&#x27;3L3X3</span>
+<span class="s plain-str">4F4g4o4w4</span>
+<span class="s plain-str">5!5)575=5b5n5</span>
+<span class="s plain-str">7/777?7M7S7x7</span>
+<span class="s plain-str">8$9E9M9U9c9i9</span>
+<span class="s plain-str">090A0I0W0]0</span>
+<span class="s plain-str">1.2O2W2_2m2s2</span>
+<span class="s plain-str">4D4e4m4u4</span>
+<span class="s plain-str">5&#x27;555;5`5l5</span>
+<span class="s plain-str">7-757=7K7Q7v7</span>
+<span class="s plain-str">8&quot;9C9K9S9a9g9</span>
+<span class="s plain-str">:8;Y;a;i;w;};</span>
+<span class="s plain-str">0K0l0t0|0</span>
+<span class="s plain-str">1&amp;1.1&lt;1B1g1s1</span>
+<span class="s plain-str">343&lt;3D3R3X3}3</span>
+<span class="s plain-str">4)5J5R5Z5h5n5</span>
+<span class="s plain-str">7?7`7h7p7~7</span>
+<span class="s plain-str">8&quot;80868[8g8</span>
+<span class="s plain-str">=3&gt;T&gt;\&gt;d&gt;r&gt;x&gt;</span>
+<span class="s plain-str">001Q1Y1a1o1u1</span>
+<span class="s plain-str">2!2&#x27;2L2X2</span>
+<span class="s plain-str">3F3g3o3w3</span>
+<span class="s plain-str">4!4)474=4b4n4</span>
+<span class="s plain-str">6/676?6M6S6x6</span>
+<span class="s plain-str">7$8E8M8U8c8i8</span>
+<span class="s plain-str">9::[:c:k:y:</span>
+<span class="s plain-str">&lt;7=X=`=h=v=|=</span>
+<span class="s plain-str">?M?n?v?~?</span>
+<span class="s plain-str">0(000&gt;0D0i0u0</span>
+<span class="s plain-str">262&gt;2F2T2Z2</span>
+<span class="s plain-str">3+4L4T4\4j4p4</span>
+<span class="s plain-str">5C5O5a5s5</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">BuddyView</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Hey&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">Enabled</span>
+<span class="s plain-str">aol://2719:2-2-Phreeze</span>
+<span class="s plain-str">|   &#x27;|:|::::::/</span>
+<span class="s plain-str">&#x27; |:|      /|       |</span>
+<span class="s plain-str">|     |&#x27;/       /::&#x27;/</span>
+<span class="s plain-str">\     \___/::&#x27;/_&#x27; |     |/</span>
+<span class="s plain-str">_   |\|::::&#x27;|/|::::::|/_</span>
+<span class="s plain-str">SubClasshWnd</span>
+<span class="s plain-str">&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;</span>
+<span class="s plain-str">&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;Phreeze!  Lag Punt, by De\\&#x27;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;u&gt;&lt;h3&gt;&lt;s&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;</span>
+<span class="s plain-str">&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;H3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;</span>
+<span class="s plain-str">{Home}+{End}</span>
+<span class="s plain-str">Send 1</span>
+<span class="s plain-str">Send 2</span>
+<span class="s plain-str">Send 3</span>
+<span class="s plain-str">Send 4</span>
+<span class="s plain-str">Send 5</span>
+<span class="s plain-str">Send 6</span>
+<span class="s plain-str">Send 7</span>
+<span class="s plain-str">Send 8</span>
+<span class="s plain-str">Send 9</span>
+</details>
+<div class="stats">Total unique strings: 1676 · Interesting: 82 · Noise filtered: 1090</div>
+</div></body></html>

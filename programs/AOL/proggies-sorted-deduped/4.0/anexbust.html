@@ -1,0 +1,764 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>anexbust.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/anexbust.zip">&#x2b07; Download anexbust.zip</a>
+</div>
+<div class="hero">
+<div><h1>Anex Bust</h1><span class="author">by <b>going</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">anexbust.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2002-01-22</span>
+<span class="badge" style="background:#1a1a2a;color:#79c0ff;border:1px solid #1f6feb">modAnexBust.bas</span>
+</div></div>
+<section class="screenshot">
+<img src="anexbust/screenshot.png" alt="Main window"><div class="caption">Main window</div>
+<img src="anexbust/animated.gif" alt="Navigation walkthrough"><div class="caption">Navigation walkthrough</div>
+<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Individual screenshots</summary>
+<div style="margin:8px 0"><img src="anexbust/screen_about.png" alt="About"><div class="caption">About</div></div>
+<div style="margin:8px 0"><img src="anexbust/screen_help.png" alt="Help"><div class="caption">Help</div></div>
+<div style="margin:8px 0"><img src="anexbust/screen_menu.png" alt="Menu"><div class="caption">Menu</div></div>
+<div style="margin:8px 0"><img src="anexbust/screen_submenu_status.png" alt="Submenu Status"><div class="caption">Submenu Status</div></div>
+<div style="margin:8px 0"><img src="anexbust/screen_submenu_style.png" alt="Submenu Style"><div class="caption">Submenu Style</div></div>
+<div style="margin:8px 0"><img src="anexbust/screen_submenu_user.png" alt="Submenu User"><div class="caption">Submenu User</div></div>
+</details>
+</section>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">-Viper</span>
+<h2>&#x1f4e6; Dependencies (4)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<h2>&#x1f4cb; Project Info</h2>
+<div class="card">
+Startup: Form1 · Version: 1.00.0
+</div>
+<h2>&#x1f91d; Greets &amp; Shoutouts</h2>
+<div class="greet-tags">
+<span class="greet-tag">Diamond Dawg</span>
+<span class="greet-tag">Toxic</span>
+<span class="greet-tag">bone (auoq)</span>
+<span class="greet-tag">crims0n</span>
+<span class="greet-tag">d0tz</span>
+<span class="greet-tag">dlux</span>
+<span class="greet-tag">notorious</span>
+<span class="greet-tag">pio</span>
+<span class="greet-tag">pyro</span>
+<span class="greet-tag">riptide</span>
+<span class="greet-tag">ryze</span>
+<span class="greet-tag">sober</span>
+<span class="greet-tag">stanky</span>
+<span class="greet-tag">tetra</span>
+</div>
+<div style="color:#8b949e;font-size:0.85em;margin-top:6px;font-style:italic">And anyone else I foregot.</div>
+<h2>&#x2699; API References (8)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">MDIClient</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">RICHCNTL</span> <span class="badge-api">2.5+</span></div>
+</div>
+<h2>&#x1f5bc; Forms &amp; Controls</h2>
+<details><summary>4 forms, 18 controls</summary>
+<div class="card">
+<h3>Form1</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>TextBox</td><td>txtRoom</td><td>Room to bust</td></tr>
+<tr><td>PictureBox</td><td>Picture1</td><td>ey | 1</td></tr>
+<tr><td>Label</td><td>lblOptz</td><td>optz.</td></tr>
+<tr><td>Label</td><td>lblStop</td><td>[stop]</td></tr>
+<tr><td>Label</td><td>lblStart</td><td>start</td></tr>
+</table>
+</div>
+<div class="card">
+<h3>Form2</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>Label</td><td>lblTries</td><td>0</td></tr>
+<tr><td>Label</td><td>lblttlBusts</td><td>0</td></tr>
+<tr><td>Label</td><td>lblttlTries</td><td>0</td></tr>
+<tr><td>Label</td><td>lblLoads</td><td>0</td></tr>
+<tr><td>Label</td><td>lblHandle</td><td>n/a</td></tr>
+</table>
+<div style="margin-top:8px;color:#8b949e;font-size:0.85em">Menu:</div>
+<ul class="menu-tree"><li>Options<ul class="submenu"><li>user<ul class="submenu"><li>handle [n/a]</li><li>loads [0]</li></ul></li><li>status<ul class="submenu"><li>tries [0]</li><li>ttltries [0]</li><li>ttlbusts [0]</li><li>show status</li><li>hide status</li></ul></li><li>style<ul class="submenu"><li>bust</li><li>run</li></ul></li><li>greets</li><li>about</li><li>help</li><li>exit</li></ul></li></ul>
+</div>
+<div class="card">
+<h3>frmGreets</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>PictureBox</td><td>Picture1</td><td>ey | 1</td></tr>
+<tr><td>Label</td><td>Label2</td><td>x</td></tr>
+<tr><td>Label</td><td>Label1</td><td>Tries: 0</td></tr>
+</table>
+<div style="margin-top:6px;color:#484f58;font-size:0.8em">Timers: Timer2, Timer1</div>
+</div>
+<div class="card">
+<h3>frmStats</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>Label</td><td>Label3</td><td>Total Busts: 0</td></tr>
+<tr><td>Label</td><td>Label2</td><td>Total Tries: 0</td></tr>
+<tr><td>Label</td><td>Label1</td><td>Tries: 0</td></tr>
+</table>
+</div>
+</details>
+<h2>&#x1f4ca; Code Breakdown</h2>
+<div class="breakdown-bar">
+<div class="bar-app" style="width:46.0%" title="App code: 46.0%">46.0%</div>
+<div style="width:22.9%;background:#1f3a1f;color:#3fb950;text-align:center;font-size:0.75em;line-height:24px" title="Cherry-picked from known modules: 22.9%">22.9%</div>
+<div class="bar-used" style="width:24.0%" title="Used modAnexBust.bas: 24.0%">24.0%</div>
+<div class="bar-dead" style="width:7.1%" title="Unused modAnexBust.bas: 7.1%">7.1%</div>
+</div>
+<div class="breakdown-legend">
+<span><span class="dot dot-app"></span>Custom code — 25 funcs (46.0%)</span>
+<span><span class="dot" style="background:#3fb950"></span>Cherry-picked from dos32.bas — 8 funcs (22.9%)</span>
+<span><span class="dot dot-used"></span>Used from modAnexBust.bas — 1 of 12 funcs (24.0%)</span>
+<span><span class="dot dot-dead"></span>Unused from modAnexBust.bas — 3 funcs (7.1%)</span>
+</div>
+<details open><summary><b>Application Code</b> (25 event handlers)</summary>
+<details class="fn-item"><summary>Form_Load() <span class="sz">5.2KB → calls: modAnexBust.Proc_2_10, WriteToINI, FileExists, GetFromINI</span></summary>
+<pre>Private Sub Form_Load()
+  Dim app_1 As App
+  Dim app_2 As App
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_1C = local_18 &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_3_40C990">FileExists</span>(local_1C, 0, app_1)
+  If call <span style="color:#d2a8ff" title="Proc_2_3_40C990">FileExists</span>(local_1C, 0, app_1) + 1 = 0 Then ...
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_28 = local_18 &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;loads&quot;, &amp;h00404AEC)
+  GoTo ...
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;handle&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;handle&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  call <span style="color:#d2a8ff" title="Proc_2_10_40D660">modAnexBust.Proc_2_10</span>(local_28, , )
+  If (local_2C = vbNullString) + 1 = 0 Then ...
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;loads&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  app_2 = Global.App
+  local_1C = Global.Path
+  local_2C = local_1C &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;loads&quot;, __vbaStrR8)
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;ttltries&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;ttlbusts&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;style&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  GoTo ...
+  If si = 0 Then ...
+  options_style_bust.Checked = True
+  options_style_run.Checked = False
+  If Me &gt;= 0 Then ...
+  GoTo ...
+  options_style_bust.Checked = False
+  options_style_run.Checked = True
+  If Me &gt;= 0 Then ...
+  app_1 = Global.App
+  local_18 = Global.Path
+  local_24 = local_18 &amp; &quot;\anexbust.dat&quot;
+  local_20 = &quot;showstat&quot;
+  local_1C = &quot;data&quot;
+  local_28 = call <span style="color:#d2a8ff" title="Proc_2_6_40CEA0">GetFromINI</span>(local_1C, local_20, local_24)
+  GoTo ...
+  If &amp;h0041005C = 0 Then ...
+  frmStats.Hide
+  options_status_show.Checked = False
+  options_status_hide.Checked = True
+  frmStats.Show
+  options_status_show.Checked = True
+  options_status_hide.Checked = False
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_Unload(Cancel <span class="sz">2.3KB → calls: WriteToINI</span></summary>
+<pre>Private Sub Form_Unload(Cancel As Integer)
+  Dim app_1 As App
+  Dim local_30 As Variant
+  app_1 = Global.App
+  local_1C = Global.Path
+  local_2C = local_1C &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;handle&quot;, local_18)
+  app_1 = Global.App
+  local_1C = Global.Path
+  local_2C = local_1C &amp; &quot;\anexbust.dat&quot;
+  call __vbaStrR8(local_40, local_3C, local_30, local_18, local_30, app_1, Me)
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;ttltries&quot;, __vbaStrR8(local_40, local_3C, local_30, local_18, local_30, app_1, Me))
+  app_1 = Global.App
+  local_1C = Global.Path
+  local_2C = local_1C &amp; &quot;\anexbust.dat&quot;
+  call __vbaStrR8(local_40, local_3C, Me, local_18, local_30, Me, Me)
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;ttlbusts&quot;, __vbaStrR8(local_40, local_3C, Me, local_18, local_30, Me, Me))
+  local_38 = options_style_bust.Checked
+  If &amp;h004105C0 = 0 Then ...
+  local_30 = Global.App
+  local_18 = Global.Path
+  local_28 = local_18 &amp; &quot;\anexbust.dat&quot;
+  GoTo ...
+  local_30 = Global.App
+  local_18 = Global.Path
+  local_28 = local_18 &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;style&quot;, &amp;h00404EA8)
+  local_38 = options_status_show.Checked
+  local_30 = Global.App
+  local_18 = Global.Path
+  local_28 = local_18 &amp; &quot;\anexbust.dat&quot;
+  GoTo ...
+  local_30 = Global.App
+  local_18 = Global.Path
+  local_28 = local_18 &amp; &quot;\anexbust.dat&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_11_40D800">WriteToINI</span>(&quot;data&quot;, &quot;showstat&quot;, &amp;h00404EA8)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label1_Change() <span style="color:#3fb950;font-style:italic">"Tries: 0"</span> <span class="sz">1.5KB</span></summary>
+<pre>Private Sub Label1_Change()
+  Dim picturebox_1 As PictureBox
+  If local_410000 &lt;&gt; 0 Then ...
+  GoTo ...
+  local_2C = Picture1.Height
+  If local_410000 &lt;&gt; 0 Then ...
+  GoTo ...
+  If local_410000 &lt;&gt; 0 Then ...
+  GoTo ...
+  faddp st1
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label2_Click() <span style="color:#3fb950;font-style:italic">"Total Tries: 0"</span> <span class="sz">378b</span></summary>
+<pre>Private Sub Label2_Click()
+  Me.Hide
+  Timer1.Enabled = False
+  Timer2.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Picture1_MouseDown(Button <span style="color:#3fb950;font-style:italic">"ey | 1"</span> <span class="sz">206b</span></summary>
+<pre>Private Sub Picture1_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If Button &lt;&gt; 1 Then ...
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Picture1_MouseMove(Button <span style="color:#3fb950;font-style:italic">"ey | 1"</span> <span class="sz">821b</span></summary>
+<pre>Private Sub Picture1_MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If Button &lt;&gt; 1 Then ...
+  local_18 = Me.Left
+  Me.Left = local_18
+  local_18 = Me.Top
+  Me.Top = Me
+  local_18 = frmGreets.Left
+  frmGreets.Left = local_18
+  local_1C = frmGreets.Height
+  local_18 = frmGreets.Top
+  frmGreets.Top = local_18
+  local_18 = frmStats.Left
+  frmStats.Left = local_18
+  local_1C = frmStats.Height
+  local_18 = frmStats.Top
+  frmStats.Top = local_18
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Timer1_Timer() <span class="sz">863b</span></summary>
+<pre>Private Sub Timer1_Timer()
+  Timer1.Enabled = False
+  Timer2.Enabled = True
+  GoTo ...
+  esi+&amp;h00000034 = esi+&amp;h00000034 + 0004h
+  If esi+&amp;h00000034 &lt;= 255 Then ...
+  local_34 = %x1 = Label1.Standing
+  local_40 = %x1 = Label1.Standing
+  local_4C = %x1 = Label1.Standing
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Timer2_Timer() <span class="sz">7.4KB</span></summary>
+<pre>Private Sub Timer2_Timer()
+  Dim local_1C As Variant
+  If (local_18 = &quot;Greets to...&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;Toxic&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;ryze&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;riptide&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;crims0n&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;Diamond Dawg&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;stanky&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;d0tz&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;tetra&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;pio&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;pyro&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;notorious&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;dlux&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;bone (auoq)&quot;) + 1 = 0 Then ...
+  GoTo ...
+  If (local_18 = &quot;sober&quot;) + 1 = 0 Then ...
+  Timer1.Enabled = True
+  Timer2.Enabled = False
+  esi+&amp;h00000034 = esi+&amp;h00000034 - 0004h
+  If esi+&amp;h00000034 &gt;= 0 Then ...
+  local_38 = %x1 = Label1.Standing
+  local_44 = %x1 = Label1.Standing
+  local_50 = %x1 = Label1.Standing
+  GoTo ...
+  call local_1C(local_1C, (vtable), local_0040F166, local_1C, RGB(CInt((local_58 * 2.5)), CInt((local_40 * 2.5)), Me), local_1C, local_1C, Me, local_1C, (vtable), Me, Me, &quot;And anyone else I foregot.&quot;, local_1C, Me)
+  If (local_18 = &quot;And anyone else I foregot.&quot;) + 1 = 0 Then ...
+  call local_1C(local_1C, (local_18 = &quot;And anyone else I foregot.&quot;), Me, local_1C(local_1C, (vtable), local_0040F166, local_1C, RGB(CInt((local_58 * 2.5)), CInt((local_40 * 2.5)), Me), local_1C, local_1C, Me, local_1C, (vtable), Me, Me, &quot;And anyone else I foregot.&quot;, local_1C, Me), local_18)
+  Timer1.Enabled = False
+  call local_1C(local_1C, local_1C(local_1C, (local_18 = &quot;And anyone else I foregot.&quot;), Me, local_1C(local_1C, (vtable), local_0040F166, local_1C, RGB(CInt((local_58 * 2.5)), CInt((local_40 * 2.5)), Me), local_1C, local_1C, Me, local_1C, (vtable), Me, Me, &quot;And anyone else I foregot.&quot;, local_1C, Me), local_18), Me)
+  Timer2.Enabled = False
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblHandle_Change() <span style="color:#3fb950;font-style:italic">"n/a"</span> <span class="sz">330b</span></summary>
+<pre>Private Sub lblHandle_Change()
+  local_20 = &quot;handle [&quot; &amp; local_18 &amp; local_004052AC
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblLoads_Change() <span style="color:#3fb950;font-style:italic">"0"</span> <span class="sz">355b</span></summary>
+<pre>Private Sub lblLoads_Change()
+  local_24 =  &amp; __vbaStrR8 &amp; local_004052AC
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblOptz_Click() <span style="color:#3fb950;font-style:italic">"optz."</span> <span class="sz">446b</span></summary>
+<pre>Private Sub lblOptz_Click()
+  local_9C = local_28
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblStop_Click() <span style="color:#3fb950;font-style:italic">"[stop]"</span> <span class="sz">1.5KB → calls: SetText</span></summary>
+<pre>Private Sub lblStop_Click()
+  If Me.Reset &lt;&gt; local_FFFFFF Then ...
+  local_18 = &quot;&lt;/u&gt;&lt;/i&gt;&lt;font color=#000000&gt;&lt;font face=&quot;&quot;Arial Narrow&quot;&quot;&gt;&lt;sup&gt;�&lt;/sup&gt;�-&lt;sub&gt;�&lt;/sub&gt; &lt; a href=www.anexsoft.com&gt;&lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;A&lt;/b&gt;&lt;font color=#666666&gt;nex Bust&lt;/a&gt; &lt;font color=#000000&gt;� &lt;b&gt;B&lt;/b&gt;&lt;font color=#666666&gt;y &lt;font color=#000000&gt;&lt;b&gt;V&lt;/b&gt;&lt;font color=#666666&gt;iper&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_0_40C2D0">SetText</span>(local_18, local_3C, &quot;[stop]&quot;)
+  call Proc_40D770(0.6, local_3C, (vtable))
+  local_20 = txtRoom.Text
+  local_1C = &quot;&lt;/u&gt;&lt;/i&gt;&lt;font color=#000000&gt;&lt;font face=&quot;&quot;Arial Narrow&quot;&quot;&gt;&lt;sup&gt;�&lt;/sup&gt;�-&lt;sub&gt;�&lt;/sub&gt; &lt;font color=#000000&gt;&lt;/u&gt;&lt;/i&gt;&lt;b&gt;&quot; &amp; local_18
+  local_30 = local_1C &amp; &quot;&lt;/b&gt; � &lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;S&lt;/b&gt;&lt;font color=#666666&gt;topped &lt;font color=#000000&gt;[&lt;b&gt;&quot; &amp; local_20 &amp; &quot;&lt;/b&gt;] � &lt;b&gt;T&lt;/b&gt;&lt;font color=#666666&gt;ries &lt;font color=#000000&gt;[&lt;b&gt;&quot;
+  call <span style="color:#d2a8ff" title="Proc_2_0_40C2D0">SetText</span>(local_30 &amp; local_2C &amp; &quot;&lt;/b&gt;]&quot;, local_00410034, local_2C)
+  txtRoom.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblTries_Change() <span style="color:#3fb950;font-style:italic">"0"</span> <span class="sz">580b</span></summary>
+<pre>Private Sub lblTries_Change()
+  local_38 = local_2C
+  local_20 =  &amp; __vbaStrR8
+  local_24 =  &amp; __vbaStrR8 &amp; local_004052AC
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblttlBusts_Change() <span style="color:#3fb950;font-style:italic">"0"</span> <span class="sz">583b</span></summary>
+<pre>Private Sub lblttlBusts_Change()
+  local_38 = local_2C
+  local_20 =  &amp; __vbaStrR8
+  local_24 =  &amp; __vbaStrR8 &amp; local_004052AC
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>lblttlTries_Change() <span style="color:#3fb950;font-style:italic">"0"</span> <span class="sz">583b</span></summary>
+<pre>Private Sub lblttlTries_Change()
+  local_38 = local_2C
+  local_20 =  &amp; __vbaStrR8
+  local_24 =  &amp; __vbaStrR8 &amp; local_004052AC
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_about_Click() <span class="sz">671b</span></summary>
+<pre>Private Sub options_about_Click()
+  local_20 = &quot;About Anex Bust -&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;This is just a simple Buster that I made.  Its nothing really special (except the fact that it has a run option which I don&#x27;t see on much busters).  I spent some time on it,  and did put some work into it.  But I guess it was all worth it.  Now I have a pretty fast buster.  I wouldn&#x27;t say its the fastest,  but its pretty fast compaired to some of the ones out today.&quot;
+  local_34 = &quot;Anex Bust&quot;
+  local_5C = local_20 &amp; &quot;vbCrLf&quot; &amp; &quot;-Viper&quot;
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_exit_Click() <span class="sz">338b</span></summary>
+<pre>Private Sub options_exit_Click()
+  Set local_18 = local_00410010
+  var_eax = Global.Unload local_18
+  Set local_18 = Me
+  var_eax = Global.Unload local_18
+  End
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_greets_Click() <span class="sz">248b</span></summary>
+<pre>Private Sub options_greets_Click()
+  frmGreets.Show
+  frmGreets.Timer1.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_help_Click() <span class="sz">967b</span></summary>
+<pre>Private Sub options_help_Click()
+  local_20 = &quot;Anex Bust help -&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;Most of the options on this buster are self-explanatory. If you have the &#x27;style&#x27; set to &#x27;bust&#x27; then the buster will act like a normal buster (it busts into the room).  If you have the style set to &#x27;run&#x27; then the buster will run to the chatroom (Ex. If you tried to run to &#x27;mp3&#x27;,  it would try &#x27;mp3&#x27;,&#x27;mp32&#x27;,&#x27;mp33&#x27;,&#x27;mp34&#x27; etc.)&quot;
+  local_28 = local_20 &amp; &quot;You can change your handle by going to Options&gt;User and clicking on Handle.&quot; &amp; &quot;You can show or hide the status window.&quot;
+  local_2C = local_28 &amp; &quot; Remember that the program will save your settings.  So if you have the style set to &#x27;run&#x27;, it will still be set to &#x27;run&#x27; when you load it up again.&quot;
+  local_40 = &quot;Anex Bust&quot;
+  local_68 = local_2C &amp; &quot;vbCrLf&quot; &amp; &quot;-Viper&quot;
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_stats_handle_Click() <span class="sz">1.1KB → calls: modAnexBust.Proc_2_10</span></summary>
+<pre>Private Sub options_stats_handle_Click()
+  local_4C = local_20
+  local_18 = InputBox(&quot;Enter your handle&quot;, local_44, local_20, local_64, local_74, 10, 10)
+  local_1C = local_18
+  call <span style="color:#d2a8ff" title="Proc_2_10_40D660">modAnexBust.Proc_2_10</span>(local_18, local_24, local_20)
+  VarPtr(local_18) + 1
+  If VarPtr(local_18) + 1 = 0 Then ...
+  GoTo ...
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_status_hide_Click() <span class="sz">470b</span></summary>
+<pre>Private Sub options_status_hide_Click()
+  local_1C = options_status_hide.Checked
+  options_status_show.Checked = False
+  options_status_hide.Checked = True
+  frmStats.Hide
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_status_show_Click() <span class="sz">477b</span></summary>
+<pre>Private Sub options_status_show_Click()
+  local_3C = options_status_show.Checked
+  options_status_hide.Checked = False
+  options_status_show.Checked = True
+  frmStats.Show
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_style_bust_Click() <span class="sz">425b</span></summary>
+<pre>Private Sub options_style_bust_Click()
+  local_1C = options_style_bust.Checked
+  options_style_run.Checked = False
+  options_style_bust.Checked = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>options_style_run_Click() <span class="sz">423b</span></summary>
+<pre>Private Sub options_style_run_Click()
+  local_1C = options_style_run.Checked
+  options_style_bust.Checked = False
+  options_style_run.Checked = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>txtRoom_KeyPress(KeyAscii <span style="color:#3fb950;font-style:italic">"Room to bust"</span> <span class="sz">217b</span></summary>
+<pre>Private Sub txtRoom_KeyPress(KeyAscii As Integer)
+  If KeyAscii &lt;&gt; 13 Then ...
+  var_eax = Call Form1.lblStart_Click
+End Sub</pre>
+</details>
+</details>
+<details><summary><b>Cherry-Picked Code</b> (8 functions cherry-picked)</summary>
+<div style="margin:8px 0 4px;color:#d2a8ff;font-size:0.85em">From <b>dos32.bas</b> (8 functions):</div>
+<details class="fn-item"><summary>GetFromINI() <span class="sz"><span style="color:#3fb950">100%</span> match · 914b</span></summary>
+<pre>Public Function GetFromINI(Section As String, Key As String, Directory As String) As String
+   Dim strBuffer As String
+   strBuffer = String(750, Chr(0))
+   Key$ = LCase$(Key$)
+   GetFromINI$ = Left(strBuffer, GetPrivateProfileString(Section$, ByVal Key$, &quot;&quot;, strBuffer, Len(strBuffer), Directory$))</pre>
+</details>
+<details class="fn-item"><summary>WriteToINI() <span class="sz"><span style="color:#3fb950">100%</span> match · 329b</span></summary>
+<pre>Public Sub WriteToINI(Section As String, Key As String, KeyValue As String, Directory As String)
+    Call WritePrivateProfileString(Section$, UCase$(Key$), KeyValue$, Directory$)</pre>
+</details>
+<details class="fn-item"><summary>FileExists() <span class="sz"><span style="color:#3fb950">100%</span> match · 309b</span></summary>
+<pre>Public Function FileExists(sFileName As String) As Boolean
+    If Len(sFileName$) = 0 Then
+        FileExists = False
+        Exit Function
+    End If
+    If Len(Dir$(sFileName$)) Then
+        FileExists = True
+    Else
+        FileExists = False
+    End If</pre>
+</details>
+<details class="fn-item"><summary>GetText() <span class="sz"><span style="color:#3fb950">100%</span> match · 636b</span></summary>
+<pre>Public Function GetText(WindowHandle As Long) As String
+    Dim buffer As String, TextLength As Long
+    TextLength&amp; = SendMessage(WindowHandle&amp;, WM_GETTEXTLENGTH, 0&amp;, 0&amp;)
+    buffer$ = String(TextLength&amp;, 0&amp;)
+    Call SendMessageByString(WindowHandle&amp;, WM_GETTEXT, TextLength&amp; + 1, buffer$)
+    GetText$ = buffer$</pre>
+</details>
+<details class="fn-item"><summary>FindRoom() <span class="sz"><span style="color:#3fb950">100%</span> match · 2.9KB</span></summary>
+<pre>Public Function FindRoom() As Long
+    Dim AOL As Long, MDI As Long, child As Long
+    Dim Rich As Long, AOLList As Long
+    Dim AOLIcon As Long, AOLStatic As Long
+    AOL&amp; = FindWindow(&quot;AOL Frame25&quot;, vbNullString)
+    MDI&amp; = FindWindowEx(AOL&amp;, 0&amp;, &quot;MDIClient&quot;, vbNullString)
+    child&amp; = FindWindowEx(MDI&amp;, 0&amp;, &quot;AOL Child&quot;, vbNullString)
+    Rich&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;RICHCNTL&quot;, vbNullString)
+    AOLList&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Listbox&quot;, vbNullString)
+    AOLIcon&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Icon&quot;, vbNullString)
+    AOLStatic&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Static&quot;, vbNullString)
+    If Rich&amp; &lt;&gt; 0&amp; And AOLList&amp; &lt;&gt; 0&amp; And AOLIcon&amp; &lt;&gt; 0&amp; And AOLStatic&amp; &lt;&gt; 0&amp; Then
+        FindRoom&amp; = child&amp;
+        Exit Function
+    Else
+        Do
+            child&amp; = FindWindowEx(MDI&amp;, child&amp;, &quot;AOL Child&quot;, vbNullString)
+            Rich&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;RICHCNTL&quot;, vbNullString)
+            AOLList&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Listbox&quot;, vbNullString)
+            AOLIcon&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Icon&quot;, vbNullString)
+            AOLStatic&amp; = FindWindowEx(child&amp;, 0&amp;, &quot;_AOL_Static&quot;, vbNullString)
+            If Rich&amp; &lt;&gt; 0&amp; And AOLList&amp; &lt;&gt; 0&amp; And AOLIcon&amp; &lt;&gt; 0&amp; And AOLStatic&amp; &lt;&gt; 0&amp; Then
+                FindRoom&amp; = child&amp;
+                Exit Function
+            End If
+        Loop Until child&amp; = 0&amp;
+    End If
+    FindRoom&amp; = child&amp;</pre>
+</details>
+<details class="fn-item"><summary>SetText() <span class="sz"><span style="color:#d29922">67%</span> match · 1.8KB</span></summary>
+<pre>Public Sub SetText(Window As Long, Text As String)
+    Call SendMessageByString(Window&amp;, WM_SETTEXT, 0&amp;, Text$)</pre>
+</details>
+<details class="fn-item"><summary>ReplaceString() <span class="sz"><span style="color:#3fb950">100%</span> match · 1.9KB</span></summary>
+<pre>Public Function ReplaceString(MyString As String, ToFind As String, ReplaceWith As String) As String
+    Dim Spot As Long, NewSpot As Long, LeftString As String
+    Dim RightString As String, NewString As String
+    Spot&amp; = InStr(LCase(MyString$), LCase(ToFind))
+    NewSpot&amp; = Spot&amp;
+    Do
+        If NewSpot&amp; &gt; 0&amp; Then
+            LeftString$ = Left(MyString$, NewSpot&amp; - 1)
+            If Spot&amp; + Len(ToFind$) &lt;= Len(MyString$) Then
+                RightString$ = Right(MyString$, Len(MyString$) - NewSpot&amp; - Len(ToFind$) + 1)
+            Else
+                RightString = &quot;&quot;
+            End If
+            NewString$ = LeftString$ &amp; ReplaceWith$ &amp; RightString$
+            MyString$ = NewString$
+        Else
+            NewString$ = MyString$
+        End If
+        Spot&amp; = NewSpot&amp; + Len(ReplaceWith$)
+        If Spot&amp; &gt; 0 Then
+            NewSpot&amp; = InStr(Spot&amp;, LCase(MyString$), LCase(ToFind$))
+        End If
+    Loop Until NewSpot&amp; &lt; 1
+    ReplaceString$ = NewString$</pre>
+</details>
+<details class="fn-item"><summary>IMText() <span class="sz"><span style="color:#3fb950">100%</span> match · 684b</span></summary>
+<pre>Public Function IMText() As String
+    Dim Rich As Long
+    Rich&amp; = FindWindowEx(FindIM&amp;, 0&amp;, &quot;RICHCNTL&quot;, vbNullString)
+    IMText$ = GetText(Rich&amp;)</pre>
+</details>
+</details>
+<details><summary><b>Used modAnexBust.bas Functions</b> (1 called)</summary>
+<details class="fn-item"><summary>modAnexBust.Proc_2_10() <span style="color:#484f58">(Proc_2_10_40D660)</span> <span class="sz">461b</span></summary>
+<pre>Public Sub <span style="color:#d2a8ff" title="Proc_2_10_40D660">modAnexBust.Proc_2_10</span>
+  LCase(Me)
+  local_20 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_2_9_40D360">ReplaceString</span>(Me, local_1C, local_20)
+  call <span style="color:#d2a8ff" title="Proc_2_9_40D360">ReplaceString</span>(Me, local_1C, local_20)
+  GoTo ...
+  If local_4 = 0 Then ...
+  Exit Sub
+End Sub</pre>
+</details>
+</details>
+<h2>&#x2b50; Interesting Strings (22)</h2>
+<span class="s interesting-str">Room to bust</span>
+<span class="s interesting-str">Total Busts: 0</span>
+<span class="s interesting-str">Total Tries: 0</span>
+<span class="s interesting-str">handle [n/a]</span>
+<span class="s interesting-str">ttltries [0]</span>
+<span class="s interesting-str">ttlbusts [0]</span>
+<span class="s interesting-str">[start]</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">&lt;b&gt;A&lt;/b&gt;&lt;font color=#666666&gt;ctivated</span>
+<span class="s interesting-str">&lt;b&gt;D&lt;/b&gt;&lt;font color=#666666&gt;eactivated</span>
+<span class="s interesting-str">\anexbust.dat</span>
+<span class="s interesting-str">Total Busts:</span>
+<span class="s interesting-str">Total Tries:</span>
+<span class="s interesting-str">About Anex Bust -</span>
+<span class="s interesting-str">Anex Bust help -</span>
+<span class="s interesting-str">This is just a simple Buster that I made.  Its nothing really special (except the fact that it has a run option which I don&#x27;t see on much busters).  I spent some time on it,  and did put some work into it.  But I guess it was all worth it.  Now I have a pretty fast buster.  I wouldn&#x27;t say its the fastest,  but its pretty fast compaired to some of the ones out today.</span>
+<span class="s interesting-str">Most of the options on this buster are self-explanatory. If you have the &#x27;style&#x27; set to &#x27;bust&#x27; then the buster will act like a normal buster (it busts into the room).  If you have the style set to &#x27;run&#x27; then the buster will run to the chatroom (Ex. If you tried to run to &#x27;mp3&#x27;,  it would try &#x27;mp3&#x27;,&#x27;mp32&#x27;,&#x27;mp33&#x27;,&#x27;mp34&#x27; etc.)</span>
+<span class="s interesting-str">You can change your handle by going to Options&gt;User and clicking on Handle.</span>
+<span class="s interesting-str">You can show or hide the status window.</span>
+<span class="s interesting-str">Remember that the program will save your settings.  So if you have the style set to &#x27;run&#x27;, it will still be set to &#x27;run&#x27; when you load it up again.</span>
+<span class="s interesting-str">Enter your handle</span>
+<span class="s interesting-str">And anyone else I foregot.</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (43)</summary>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">Tries: 0</span>
+<span class="s plain-str">loads [0]</span>
+<span class="s plain-str">tries [0]</span>
+<span class="s plain-str">show status</span>
+<span class="s plain-str">hide status</span>
+<span class="s plain-str">Anex Bust</span>
+<span class="s plain-str">&lt;b&gt;B&lt;/b&gt;&lt;font color=#666666&gt;y &lt;font color=#000000&gt;&lt;b&gt;V&lt;/b&gt;&lt;font color=#666666&gt;iper &lt;font color=#000000&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;B&lt;/b&gt;&lt;font color=#666666&gt;usting &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">&lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;B&lt;/b&gt;&lt;font color=#666666&gt;usted &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">&lt;b&gt;T&lt;/b&gt;&lt;font color=#666666&gt;ries &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">&lt;b&gt;B&lt;/b&gt;&lt;font color=#666666&gt;y &lt;font color=#000000&gt;&lt;b&gt;V&lt;/b&gt;&lt;font color=#666666&gt;iper</span>
+<span class="s plain-str">&lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;R&lt;/b&gt;&lt;font color=#666666&gt;unning &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">&lt;font color=#000000&gt;&lt;b&gt;R&lt;/b&gt;&lt;font color=#666666&gt;an &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">&lt;font color=#000000&gt;&lt;/u&gt;&lt;b&gt;S&lt;/b&gt;&lt;font color=#666666&gt;topped &lt;font color=#000000&gt;[&lt;b&gt;</span>
+<span class="s plain-str">ScaleWidth</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">AOL Toolbar</span>
+</details>
+<div class="stats">Total unique strings: 370 · Interesting: 22 · Noise filtered: 276</div>
+</div></body></html>

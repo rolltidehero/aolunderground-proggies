@@ -1,0 +1,808 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>pinvoke.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/pinvoke.zip">&#x2b07; Download pinvoke.zip</a>
+</div>
+<div class="hero">
+<div><h1>invoke</h1><span class="author">by <b>silkk</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">invoke.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-12-30</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (3)</h2>
+<span class="s author-str">ph2 - by: oracle &#x27;n kai</span>
+<span class="s author-str">&gt; unloaded by:[</span>
+<span class="s author-str">&gt; loaded by:[</span>
+<h2>&#x1f4e6; Dependencies (7)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">comdlg32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">aolstuff.dll</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (1)</h2>
+<span class="s phishing-str">Enter your screen name and password in sn:pw format</span>
+
+<h2>&#x2699; API References (19)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Image</span></div>
+<div class="api-item"><span class="api-name">_AOL_ComboBox</span></div>
+<div class="api-item"><span class="api-name">_AOL_Child</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (411)</h2>
+<span class="s interesting-str">platinum [invoke] spam</span>
+<span class="s interesting-str">total fails:</span>
+<span class="s interesting-str">email fails:</span>
+<span class="s interesting-str">scroll stats</span>
+<span class="s interesting-str">[member dir]</span>
+<span class="s interesting-str">[lobby]</span>
+<span class="s interesting-str">[who&#x27;s chatting]</span>
+<span class="s interesting-str">[member dir + lobby]</span>
+<span class="s interesting-str">[member  dir + w/c]</span>
+<span class="s interesting-str">[lobby + w/c]</span>
+<span class="s interesting-str">email list section</span>
+<span class="s interesting-str">add email list</span>
+<span class="s interesting-str">clear email list</span>
+<span class="s interesting-str">add keyword list</span>
+<span class="s interesting-str">clear all keywords</span>
+<span class="s interesting-str">subject section</span>
+<span class="s interesting-str">remove subject</span>
+<span class="s interesting-str">clear subjects</span>
+<span class="s interesting-str">spam options <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">list spam options</span>
+<span class="s interesting-str">how many mails per send</span>
+<span class="s interesting-str">member dir options</span>
+<span class="s interesting-str"># of collects before sign off</span>
+<span class="s interesting-str"># of names to grab before sending</span>
+<span class="s interesting-str">lobby options</span>
+<span class="s interesting-str"># of names to collect before send</span>
+<span class="s interesting-str">kill from name</span>
+<span class="s interesting-str">handle [newbie]</span>
+<span class="s interesting-str">C:\WINDOWS\SYSTEM\MSWINSCK.oca</span>
+<span class="s interesting-str">C*\AC:\mystuff\stuff\invoke.vbp</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Sorry, we are temporarily unable to send mail.  Please try again in a few minutes.</span>
+<span class="s interesting-str">Sorry, we are temporarily unable to send email.  Please try again in a few minutes.</span>
+<span class="s interesting-str">No profiles were found that match what you entered.</span>
+<span class="s interesting-str">Unable to Send Mail</span>
+<span class="s interesting-str">s is not a known member.</span>
+<span class="s interesting-str">is is not a known member.</span>
+<span class="s interesting-str">his is not a known member.</span>
+<span class="s interesting-str">This is not a known member.</span>
+<span class="s interesting-str">This member is currently not accepting e-mail from your account.</span>
+<span class="s interesting-str">This member&#x27;s mailbox is full.</span>
+<span class="s interesting-str">This member is currently not accepting email.</span>
+<span class="s interesting-str">Unable to send to</span>
+<span class="s interesting-str">A request to the host</span>
+<span class="s interesting-str">Your mail has been sent.</span>
+<span class="s interesting-str">Your email has been sent.</span>
+<span class="s interesting-str">There must be at least one addressee.</span>
+<span class="s interesting-str">Sorry, we are unable to send mail.  Please try again later.</span>
+<span class="s interesting-str">Member Directory</span>
+<span class="s interesting-str">Member Directory Search Results</span>
+<span class="s interesting-str">Invoke Database Record</span>
+<span class="s interesting-str">\platinum.ini</span>
+<span class="s interesting-str">signon pause</span>
+<span class="s interesting-str">The Connection Failed</span>
+<span class="s interesting-str">an error has occured.. make sure</span>
+<span class="s interesting-str">that you are connected to your tcp,</span>
+<span class="s interesting-str">there aren&#x27;t any busy signals, etc..</span>
+<span class="s interesting-str">Goodbye from America Online!</span>
+<span class="s interesting-str">Keywords Found</span>
+<span class="s interesting-str">Incorrect name and/or password, please re-enter</span>
+<span class="s interesting-str">Security Code</span>
+<span class="s interesting-str">not currently active.</span>
+<span class="s interesting-str">Invalid account</span>
+<span class="s interesting-str">account is not currently</span>
+<span class="s interesting-str">login process did not complete</span>
+<span class="s interesting-str">Your account is signed on using</span>
+<span class="s interesting-str">and/or password,</span>
+<span class="s interesting-str">account has been cancelled.</span>
+<span class="s interesting-str">now searching directory for [</span>
+<span class="s interesting-str">mem dir fatal error - hol&#x27; up ho</span>
+<span class="s interesting-str">fucking error gayness = hol&#x27; up</span>
+<span class="s interesting-str">no matches were found :[</span>
+<span class="s interesting-str">gathering names...</span>
+<span class="s interesting-str">adding the list</span>
+<span class="s interesting-str">Buddy List Window</span>
+<span class="s interesting-str">Invalid character</span>
+<span class="s interesting-str">s&amp;witch screen name</span>
+<span class="s interesting-str">AOL Instant Messenger (SM)</span>
+<span class="s interesting-str">AOL Instant Messenger (TM) Error</span>
+<span class="s interesting-str">Software Upgrade Recommended</span>
+<span class="s interesting-str">&amp;What&#x27;s New in AOL 5.0</span>
+<span class="s interesting-str">you requested is full</span>
+<span class="s interesting-str">name is not allowed</span>
+<span class="s interesting-str">Change Your Password</span>
+<span class="s interesting-str">Change Password</span>
+<span class="s interesting-str">specify current password.</span>
+<span class="s interesting-str">is identical to your old password</span>
+<span class="s interesting-str">password has been changed</span>
+<span class="s interesting-str">&lt;font color=#</span>
+<span class="s interesting-str">General Preferences</span>
+<span class="s interesting-str">Enable chat room sounds</span>
+<span class="s interesting-str">&amp;Sign On Screen</span>
+<span class="s interesting-str">stop cd wait</span>
+<span class="s interesting-str">open cdaudio alias cd wait shareable</span>
+<span class="s interesting-str">set cd door open</span>
+<span class="s interesting-str">set cd door closed</span>
+<span class="s interesting-str">status cd length wait</span>
+<span class="s interesting-str">status cd length track</span>
+<span class="s interesting-str">status cd position</span>
+<span class="s interesting-str">status cd mode</span>
+<span class="s interesting-str">set cd time format tmsf wait</span>
+<span class="s interesting-str">not a known member</span>
+<span class="s interesting-str">come check out the computing area!</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">incoming text</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">not currently signed on</span>
+<span class="s interesting-str">is online and able to receive Instant Messages</span>
+<span class="s interesting-str">cannot currently receive Instant Messages</span>
+<span class="s interesting-str">send an instant message</span>
+<span class="s interesting-str">viewing commands</span>
+<span class="s interesting-str">chat commands</span>
+<span class="s interesting-str">turns ims off.</span>
+<span class="s interesting-str">turns ims on.</span>
+<span class="s interesting-str">im sn, message -</span>
+<span class="s interesting-str">ims sn w/ message.</span>
+<span class="s interesting-str">punts 2.5 sn&#x27;s only.</span>
+<span class="s interesting-str">adds sn to punt list.</span>
+<span class="s interesting-str">remove sn from punt list.</span>
+<span class="s interesting-str">scrolls punt list.</span>
+<span class="s interesting-str">brags # punted.</span>
+<span class="s interesting-str">[screen names]</span>
+<span class="s interesting-str">checkims sn -</span>
+<span class="s interesting-str">checks ims of sn.</span>
+<span class="s interesting-str">scrolls where sn is.</span>
+<span class="s interesting-str">profile sn -</span>
+<span class="s interesting-str">scrolls sn&#x27;s profile.</span>
+<span class="s interesting-str">checks if sn is alive.</span>
+<span class="s interesting-str">[ghost]</span>
+<span class="s interesting-str">turns ghost on.</span>
+<span class="s interesting-str">turns ghost off.</span>
+<span class="s interesting-str">[ignore]</span>
+<span class="s interesting-str">x screenname -</span>
+<span class="s interesting-str">[program]</span>
+<span class="s interesting-str">unx screenname -</span>
+<span class="s interesting-str">unignores sn.</span>
+<span class="s interesting-str">[enter room]</span>
+<span class="s interesting-str">pr privateroom -</span>
+<span class="s interesting-str">tries to enter pr.</span>
+<span class="s interesting-str">bust privateroom -</span>
+<span class="s interesting-str">tries to bust pr.</span>
+<span class="s interesting-str">[account]</span>
+<span class="s interesting-str">checks if user is oh.</span>
+<span class="s interesting-str">check if user is master or sub.</span>
+<span class="s interesting-str">[sign on/off]</span>
+<span class="s interesting-str">signs off aol.</span>
+<span class="s interesting-str">signs on sn as guest.</span>
+<span class="s interesting-str">signs on sn temp.</span>
+<span class="s interesting-str">signs on sn quickly.</span>
+<span class="s interesting-str">[trigger]</span>
+<span class="s interesting-str">trigger newtrigger -</span>
+<span class="s interesting-str">sets new trigger.</span>
+<span class="s interesting-str">shows current trigger.</span>
+<span class="s interesting-str">turns on hacker mode.</span>
+<span class="s interesting-str">turns on elite mode.</span>
+<span class="s interesting-str">turns on lcase mode.</span>
+<span class="s interesting-str">turns on ucase mode.</span>
+<span class="s interesting-str">turns on oh mode.</span>
+<span class="s interesting-str">turn on silent mode.</span>
+<span class="s interesting-str">turn on normal mode.</span>
+<span class="s interesting-str">brags type..</span>
+<span class="s interesting-str">[elite, exploit, 3chr, etc..]</span>
+<span class="s interesting-str">checks if c-com is active.</span>
+<span class="s interesting-str">sets new ascii.</span>
+<span class="s interesting-str">sets 6 digit ascii color.</span>
+<span class="s interesting-str">sets 6 digit text color.</span>
+<span class="s interesting-str">scrolls current user</span>
+<span class="s interesting-str">advertises ph2.</span>
+<span class="s interesting-str">AOL Screen Names</span>
+<span class="s interesting-str">Create A Screen Name</span>
+<span class="s interesting-str">America Online Error</span>
+<span class="s interesting-str">You cannot delete a protected item.</span>
+<span class="s interesting-str">Step 2 of 4: Choose a password</span>
+<span class="s interesting-str">Step 3 of 4: Select a Parental Controls setting</span>
+<span class="s interesting-str">Master Screen Name status?</span>
+<span class="s interesting-str">Your New Screen Name <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">is already on record</span>
+<span class="s interesting-str">Cancel Registration</span>
+<span class="s interesting-str">ph2 dupe kill</span>
+<span class="s interesting-str">status: [dupe killing]</span>
+<span class="s interesting-str">dupe killed: 0%</span>
+<span class="s interesting-str">dupe killed:</span>
+<span class="s interesting-str">status: [done]</span>
+<span class="s interesting-str">dupe killed: 100%</span>
+<span class="s interesting-str">] dupes were removed.</span>
+<span class="s interesting-str">Enable event sounds</span>
+<span class="s interesting-str">are you sure you want to cancel your registration?</span>
+<span class="s interesting-str">thanks for trying!</span>
+<span class="s interesting-str">oracle n kai</span>
+<span class="s interesting-str">AIM password</span>
+<span class="s interesting-str">Other Billing Methods</span>
+<span class="s interesting-str">failed authorization</span>
+<span class="s interesting-str">payment method</span>
+<span class="s interesting-str">welcome to america online</span>
+<span class="s interesting-str">your aol instant messenger screen name</span>
+<span class="s interesting-str">registration information</span>
+<span class="s interesting-str">how your aol membership works</span>
+<span class="s interesting-str">billing method</span>
+<span class="s interesting-str">billing information</span>
+<span class="s interesting-str">conditions of aol membership</span>
+<span class="s interesting-str">getting to know america online</span>
+<span class="s interesting-str">Edit Stored Passwords</span>
+<span class="s interesting-str">[no pw&#x27;s were stored]</span>
+<span class="s interesting-str">[Stored]</span>
+<span class="s interesting-str">Store Passwords</span>
+<span class="s interesting-str">Create Your America Online Account Now</span>
+<span class="s interesting-str">Your AOL Instant Messenger Screen Name</span>
+<span class="s interesting-str">Member Information</span>
+<span class="s interesting-str">How Your AOL Membership Works</span>
+<span class="s interesting-str">Choose a Billing Method</span>
+<span class="s interesting-str">Billing Information</span>
+<span class="s interesting-str">Welcome to People Connection</span>
+<span class="s interesting-str">conditions of</span>
+<span class="s interesting-str">bait received: [</span>
+<span class="s interesting-str">Are You Sure You Want to Cancel</span>
+<span class="s interesting-str">Thanks for Trying!</span>
+<span class="s interesting-str">AOL Quick Checkout</span>
+<span class="s interesting-str">Step 1 of 4: Choose a Screen Name</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Step 1 of 4: Choose Another Screen Name</span>
+<span class="s interesting-str">Guest Sign-On</span>
+<span class="s interesting-str">official aol internet guide</span>
+<span class="s interesting-str">the official aol internet guide</span>
+<span class="s interesting-str">Invalid password, please re-enter:</span>
+<span class="s interesting-str">Locate Member Online</span>
+<span class="s interesting-str">Compose Mail</span>
+<span class="s interesting-str">Goodbye From America Online!</span>
+<span class="s interesting-str">the official aol tour guide</span>
+<span class="s interesting-str">File transfer complete</span>
+<span class="s interesting-str">File transfer complete.</span>
+<span class="s interesting-str">File Transfer</span>
+<span class="s interesting-str">verify your billing</span>
+<span class="s interesting-str">Welcome to AOL</span>
+<span class="s interesting-str">Welcome to AOL!</span>
+<span class="s interesting-str">Privacy Preferences</span>
+<span class="s interesting-str">Block all AOL members and AOL Instant Messenger users</span>
+<span class="s interesting-str">Connect Error</span>
+<span class="s interesting-str">SecurID Code</span>
+<span class="s interesting-str">not currently active</span>
+<span class="s interesting-str">name and/or password</span>
+<span class="s interesting-str">per account can be online</span>
+<span class="s interesting-str">account has been cancelled</span>
+<span class="s interesting-str">Screen Name Not Found.</span>
+<span class="s interesting-str">currently signed on</span>
+<span class="s interesting-str">yesno msgbox</span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">- offline or ghosting</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">re enter scroll</span>
+<span class="s interesting-str">you have no sn&#x27;s to run a mass alive on.</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">get a member&#x27;s profile</span>
+<span class="s interesting-str">Edit Your Online Profile</span>
+<span class="s interesting-str">member directory</span>
+<span class="s interesting-str">This account is not currently active</span>
+<span class="s interesting-str">You have been disconnected from America Online</span>
+<span class="s interesting-str">This account has been suspended</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">edit go to menu</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Password Store Information Box</span>
+<span class="s interesting-str">Invalid password</span>
+<span class="s interesting-str">Your connection to AOL has been lost</span>
+<span class="s interesting-str">switch scree&amp;n</span>
+<span class="s interesting-str">Switch Screen Names</span>
+<span class="s interesting-str">Switch Screen Name</span>
+<span class="s interesting-str">Switch Screen Name Password</span>
+<span class="s interesting-str">Incoming Text</span>
+<span class="s interesting-str">Who&#x27;s Chatting</span>
+<span class="s interesting-str">requests too quickly.</span>
+<span class="s interesting-str">get some &lt;&gt;&lt; biatch!</span>
+<span class="s interesting-str">no &lt;&gt;&lt; retard.</span>
+<span class="s interesting-str">Scrolling all</span>
+<span class="s interesting-str">Scrolled all</span>
+<span class="s interesting-str">Scrolling string:</span>
+<span class="s interesting-str">Scrolled string:</span>
+<span class="s interesting-str">Scrolling number:</span>
+<span class="s interesting-str">Scrolled number:</span>
+<span class="s interesting-str">enter the new sn you want to use:</span>
+<span class="s interesting-str">edit account</span>
+<span class="s interesting-str">enter the new pw you want to use:</span>
+<span class="s interesting-str">screen name:</span>
+<span class="s interesting-str">length of sn:</span>
+<span class="s interesting-str">length of pw:</span>
+<span class="s interesting-str">valid sn length:</span>
+<span class="s interesting-str">valid pw length:</span>
+<span class="s interesting-str">ph2 phish info</span>
+<span class="s interesting-str">is not online.</span>
+<span class="s interesting-str">is currently signed on.</span>
+<span class="s interesting-str">ph2 online check</span>
+<span class="s interesting-str">is not an active aol account.</span>
+<span class="s interesting-str">is a currently active aol account.</span>
+<span class="s interesting-str">ph2 alive check</span>
+<span class="s interesting-str">Mass Alive Activated</span>
+<span class="s interesting-str">ph2 mass alive</span>
+<span class="s interesting-str">status: [mass alive]</span>
+<span class="s interesting-str">complete: 0%</span>
+<span class="s interesting-str">Mass Alive Complete</span>
+<span class="s interesting-str">complete: 100%</span>
+<span class="s interesting-str">S/O All Activated</span>
+<span class="s interesting-str">ph2 signon all</span>
+<span class="s interesting-str">status: [signon all]</span>
+<span class="s interesting-str">S/O All Complete</span>
+<span class="s interesting-str">] = overhead account</span>
+<span class="s interesting-str">foriegn check</span>
+<span class="s interesting-str">= foriegn account</span>
+<span class="s interesting-str">none of those accounts were overhead&#x27;s.</span>
+<span class="s interesting-str">enter the tank you want to move &#x27;</span>
+<span class="s interesting-str">ph2 phish mover</span>
+<span class="s interesting-str">tank not found.</span>
+<span class="s interesting-str">possible tanks:</span>
+<span class="s interesting-str">&#x27; has been moved to the &#x27;</span>
+<span class="s interesting-str">Account Switch</span>
+<span class="s interesting-str">New Fastest Signon Time</span>
+<span class="s interesting-str">confirm signon</span>
+<span class="s interesting-str">new fastest signon time!</span>
+<span class="s interesting-str">new signon time</span>
+<span class="s interesting-str">signon successful.</span>
+<span class="s interesting-str">minimize welcome</span>
+<span class="s interesting-str">] is an over head account</span>
+<span class="s interesting-str">] is not an overhead account</span>
+<span class="s interesting-str">ph2 signon log</span>
+<span class="s interesting-str">has an invalid password.</span>
+<span class="s interesting-str">remove if dead</span>
+<span class="s interesting-str">the account: [</span>
+<span class="s interesting-str">] is currently signed on.</span>
+<span class="s interesting-str">is a dead or invalid account.</span>
+<span class="s interesting-str">is an internal account.</span>
+<span class="s interesting-str">] elite accounts</span>
+<span class="s interesting-str">] exploited accounts</span>
+<span class="s interesting-str">] 3chr accounts</span>
+<span class="s interesting-str">] lcase accounts</span>
+<span class="s interesting-str">] aim accounts</span>
+<span class="s interesting-str">] host accounts</span>
+<span class="s interesting-str">] empowered accounts</span>
+<span class="s interesting-str">] guide accounts</span>
+<span class="s interesting-str">] jacked accounts</span>
+<span class="s interesting-str">] master accounts</span>
+<span class="s interesting-str">] sub accounts</span>
+<span class="s interesting-str">] unknown accounts</span>
+<span class="s interesting-str">] foriegn accounts</span>
+<span class="s interesting-str">\invoke-subject.txt</span>
+<span class="s interesting-str">add a subject</span>
+<span class="s interesting-str">\invoke.ini</span>
+<span class="s interesting-str">enter a subject to have added to the spammer</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#166388&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&gt; platinum[invoke]spam <span style="color:#484f58;font-size:0.75em">×8</span></span>
+<span class="s interesting-str">&gt; auto-spam [m-dir + lobby](3-chr)</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#1782999&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">brb grabbin a lobby...</span>
+<span class="s interesting-str">back from lobby ,`;o)</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#008000&gt;</span>
+<span class="s interesting-str">back up account</span>
+<span class="s interesting-str">font ptsize=1&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#976aaa&gt; platinum[invoke]spam</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#129dda&gt; platinum[invoke]spam</span>
+<span class="s interesting-str">back to work ,`;o)</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#a66388&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&gt; auto-spam [m-dir + lobby](kwlist)</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#90f000&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&gt; auto-spam [member dir](3-chr)</span>
+<span class="s interesting-str">Select a File</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#q0f000&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&gt; auto-spam [member dir](kwlist)</span>
+<span class="s interesting-str">Text Files (*.txt)</span>
+<span class="s interesting-str">List Files (*.lst)</span>
+<span class="s interesting-str">All Files (*.*)</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#293bbb&gt; <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">] | total sent: (</span>
+<span class="s interesting-str">&gt; get the latest realese [-&gt;&lt; a href= <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&gt; here &lt;/a&gt;&lt;font face=&quot;Tahoma&quot; color=#293bbb&gt;&lt;-]</span>
+<span class="s interesting-str">Platinum Spam INC AGREEMENT</span>
+<span class="s interesting-str">who might you be?</span>
+<span class="s interesting-str">By clicking OK you agree that you do not work for America Online or any of their affiliates, nor do you work for any government agency, and that you understand this program is for educational purposes only and should not be used for illegal activities.  Also, you agree that anything you do with this program is your own fault and the maker will not be held responsible for anything good or bad you accomplish with it.  If you agree to all these terms click OK to load the program.</span>
+<span class="s interesting-str">\invoke-mailbody.txt</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#zdccd8&gt; <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#666aaa&gt;platinum[invoke]spam</span>
+<span class="s interesting-str">&gt;here&lt;/a&gt;&lt;font face=&quot;Tahoma&quot; color=#zdccd8&gt;&lt;-]</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#129dda&gt;just letting everyone know right now! That I</span>
+<span class="s interesting-str">hey you newbie fuck! Dont ever try to snoop around my progs trying to unlatch the ultimate mode which collects from member dir - w/c - lobby !!... just for that.........</span>
+<span class="s interesting-str">silkk ownz yer soul</span>
+<span class="s interesting-str">Is comming out of the closet!!</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#129dda&gt;I swear to God I have been GAY my whole life and I molest sheeps as their fur coat is warm</span>
+<span class="s interesting-str">Enter your new handle</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#666aaa&gt;</span>
+<span class="s interesting-str">is list-spamming (</span>
+<span class="s interesting-str">Hey BITCH!@!@!....... YOU AINT SLICK!!</span>
+<span class="s interesting-str">enter an amount of names you want it to grab from the lobby&#x27;s before sending mail</span>
+<span class="s interesting-str">enter your new amount</span>
+<span class="s interesting-str">comming soon!</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#10f000&gt;platinum[invoke]spam</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#10f000&gt;</span>
+<span class="s interesting-str">is auto-spamming [lobby]</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#10f000&gt;BBL folks! time to make that $$$</span>
+<span class="s interesting-str">You&#x27;ve changed chat rooms too quickly.  Please reduce the rate at which you change chat rooms.</span>
+<span class="s interesting-str">how many emails to mail per send?</span>
+<span class="s interesting-str">enter an amount of names to grab from the member directory before it mails</span>
+<span class="s interesting-str">The only thing you need to basicly have and do is M-A-0-L 5.o and set your mail prefrences. To do that you must click on My A0L Icon on the tool bar then from there click on Prefrences.. then mail.. then just uncheck the first 2 boxes... After that you should be set!</span>
+<span class="s interesting-str">If you have any further questions/comments/suggestions then email me at silkks@tupac.com</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#999bbb&gt; <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&gt; total sent: (</span>
+<span class="s interesting-str">) | total failed:[</span>
+<span class="s interesting-str">&gt; here &lt;/a&gt;&lt;font face=&quot;Tahoma&quot; color=#999bbb&gt;&lt;-]</span>
+<span class="s interesting-str">enter an amount of searches from the member directory you want before it signs off then back on (to avoid member dir lag and #6767 error)</span>
+<span class="s interesting-str">Which private room do you want the spammer to goto while spamming?</span>
+<span class="s interesting-str">enter your room!</span>
+<span class="s interesting-str">&lt;font face=&quot;Tahoma&quot; color=#228aff&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">platinum[invoke]spam testing.....</span>
+<span class="s interesting-str">YES BITCH IT WORKS! NOW GET TO WORK!</span>
+<span class="s interesting-str">Town Square -</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (254)</summary>
+<span class="s plain-str">f\stuff</span>
+<span class="s plain-str">Winsock3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MSWinsockLib.Winsock <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Winsock2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Winsock1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CommonDialog1</span>
+<span class="s plain-str">MSComDlg.CommonDialog <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">add name</span>
+<span class="s plain-str">log off/on:</span>
+<span class="s plain-str">loaded:</span>
+<span class="s plain-str">member:</span>
+<span class="s plain-str">subjex:</span>
+<span class="s plain-str">keywords:</span>
+<span class="s plain-str">overall:</span>
+<span class="s plain-str">emails:</span>
+<span class="s plain-str">NEWBIES READ!!!!!!!!!!!</span>
+<span class="s plain-str">auto-spam</span>
+<span class="s plain-str">whoschattingspam <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">test email</span>
+<span class="s plain-str">emaillistsection <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">add subject</span>
+<span class="s plain-str">memberdiroptions <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">numberofcollects <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">membercollectamount <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">lobbycollectamount <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">aol account</span>
+<span class="s plain-str">sign on</span>
+<span class="s plain-str">spam room</span>
+<span class="s plain-str">Winsock</span>
+<span class="s plain-str">CommonDialog</span>
+<span class="s plain-str">AOLChangeList</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">mciGetErrorStringA</span>
+<span class="s plain-str">SetCapture</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WindowFromPoint</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">SetForegroundWindow</span>
+<span class="s plain-str">PlaySoundA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetOpenFileNameA</span>
+<span class="s plain-str">GetSaveFileNameA</span>
+<span class="s plain-str">TerminateProcess</span>
+<span class="s plain-str">Process32First</span>
+<span class="s plain-str">Process32Next</span>
+<span class="s plain-str">CreateToolhelp32Snapshot</span>
+<span class="s plain-str">MSWinsockLib</span>
+<span class="s plain-str">TheList2</span>
+<span class="s plain-str">OnlineMem</span>
+<span class="s plain-str">2c49f800-c2dd-11cf-9ad6-0080c7e7b78d</span>
+<span class="s plain-str">28C4C820-401A-101B-A3C9-08002B2F49FB</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">Caption</span>
+<span class="s plain-str">platinum[cgi]spam</span>
+<span class="s plain-str">&lt; a href=</span>
+<span class="s plain-str">ListIndex</span>
+<span class="s plain-str">Enabled</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Sign On</span>
+<span class="s plain-str">|online:</span>
+<span class="s plain-str">IMClass</span>
+<span class="s plain-str">RICHEDIT</span>
+<span class="s plain-str">aol://4950:0000010000|</span>
+<span class="s plain-str">colec_Click</span>
+<span class="s plain-str">abcdefghijklmnopqrstuvwxyz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">already in</span>
+<span class="s plain-str">too short</span>
+<span class="s plain-str">not given</span>
+<span class="s plain-str">Untitled</span>
+<span class="s plain-str">_Oscar_Tree</span>
+<span class="s plain-str">WndAte32Class</span>
+<span class="s plain-str">AIM_ChatWnd</span>
+<span class="s plain-str">Chat Room:</span>
+<span class="s plain-str">_Oscar_BuddyListWin</span>
+<span class="s plain-str">ComboBox</span>
+<span class="s plain-str">&amp;LOGGING...</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">Attachments</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">Entered <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Password</span>
+<span class="s plain-str">ascii color</span>
+<span class="s plain-str">text color</span>
+<span class="s plain-str">pig latin</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">nvalid c</span>
+<span class="s plain-str">play cd</span>
+<span class="s plain-str">seek cd To</span>
+<span class="s plain-str">pause cd</span>
+<span class="s plain-str">close all</span>
+<span class="s plain-str">check alive</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Available?</span>
+<span class="s plain-str">AOL Hotline</span>
+<span class="s plain-str">imsoff -</span>
+<span class="s plain-str">imson -</span>
+<span class="s plain-str">remove sn -</span>
+<span class="s plain-str">brag -</span>
+<span class="s plain-str">Invalid.</span>
+<span class="s plain-str">locate sn -</span>
+<span class="s plain-str">alive sn -</span>
+<span class="s plain-str">ghost on -</span>
+<span class="s plain-str">ghost off -</span>
+<span class="s plain-str">ignores sn.</span>
+<span class="s plain-str">master? -</span>
+<span class="s plain-str">signoff -</span>
+<span class="s plain-str">signon sn -</span>
+<span class="s plain-str">temp sn -</span>
+<span class="s plain-str">quick sn -</span>
+<span class="s plain-str">trigger? -</span>
+<span class="s plain-str">hacker -</span>
+<span class="s plain-str">elite -</span>
+<span class="s plain-str">lcase -</span>
+<span class="s plain-str">ucase -</span>
+<span class="s plain-str">overhead -</span>
+<span class="s plain-str">silent -</span>
+<span class="s plain-str">normal -</span>
+<span class="s plain-str">brag type -</span>
+<span class="s plain-str">ascii -</span>
+<span class="s plain-str">acolor -</span>
+<span class="s plain-str">tcolor -</span>
+<span class="s plain-str">user -</span>
+<span class="s plain-str">exit ph2 -</span>
+<span class="s plain-str">exits ph2.</span>
+<span class="s plain-str">Finished</span>
+<span class="s plain-str">new user</span>
+<span class="s plain-str">Next &gt;</span>
+<span class="s plain-str">WindowState</span>
+<span class="s plain-str">dupeBar</span>
+<span class="s plain-str">Refresh</span>
+<span class="s plain-str">Invalid</span>
+<span class="s plain-str">Can&#x27;t Enter</span>
+<span class="s plain-str">Banned.</span>
+<span class="s plain-str">are cool</span>
+<span class="s plain-str">New Local#</span>
+<span class="s plain-str">Find a Chat</span>
+<span class="s plain-str">Screenname</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">&#x27;s Buddy L</span>
+<span class="s plain-str">Edit List</span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">1234567890abcdefghijklmnopqrstuvwxyz</span>
+<span class="s plain-str">ComboLBox</span>
+<span class="s plain-str">Ignored:</span>
+<span class="s plain-str">Un-Ignored:</span>
+<span class="s plain-str">aol://9293:$IM_OFF</span>
+<span class="s plain-str">aol://9293:$IM_ON</span>
+<span class="s plain-str">Buddy Chat</span>
+<span class="s plain-str">aol://3548:</span>
+<span class="s plain-str">mass alive</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Main Menu</span>
+<span class="s plain-str">TotalTime</span>
+<span class="s plain-str">GetWaveLengthSecs</span>
+<span class="s plain-str">&amp;Sign off</span>
+<span class="s plain-str">Sign Off</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;</span>
+<span class="s plain-str">Scrolling</span>
+<span class="s plain-str">password:</span>
+<span class="s plain-str">empowered?:</span>
+<span class="s plain-str">Mass Alive</span>
+<span class="s plain-str">complete:</span>
+<span class="s plain-str">mnuSOTag</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">ph2 s/o all</span>
+<span class="s plain-str">lst3ChrSN</span>
+<span class="s plain-str">lst3ChrPW</span>
+<span class="s plain-str">&#x27;elite&#x27;</span>
+<span class="s plain-str">&#x27;exploit&#x27;</span>
+<span class="s plain-str">&#x27;lcase&#x27;</span>
+<span class="s plain-str">&#x27;jacked&#x27;</span>
+<span class="s plain-str">&#x27;master&#x27;</span>
+<span class="s plain-str">&#x27;unknown&#x27;</span>
+<span class="s plain-str">&#x27;foriegn&#x27;</span>
+<span class="s plain-str">&#x27;guide&#x27;</span>
+<span class="s plain-str">Returned</span>
+<span class="s plain-str">aol://2719:3-2214-</span>
+<span class="s plain-str">Old: none</span>
+<span class="s plain-str">old: none</span>
+<span class="s plain-str">method:</span>
+<span class="s plain-str">mnuSOOhCheck</span>
+<span class="s plain-str">mnuSOIMsOff</span>
+<span class="s plain-str">mnuSOChangePW</span>
+<span class="s plain-str">mnuSOGhostOn</span>
+<span class="s plain-str">screenname:</span>
+<span class="s plain-str">mnuTankAIM</span>
+<span class="s plain-str">mnuTankCC</span>
+<span class="s plain-str">mnuTankEmp</span>
+<span class="s plain-str">mnuTankForiegn</span>
+<span class="s plain-str">mnuTankGuide</span>
+<span class="s plain-str">mnuTankHost</span>
+<span class="s plain-str">mnuTankInfo</span>
+<span class="s plain-str">mnuTankJacked</span>
+<span class="s plain-str">mnuTankMaster</span>
+<span class="s plain-str">mnuTankSub</span>
+<span class="s plain-str">mnuTankUnknown</span>
+<span class="s plain-str">frame3Chr</span>
+<span class="s plain-str">Visible</span>
+<span class="s plain-str">frameAIM</span>
+<span class="s plain-str">frameBuster</span>
+<span class="s plain-str">frameElite</span>
+<span class="s plain-str">frameEmp</span>
+<span class="s plain-str">frameExploit</span>
+<span class="s plain-str">frameForiegn</span>
+<span class="s plain-str">frameGuide</span>
+<span class="s plain-str">frameHost</span>
+<span class="s plain-str">frameIcase</span>
+<span class="s plain-str">frameJacked</span>
+<span class="s plain-str">frameMaster</span>
+<span class="s plain-str">frameSub</span>
+<span class="s plain-str">frameUnknown</span>
+<span class="s plain-str">zhxmnnTsjbdouwlfiH6japcqe</span>
+<span class="s plain-str">&gt; p.[i].s <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">sent: [-&gt;&lt; a href=</span>
+<span class="s plain-str">aol://4950:0000010000||all:</span>
+<span class="s plain-str">) emails</span>
+<span class="s plain-str">{s goodbye}</span>
+<span class="s plain-str">lobby&#x27;s</span>
+<span class="s plain-str">platinum[invoke]spam</span>
+<span class="s plain-str">Ratelimits</span>
+<span class="s plain-str">] | loaded:[</span>
+<span class="s plain-str">] times</span>
+<span class="s plain-str">PlatinumSpam</span>
+<span class="s plain-str">| stopped</span>
+</details>
+<div class="stats">Total unique strings: 1301 · Interesting: 411 · Noise filtered: 606</div>
+</div></body></html>

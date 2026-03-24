@@ -1,0 +1,840 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>solar.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/solar.zip">&#x2b07; Download solar.zip</a>
+</div>
+<div class="hero">
+<div><h1>solar</h1><span class="author">by <b>kryo</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">solar.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-01-12</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (6)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">MP3PLAY.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (188)</h2>
+<span class="s interesting-str">solar winds cchat</span>
+<span class="s interesting-str">C:\MICROSOFT VISUAL STUDIO\VISUAL BASIC 6.O\VB6.OLB</span>
+<span class="s interesting-str">C:\MP3PLAY\ACTIVEX\MP3PLAY.oca</span>
+<span class="s interesting-str">cancel multi</span>
+<span class="s interesting-str">input handle <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">zonk mp3 player | fonts</span>
+<span class="s interesting-str">Times New Roman% <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Times New RomanD <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">double click to play</span>
+<span class="s interesting-str">zonk file renamer</span>
+<span class="s interesting-str">solar winds   |   file renamer</span>
+<span class="s interesting-str">zonk mp3 decoder</span>
+<span class="s interesting-str">output directory</span>
+<span class="s interesting-str">doubleclick to decode</span>
+<span class="s interesting-str">status:  idle</span>
+<span class="s interesting-str">Solar Winds    AFK Messages</span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">macro font converter</span>
+<span class="s interesting-str">font 2 macro</span>
+<span class="s interesting-str">Comic Sans MS</span>
+<span class="s interesting-str">mpeg 1 layer 3</span>
+<span class="s interesting-str">Solar Winds   |   View ID3 Tag   |   File Info</span>
+<span class="s interesting-str">Times New Roman <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Solar Winds Commands</span>
+<span class="s interesting-str">add your trigger before each command(</span>
+<span class="s interesting-str">2wav x - decodes x to a wav (x optional)</span>
+<span class="s interesting-str">8on - turns on 8ball bot</span>
+<span class="s interesting-str">8off - turns off 8ball bot</span>
+<span class="s interesting-str">add x, y - adds x and y%</span>
+<span class="s interesting-str">addbuddy x - adds x to your buddylist!</span>
+<span class="s interesting-str">addroom - adds room .. you&#x27;ll see</span>
+<span class="s interesting-str">adv - advertise dis  :)&#x27;</span>
+<span class="s interesting-str">afkon x, y - x as max msgs, y as reason</span>
+<span class="s interesting-str">afkoff - you figure it out+</span>
+<span class="s interesting-str">alive x - check if x is alive/dead/blocking</span>
+<span class="s interesting-str">ascii x - changes the ascii to x</span>
+<span class="s interesting-str">attn x - x as wut to say%</span>
+<span class="s interesting-str">blockim x - block imz from x for good+</span>
+<span class="s interesting-str">blockmail x - x as lamer to block mail from&#x27;</span>
+<span class="s interesting-str">brb - tells every1 you&#x27;ll be right back</span>
+<span class="s interesting-str">bust x - x as room to bust?</span>
+<span class="s interesting-str">c x - count number of x: new, old, sent, flash, fonts, xed, imm</span>
+<span class="s interesting-str">calc - opens calculater&amp;</span>
+<span class="s interesting-str">cap x -  x as wut to change caption to</span>
+<span class="s interesting-str">cd - opens cd player</span>
+<span class="s interesting-str">charmap - opens character map&#x27;</span>
+<span class="s interesting-str">ck x - sees if x has imz on/off/offline</span>
+<span class="s interesting-str">clear - clears your chat box</span>
+<span class="s interesting-str">clearimm - clears immune list</span>
+<span class="s interesting-str">clearx - clears the ignore list</span>
+<span class="s interesting-str">clock - day, date and time</span>
+<span class="s interesting-str">cmds - shows commandsL</span>
+<span class="s interesting-str">colora x - sets the color for ascii   preset colors: red, blue, orange, pinkV</span>
+<span class="s interesting-str">colorf x - sets the color for font                  yellow, green, black, purple, grey(</span>
+<span class="s interesting-str">cont - plays a random mp3 after one ends&quot;</span>
+<span class="s interesting-str">cube x - number x to the 3rd power</span>
+<span class="s interesting-str">date - show date</span>
+<span class="s interesting-str">day - show day</span>
+<span class="s interesting-str">decode x - decodes screen name x</span>
+<span class="s interesting-str">dice - roll 15 999 sided dice,</span>
+<span class="s interesting-str">dir x - set the dir of your mp3s ex - c:\mp3</span>
+<span class="s interesting-str">div x, y - divide x by y2</span>
+<span class="s interesting-str">dlman - opens download manager and starts download</span>
+<span class="s interesting-str">drugon - turns drug bot on</span>
+<span class="s interesting-str">drugoff - turns drug bot off</span>
+<span class="s interesting-str">eat - eats the chat</span>
+<span class="s interesting-str">echoon x - starts echoing of x</span>
+<span class="s interesting-str">echooff - stops echoing,</span>
+<span class="s interesting-str">editn x, y - edit note number: x  with msg y&amp;</span>
+<span class="s interesting-str">exit - ends solar winds (why do this?)</span>
+<span class="s interesting-str">files - opens windows explorer</span>
+<span class="s interesting-str">flash - opens flashmail</span>
+<span class="s interesting-str">font? - displays current font</span>
+<span class="s interesting-str">font x - sets the font x</span>
+<span class="s interesting-str">fonts - view the fonts you have&quot;</span>
+<span class="s interesting-str">fortuneoff - turns off fortune bot</span>
+<span class="s interesting-str">fortuneon - turns on fortune bot</span>
+<span class="s interesting-str">ghostoff - turns off ghosting</span>
+<span class="s interesting-str">ghoston - turns on ghosting</span>
+<span class="s interesting-str">handle x - sets handle as x</span>
+<span class="s interesting-str">hidewelc - hides welcome screen/</span>
+<span class="s interesting-str">hotmail - opens browser and goes to hotmail.com</span>
+<span class="s interesting-str">hug x - x as person to hug</span>
+<span class="s interesting-str">id3 - scrolls id3 tag of mp3&quot;</span>
+<span class="s interesting-str">idleoff - turns idle off if its on+</span>
+<span class="s interesting-str">idleon - turns idle on if it not already on#</span>
+<span class="s interesting-str">im x, y - im person (x) and msg (y)(</span>
+<span class="s interesting-str">imlink x - links an instant message to x9</span>
+<span class="s interesting-str">imm x - add x to immune list, only part needed if in room&amp;</span>
+<span class="s interesting-str">immuned - scroll people on immune list</span>
+<span class="s interesting-str">imson - turns ims on4</span>
+<span class="s interesting-str">imsoff - this shoulda been above imson but who cares</span>
+<span class="s interesting-str">imx y - im ignores y+</span>
+<span class="s interesting-str">invite x, y - invite people (y) to room (x)</span>
+<span class="s interesting-str">ip - copy your ip to clipboard&#x27;</span>
+<span class="s interesting-str">jk - tells every1 you were just kidding$</span>
+<span class="s interesting-str">jp - tells every1 you&#x27;re just playin#</span>
+<span class="s interesting-str">kw x - x as wut to goto for keyword$</span>
+<span class="s interesting-str">killglyph - kills annoying aol glyph)</span>
+<span class="s interesting-str">link x, y - links x with y as description</span>
+<span class="s interesting-str">links x - x as color or hex code</span>
+<span class="s interesting-str">loadn - loads any saved notes</span>
+<span class="s interesting-str">lobby - enters a random lobby&#x27;</span>
+<span class="s interesting-str">loc x - locates person, x as the person%</span>
+<span class="s interesting-str">macro - opens font to macro converterI</span>
+<span class="s interesting-str">mbr x, y - x as catagory: ts, ae, fr, li, snf, pl, ro, si, uk, ca, ja, br</span>
+<span class="s interesting-str">y as member room(</span>
+<span class="s interesting-str">mailflash x, y -  x as subject, y as who)</span>
+<span class="s interesting-str">mailme - opens new mail so u can email me,</span>
+<span class="s interesting-str">massim x - mass ims the room w/ x as message0</span>
+<span class="s interesting-str">mp3s - returns the number of mp3s in the set dir&quot;</span>
+<span class="s interesting-str">msgs - shows messages from afk bot</span>
+<span class="s interesting-str">mult x, y - multiplies x by x</span>
+<span class="s interesting-str">mute - mutes/unmutes mp3)</span>
+<span class="s interesting-str">mysite - send link to http://kryo.cjb.net</span>
+<span class="s interesting-str">n x - x as note to take</span>
+<span class="s interesting-str">new - opens new mail&quot;</span>
+<span class="s interesting-str">newname x - trys to make new sn: x/</span>
+<span class="s interesting-str">newpw - takes you to the change password screen6</span>
+<span class="s interesting-str">note x - scroll note x   if no x then all are scrolled&quot;</span>
+<span class="s interesting-str">off - will deactivate this program</span>
+<span class="s interesting-str">old - opens old mail!</span>
+<span class="s interesting-str">on - will reactivate this program&quot;</span>
+<span class="s interesting-str">order - will play mp3s by filename</span>
+<span class="s interesting-str">pause - toggles pause for mp3</span>
+<span class="s interesting-str">play x - x as mp3 to play.</span>
+<span class="s interesting-str">pos - returns time of mp3 elapsed out of total</span>
+<span class="s interesting-str">pr x - x as the private room</span>
+<span class="s interesting-str">prlink x - x as the room to link2</span>
+<span class="s interesting-str">pro x - shows you persons profile if they have one</span>
+<span class="s interesting-str">qx - x as number of quote: 1-9</span>
+<span class="s interesting-str">quotes - edit your quotes+</span>
+<span class="s interesting-str">rand x - plays a random mp3 of x [optional]%</span>
+<span class="s interesting-str">reenter - reenters the room you&#x27;re in;</span>
+<span class="s interesting-str">remimm x - x as number or person to remove from immune list&amp;</span>
+<span class="s interesting-str">remn x - x as number of note to remove#</span>
+<span class="s interesting-str">rename - rename and/or delete files</span>
+<span class="s interesting-str">repon - will repeat mp3s</span>
+<span class="s interesting-str">repoff - not repeat mp3s*</span>
+<span class="s interesting-str">req x - requests x  will send im to person</span>
+<span class="s interesting-str">reqoff - turns off requester3</span>
+<span class="s interesting-str">reset - reset all defaults .. ie: dir, font, quotes</span>
+<span class="s interesting-str">room - returns the room caption&amp;</span>
+<span class="s interesting-str">roomcap x - changes the room&#x27;s caption</span>
+<span class="s interesting-str">run x - room runner, x as room</span>
+<span class="s interesting-str">saven - saves notes</span>
+<span class="s interesting-str">scroll x - six line scroll.</span>
+<span class="s interesting-str">search x - goes to file search and looks for x</span>
+<span class="s interesting-str">sent - opens sent mail</span>
+<span class="s interesting-str">sexon - turns on sex bot</span>
+<span class="s interesting-str">sexoff - turns off sex bot/</span>
+<span class="s interesting-str">shell x - runs the program x (full path needed)&quot;</span>
+<span class="s interesting-str">skip x - x in seconds or 1:23 form?</span>
+<span class="s interesting-str">stats - scrolls download/upload stats .. file, % done, min left,</span>
+<span class="s interesting-str">switch - opens the switch screen name window#</span>
+<span class="s interesting-str">showwelc - shows the welcome screen&amp;</span>
+<span class="s interesting-str">signoff- signoff and close solar winds!</span>
+<span class="s interesting-str">squ x - number x to the 2nd power</span>
+<span class="s interesting-str">stfu x - tells x to stfu4</span>
+<span class="s interesting-str">stop - stops playin of mp3 and turns off repeat, etc</span>
+<span class="s interesting-str">sub x, y - subtracts y from x&quot;</span>
+<span class="s interesting-str">suproom x - sups the room w/ msg x</span>
+<span class="s interesting-str">time - shows time</span>
+<span class="s interesting-str">totals - view totals .. ull see/</span>
+<span class="s interesting-str">trig? - type &quot;.trig?&quot; if you forget the trigger&#x27;</span>
+<span class="s interesting-str">trig x - sets trigger to x   1 char max</span>
+<span class="s interesting-str">upchat - shows upchat form</span>
+<span class="s interesting-str">unimx y - unim ignores y</span>
+<span class="s interesting-str">unx y - y as person to unignore</span>
+<span class="s interesting-str">viewmp3s - view your mp3s</span>
+<span class="s interesting-str">vol x - set mp3 volume to x</span>
+<span class="s interesting-str">x y - y as person to ignore</span>
+<span class="s interesting-str">wb x - wecome back x7</span>
+<span class="s interesting-str">web x - x as site  opens browser  &#x27;http://&#x27; already set</span>
+<span class="s interesting-str">welcon - turns on a welcome bot</span>
+<span class="s interesting-str">welcoff - turns welcome bot off)</span>
+<span class="s interesting-str">wordx - shows current words being ignored5</span>
+<span class="s interesting-str">wordxadd x - add x to word ignore list, up to 5 words</span>
+<span class="s interesting-str">wordxon - turns wor ignore on</span>
+<span class="s interesting-str">wordxoff - turns off word ignore&#x27;</span>
+<span class="s interesting-str">wordxrem x - removes x word ignore list5</span>
+<span class="s interesting-str">write x - opens write new mail window to x (optional)!</span>
+<span class="s interesting-str">Solar Winds     Chat Commands</span>
+<span class="s interesting-str">upload status</span>
+<span class="s interesting-str">scroll stats</span>
+<span class="s interesting-str">Do Not Send E-Mail While Uploading</span>
+<span class="s interesting-str">NOtLNtOOvNOsNNpOOsNNtLNtLNqNNqNNsOOpLLqNNlNLoNOoKK_??V11K##?</span>
+<span class="s interesting-str">yx{ghhWVVADC413 %#</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (536)</summary>
+<span class="s plain-str">-C000-Solar</span>
+<span class="s plain-str">MPEGPLAYLib.Mp3Play <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Mp3Play</span>
+<span class="s plain-str">SolarWinds <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SolarCmds <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SolarAfk <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">UpChat1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SolarNames <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SolarQuotes <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SolarMp3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">*mp3chat3</span>
+<span class="s plain-str">*C:\WINDOWS\SYSTEM\CHATSCAN</span>
+<span class="s plain-str">HScroll1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mp3Play1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">MPEGPLAYLib</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">SystemParametersInfoA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">cmbFonts <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lmaxmsg</span>
+<span class="s plain-str">LPicture1</span>
+<span class="s plain-str">LCommand1</span>
+<span class="s plain-str">L__vbaVarTstGe</span>
+<span class="s plain-str">L__vbaI4ErrVar</span>
+<span class="s plain-str">GetPixel</span>
+<span class="s plain-str">TextOutA</span>
+<span class="s plain-str">view fonts</span>
+<span class="s plain-str">set mp3 dir</span>
+<span class="s plain-str">add room <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Tahoma+</span>
+<span class="s plain-str">Total: 0</span>
+<span class="s plain-str">Refresh</span>
+<span class="s plain-str">view mp3&#x27;s</span>
+<span class="s plain-str">delete it</span>
+<span class="s plain-str">rename it</span>
+<span class="s plain-str">mp3 decoder</span>
+<span class="s plain-str">search:</span>
+<span class="s plain-str">Tahoma, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">lines: 0</span>
+<span class="s plain-str">scroll it</span>
+<span class="s plain-str">mail to:</span>
+<span class="s plain-str">mp3 info</span>
+<span class="s plain-str">channel:</span>
+<span class="s plain-str">original:</span>
+<span class="s plain-str">copyrighted:</span>
+<span class="s plain-str">128 kbps,</span>
+<span class="s plain-str">length:</span>
+<span class="s plain-str">Comment:</span>
+<span class="s plain-str">Artist:</span>
+<span class="s plain-str">edit quotes</span>
+<span class="s plain-str">BBBDDD999---</span>
+<span class="s plain-str">999FFF___qqq</span>
+<span class="s plain-str">qqq^^^rrrmmm~~~</span>
+<span class="s plain-str">mmmccc++++++++++++++++++++++++___</span>
+<span class="s plain-str">yyy~~~bbb999 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">wwwmmmfffccccccccccccccccccccccccVVV+++ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MMM888!!!!!!!!!!!!!!!!!!!!!!!!&quot;&quot;&quot; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SSSAAAAAAAAAAAAAAAAAAVVV}}}rrrrrrjjj</span>
+<span class="s plain-str">fffTTTkkk~~~lll+++</span>
+<span class="s plain-str">fffTTTdddMMM <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">KKKCCCCCC&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;999///+++ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">IIIFFF[[[QQQ;;;</span>
+<span class="s plain-str">yyydddLLL&amp;&amp;&amp;</span>
+<span class="s plain-str">999^^^cccdddDDDHHHAAA</span>
+<span class="s plain-str">YYYeeehhhoookkk~~~</span>
+<span class="s plain-str">yyy~~~bbb&amp;&amp;&amp; <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">yyy~~~fff444</span>
+<span class="s plain-str">UUUwww}}}ccc</span>
+<span class="s plain-str">JJJaaa{{{ccc</span>
+<span class="s plain-str">yyy~~~^^^444</span>
+<span class="s plain-str">jjjwwwkkkLLL</span>
+<span class="s plain-str">yyy~~~^^^###$$$qqq</span>
+<span class="s plain-str">rrrBBB444!!!!!!!!!!!!!!!!!!!!!===eee</span>
+<span class="s plain-str">yyy{{{jjjBBBAAAwww}}}VVV</span>
+<span class="s plain-str">SSSAAAAAAAAAAAAAAAAAAVVV}}}</span>
+<span class="s plain-str">fffTTTkkk~~~</span>
+<span class="s plain-str">555CCCCCC&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;999///333</span>
+<span class="s plain-str">solar winds</span>
+<span class="s plain-str">58	58	59	59	58	58</span>
+<span class="s plain-str">GG!FF&quot;GG#GG#GG&quot;FF!GG</span>
+<span class="s plain-str">DT	ET	FT	FT</span>
+<span class="s plain-str">TT TU&amp;TT(TT*TT+TU*TT)TT(TT&#x27;TU&amp;TU#TT TT</span>
+<span class="s plain-str">6\)@^6Jb9Mc9Mc:Mb9Lc5Gc(&lt;_(;^5Db9Ic9Ib5Hb*@_</span>
+<span class="s plain-str">4[)=_5Ba9Cc9Fb4D`:Nd&lt;WdFccA`b9Od:Id9Fc:Fd4Ba9Gd:Ic9Id4Db5Cb:Fd9Ec5Bb4Cb;Fc:Fd:Gc8Hc8Fc:Fc9Fc4Bc9Fc9Ec8Db&lt;@QR::R99S:9O44Q99R::O88N77J55G13A/0:**0&quot;!#</span>
+<span class="s plain-str">aa&quot;`a&#x27;aa-ab0aa0a`2``2aa2aa0`a.aa,aa*aa(aa&amp;aa$aa</span>
+<span class="s plain-str">7f(Dj&lt;TpScv_ly_k{_ky_jxRav&lt;Op&gt;PqS`v_iz_iyRcu=Rp&#x27;@j=KqR\v`fz_hySdxbtxhy{eyy_nz^jx`f{^gx_gyS_w_jx`h{`izS_wS^v`gy_gyS^wS^v_gx_hy_iy_hx`gz`fz_gyS]w_fy_gy`fy_bmn__p_`o__hSQm_`l^^k]]i\\gXXbTV\NORHHC670!!</span>
+<span class="s plain-str">lk!kk(lk.lj3kj6kk7lk8kk7kl8kk6kk4kk2lk0kk.lk,kk)kl#lk</span>
+<span class="s plain-str">Uk	Tk	Sl	Sk</span>
+<span class="s plain-str">@q.OvIa}kx</span>
+<span class="s plain-str">oca`LME001</span>
+<span class="s plain-str">d&quot;#m**i&amp;&amp;]</span>
+<span class="s plain-str">g%%q--l*)^</span>
+<span class="s plain-str">h&amp;&#x27;q//n++_</span>
+<span class="s plain-str">i&#x27;&#x27;r00o,+_</span>
+<span class="s plain-str">xjieRSL446</span>
+<span class="s plain-str">i&#x27;(r00o,+^</span>
+<span class="s plain-str">ccgJHX&lt;=D((2</span>
+<span class="s plain-str">g&#x27;(r00o,+^</span>
+<span class="s plain-str">LKu?@U/.K&#x27;&#x27;;</span>
+<span class="s plain-str">f&#x27;&#x27;r00n++_</span>
+<span class="s plain-str">f&#x27;&#x27;p01m+,[</span>
+<span class="s plain-str">f((p01m++^</span>
+<span class="s plain-str">e&#x27;&#x27;p10l++\ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">d&#x27;&#x27;p01m+,^</span>
+<span class="s plain-str">e&#x27;&#x27;p01m++\</span>
+<span class="s plain-str">e&#x27;&#x27;p01l++\</span>
+<span class="s plain-str">e&#x27;&#x27;o01l+,\</span>
+<span class="s plain-str">d&#x27;&#x27;o01l+,\</span>
+<span class="s plain-str">d&#x27;&#x27;o01l+,[</span>
+<span class="s plain-str">d&#x27;&#x27;n11j+,Z</span>
+<span class="s plain-str">b&#x27;&#x27;m00j+,Z <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">b&#x27;&#x27;m00j+,X</span>
+<span class="s plain-str">b&#x27;&#x27;k00i+,X</span>
+<span class="s plain-str">Z&#x27;&#x27;e00b+,R <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Z&#x27;&#x27;c00a,+P</span>
+<span class="s plain-str">X(&#x27;c00`++P</span>
+<span class="s plain-str">W&#x27;&#x27;a00_++N</span>
+<span class="s plain-str">V&#x27;&#x27;a00_++N</span>
+<span class="s plain-str">T&#x27;&#x27;`10]++L <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">S&#x27;&#x27;^00\++K <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Q&#x27;&#x27;]00Z,+K</span>
+<span class="s plain-str">P(&#x27;[00Z,+I</span>
+<span class="s plain-str">O&#x27;&#x27;[00Y++G</span>
+<span class="s plain-str">N&#x27;&#x27;Y00Y++G</span>
+<span class="s plain-str">N&#x27;&#x27;Y00W++G</span>
+<span class="s plain-str">L&#x27;&#x27;X00W++E</span>
+<span class="s plain-str">L&#x27;(X00U++D</span>
+<span class="s plain-str">J&#x27;(V00T++D</span>
+<span class="s plain-str">H&#x27;&#x27;T00S,+B</span>
+<span class="s plain-str">H((T00R++@</span>
+<span class="s plain-str">E&#x27;&#x27;S01P++&gt;</span>
+<span class="s plain-str">E&#x27;&#x27;P00O+,&gt;</span>
+<span class="s plain-str">D&#x27;&#x27;P00O++=</span>
+<span class="s plain-str">B(&#x27;P00O++=</span>
+<span class="s plain-str">8&#x27;&#x27;E00E,+4</span>
+<span class="s plain-str">8&#x27;&#x27;D00D++2</span>
+<span class="s plain-str">6&#x27;(A00B++0</span>
+<span class="s plain-str">4&#x27;(@00@++/</span>
+<span class="s plain-str">3&#x27;(?00?++.</span>
+<span class="s plain-str">1&#x27;&#x27;?01=,++</span>
+<span class="s plain-str">0//01---&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">NLONNIKK???300$##</span>
+<span class="s plain-str">wwx[Y[???&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">hkkIII///</span>
+<span class="s plain-str">iiiKKK/-/</span>
+<span class="s plain-str">10d00a//a10a//`0/a03_10_0/_0/_0/_0/_0/\0/[1/[01X/-Q(&#x27;L</span>
+<span class="s plain-str">N&#x27;&#x27;O//P10P10O10L00L00K00K00K00K00H00F10C/-&lt;(&#x27;3</span>
+<span class="s plain-str">www[YY??@///01////0/1300000300000,//%&#x27;&#x27;</span>
+<span class="s plain-str">W!!`0/o?=vKGwOKvNOvNOwOLwNOwNOvNOtNKwOLvNO</span>
+<span class="s plain-str">10\=?dKKfOLfNNdLLcONcNLaNL_NL_NO_NO_NO_NO[KKN=?@010##!</span>
+<span class="s plain-str">twwkik\[[NNNOLLLOOOLLOONLNKKNNKNNNNNONNLKK???000$##</span>
+<span class="s plain-str">10???HKIKOLNNNKLLNNNLOOKLPNNNNNNNNNNNNNNNNNNNNNNNNONOKNONNNQLNKNNNNNNNNLKI</span>
+<span class="s plain-str">iixY[dFGO10?</span>
+<span class="s plain-str">op~op|pp{ppyooyoptkkd[[OGG911&#x27;</span>
+<span class="s plain-str">/11IDF\[[kkkoooooooooooospppooikkX[[GGG000</span>
+<span class="s plain-str">10???KKK[[[lkkooolooppppooqoopoospppppnoolkkX[[kkkooooppqooooosoqonokkk[[[</span>
+<span class="s plain-str">kkkhkkoponpoooonooooploonpooooooonpoopokkk_Y[GGG000</span>
+<span class="s plain-str">GF\Y[ikkqooqooooooponpoqooooooooooooooooooooooooooopolqoopoooooookooqoplik</span>
+<span class="s plain-str">[YIHK???311 ##</span>
+<span class="s plain-str">V&#x27;&#x27;g??|[[</span>
+<span class="s plain-str">wxqYY[??C&#x27;&#x27;4</span>
+<span class="s plain-str">|wx_Y[C=?)&#x27;&#x27;</span>
+<span class="s plain-str">vvv[[[???&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">GG[YYlkkwww</span>
+<span class="s plain-str">www[[[&lt;??(((</span>
+<span class="s plain-str">wwnkk[[[DGG1// &quot;&quot;</span>
+<span class="s plain-str">ik_KIG105</span>
+<span class="s plain-str">lkkKKK///</span>
+<span class="s plain-str">kkkLKK0//</span>
+<span class="s plain-str">/00DGG\Y[tww</span>
+<span class="s plain-str">kkiKKK,//</span>
+<span class="s plain-str">www\[[HGG111</span>
+<span class="s plain-str">wwgY[S?==(&#x27;/</span>
+<span class="s plain-str">+0/OONloo</span>
+<span class="s plain-str">oooNNN/00###1/0HGG\[Y</span>
+<span class="s plain-str">pqoKNN/00</span>
+<span class="s plain-str">tww[YY&gt;&gt;&gt;*&#x27;)</span>
+<span class="s plain-str">vkkWKK;-/&#x27;</span>
+<span class="s plain-str">311KOLooo</span>
+<span class="s plain-str">looNNN/0030/GFG[[[tww</span>
+<span class="s plain-str">wwwWY[OOO</span>
+<span class="s plain-str">opoKNN000</span>
+<span class="s plain-str">111FFF[[[www</span>
+<span class="s plain-str">kkkGII102</span>
+<span class="s plain-str">wpqWLL;11#</span>
+<span class="s plain-str">3/1KNNooo <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oooOOO?==HKI\Y[tww</span>
+<span class="s plain-str">oqKOL000$##+0/IGG[[[yww</span>
+<span class="s plain-str">www\Y[IGGLNK</span>
+<span class="s plain-str">qooNLO300&#x27;(&#x27;???[[[www</span>
+<span class="s plain-str">tww^ZY?&lt;&gt;%(&amp;</span>
+<span class="s plain-str">qooSLN710,&#x27;&#x27;300NOL</span>
+<span class="s plain-str">qooONN000///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">ponONNW[Ylkktww</span>
+<span class="s plain-str">opKLL0000/1GGGW[Yxwv</span>
+<span class="s plain-str">wwv\Y[GGG-/0PNO</span>
+<span class="s plain-str">oooNLO300+--KKIlkk</span>
+<span class="s plain-str">jjjHJJ,..</span>
+<span class="s plain-str">D0/^NO~po</span>
+<span class="s plain-str">oooPNO///@??IIIONO</span>
+<span class="s plain-str">nooNNNLLLHKK???000###</span>
+<span class="s plain-str">oqo[[[xww</span>
+<span class="s plain-str">wwwWYYooo</span>
+<span class="s plain-str">noKOLONNKNN[[[xww</span>
+<span class="s plain-str">wwwX[[GDG?@&lt;KKKLNK</span>
+<span class="s plain-str">qooNLONNNHKIKNOopo</span>
+<span class="s plain-str">oooNNN200</span>
+<span class="s plain-str">A13WLLyoo</span>
+<span class="s plain-str">oooNNNLKI[Y[ilkqop</span>
+<span class="s plain-str">ooonnnsppkkk[[[CFF///$$$</span>
+<span class="s plain-str">www[[[LLLqoo</span>
+<span class="s plain-str">swv[Y[CGFNKKYYYhkknpo</span>
+<span class="s plain-str">opooooqoohki[YYspp</span>
+<span class="s plain-str">pnnMMM000</span>
+<span class="s plain-str">pqoWYYoikswv</span>
+<span class="s plain-str">xww[[[IGG-//###</span>
+<span class="s plain-str">wwwX[[HGGNNNooo</span>
+<span class="s plain-str">xvw[[[DGF\[Yhkivtw</span>
+<span class="s plain-str">50/PKLspp</span>
+<span class="s plain-str">www\[[DGG000</span>
+<span class="s plain-str">wwwkii[[[GGG300KNNooo</span>
+<span class="s plain-str">tww\[[tww</span>
+<span class="s plain-str">mooPKL000</span>
+<span class="s plain-str">/00KNNqoo <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">wwwYYYKKK9?=501000NNNqoo</span>
+<span class="s plain-str">tww\[[NNNLLLKNNKNNOOONNNOLLONNOLLKOLooo</span>
+<span class="s plain-str">mooKMM000</span>
+<span class="s plain-str">ywwYYYDGG000&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">000OLLnoo</span>
+<span class="s plain-str">snoMMM311</span>
+<span class="s plain-str">01/NNNkpo</span>
+<span class="s plain-str">wvw[[[GGG300 ##</span>
+<span class="s plain-str">nopKOL/00</span>
+<span class="s plain-str">300KOLnpo</span>
+<span class="s plain-str">mooMMM-//</span>
+<span class="s plain-str">103LLLpqo</span>
+<span class="s plain-str">www[[[GGG300%&#x27;&#x27;</span>
+<span class="s plain-str">onpOLN,01</span>
+<span class="s plain-str">vvv\[[HKK???300</span>
+<span class="s plain-str">xwwX[YONNOOONNNOLLNNNNNNNNNNNNNLO[[[xwv</span>
+<span class="s plain-str">opnKNL4/0</span>
+<span class="s plain-str">000NNNopp</span>
+<span class="s plain-str">wwwlkk[[[DGG30/0-/NKKkkk</span>
+<span class="s plain-str">kpnKMM/0.</span>
+<span class="s plain-str">311NOLloo</span>
+<span class="s plain-str">www[[[GGG310&lt;?=YYYvwx</span>
+<span class="s plain-str">smrMLN200</span>
+<span class="s plain-str">wvwY[\OKNKNNNNNQLNONNNNNONNY[[svw</span>
+<span class="s plain-str">01/NOLooo</span>
+<span class="s plain-str">opo[[[www</span>
+<span class="s plain-str">wwwY[[NNNpoo</span>
+<span class="s plain-str">ywx[[[NNNLOOKNNNOLNOLNNNKNO_Y[tww</span>
+<span class="s plain-str">qonLLL/20</span>
+<span class="s plain-str">oooNNN0/1///300-//111300000LLLsoo</span>
+<span class="s plain-str">opoKOL[Y[www</span>
+<span class="s plain-str">oonPON01////111000000000///KNNoos</span>
+<span class="s plain-str">minLJI/+0</span>
+<span class="s plain-str">000KNOqoo</span>
+<span class="s plain-str">oooKNN-//</span>
+<span class="s plain-str">000NNNqoo</span>
+<span class="s plain-str">pppNOLGGG[[[wvw</span>
+<span class="s plain-str">pppKNN///</span>
+<span class="s plain-str">300NNNooo</span>
+<span class="s plain-str">vvvZZZ?&gt;@&#x27;(&amp;</span>
+<span class="s plain-str">nopNOL000</span>
+<span class="s plain-str">oooNNN300GFF[[[hkktww</span>
+<span class="s plain-str">000KLPspk</span>
+<span class="s plain-str">www[[[FFF20/</span>
+<span class="s plain-str">oooONN/00/00???KKK[YY</span>
+<span class="s plain-str">3/1ONOooo</span>
+<span class="s plain-str">www[[[GGG000!&quot;</span>
+<span class="s plain-str">0//HKKkii</span>
+<span class="s plain-str">nkkKKI,/-</span>
+<span class="s plain-str">nkkKKK3-/</span>
+<span class="s plain-str">+0/KIIkkl</span>
+<span class="s plain-str">vvv[[[GGG000&quot;&quot;&quot;</span>
+<span class="s plain-str">yww[Y[Y[[wvv</span>
+<span class="s plain-str">wwwWY[???)&#x27;(</span>
+<span class="s plain-str">wwwWYY&lt;??%&#x27;&#x27;</span>
+<span class="s plain-str">www[[[???&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">ii[\[FFF111!!!</span>
+<span class="s plain-str">/00FDGX[[kkknpoqopooopooooooooponkpooooooo</span>
+<span class="s plain-str">oqqooooopppsppqoooooopopppsooooospokpopoqggn[[[GDGGGFYYYkinooponotqnqooopp</span>
+<span class="s plain-str">ooikh[YXDGF01/</span>
+<span class="s plain-str">000GGGX[[iiinoppoqsppooonpoopokkk[[[GGG</span>
+<span class="s plain-str">0/DGG[[[kkknoonpoqooqoooooppppppsppopolhnY[XX[[iiiqooqopnpooooooopppoooooo</span>
+<span class="s plain-str">poooolooooopppoooooooooooooooooonpoooooooqooooonkkWYYX[[kklsnonooqooopoqoo</span>
+<span class="s plain-str">opiko[[[GGG000</span>
+<span class="s plain-str">000FDG\[[hkipnoooooopqoonopnoolkk[[[GGG</span>
+<span class="s plain-str">FF[[YkkkpooooosoooqoopoooooooooooooqooooooooqqqpooooonooonoqopoppoooilkW[Y</span>
+<span class="s plain-str">IK??=000###</span>
+<span class="s plain-str">LNNNNNNNLLLOOONNNNNNKNOLLLKNNONNLOOOLOONLHLG;==000//0?@?KKKONLLOONLONNNOKN</span>
+<span class="s plain-str">OOKKK?=?-//&#x27;##</span>
+<span class="s plain-str">LLNNNLOOKNNKNNNNNNNNLLLOLLONNONNNLONLOLOOLKNLLLIKK===C=?KIIKOOLLLNNNKNONNN</span>
+<span class="s plain-str">NLKKK???000###</span>
+<span class="s plain-str">0/&lt;??KIILOONNNKNNOLLKNNKNNONNNNNOOONNNPOONNNNNNONNLLLOONNOLNOLNOLOONKKK?&lt;?</span>
+<span class="s plain-str">0/0/1300000000000///00000000000001//0//0/01/01/---%&#x27;&#x27;%&#x27;&#x27;,//0/1000111//0000</span>
+<span class="s plain-str">78333-++#$$</span>
+<span class="s plain-str">QQSSQSQSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;///&#x27;&#x27;&#x27;+++333;;;CCCKKKOOOSSS</span>
+<span class="s plain-str">SSPSSSSSSSSSSQSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOO</span>
+<span class="s plain-str">KICCC;;;-//&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">SQSQSPSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCCKKKOOOSSSSSSSSSSSQSSSSSSPSS</span>
+<span class="s plain-str">QQPSSOOOKKKOOOSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">STQOOKIKFCC;9;333-++###</span>
+<span class="s plain-str">CC;;;333+++%##</span>
+<span class="s plain-str">SQSSSSSSSSSTSSSSSSSSSSSOOOKKKCCC;;;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">POSSSPSSTSSSSSSSSSSSSSSOOOKKKCCC;;;///;;;CCCKKKPPPSSSSSSSSSSSSTSSSQSPSSTSS</span>
+<span class="s plain-str">SQSQSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCD;;9413</span>
+<span class="s plain-str">SQSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">KKSVV___fdgiggiggggggggggggggggggggggggggggggggggggggggggggggggggggggggfgg</span>
+<span class="s plain-str">hgghgighdggggggggggggggggggggggggggddd___WWWKKK;;;///;;;CCCKKKWWW^^^fffggg</span>
+<span class="s plain-str">gggggggggggghgggggggggggggggggggggggggggggggggggggggggggggggggggggggiggddd</span>
+<span class="s plain-str">hfgghgggggggggggggggggggggggggggggggggfff___WWW___fffhhhggggggghgggggggggg</span>
+<span class="s plain-str">hggggggggggggggggggggggggggggggggggggggggggggggggggggdddgggggggggdggighghg</span>
+<span class="s plain-str">hgfggfff___dddggggggggggggggggggggggggfff___WWWKKK;;;-//###</span>
+<span class="s plain-str">hggff_^_SWWKIKACC;;;///&#x27;&#x27;&#x27;&#x27;&#x27;&#x27;///;;;CCCKKKWWW___fffggggggggggggggggggfff_^_</span>
+<span class="s plain-str">WTILKFCC8;;3//#&#x27;&#x27;###///;;;KKKWWW___fffggggggggggggggggggggggggfff`_____dcf</span>
+<span class="s plain-str">gggghfgggggkgggggggggggddd___WWWKKK;;;000###</span>
+<span class="s plain-str">fcgggggggggggggggggggggfff___WWWKKK;;;KKKWWW___dddgggggggggchgkggfghfggggg</span>
+<span class="s plain-str">gggghgggggggggggggggggggggggggggggggggggggggggggggggggggdggfff___WVWKKICCD</span>
+<span class="s plain-str">KKWWW___fffhhhggggggggggggggggggggggggggggggggggggggggggighgggiggfghfggfgh</span>
+<span class="s plain-str">gggggggggggggggggggggggggggggggggggfff___WWWKKK;;;000%%%</span>
+<span class="s plain-str">XWgggwtw|</span>
+<span class="s plain-str">vvvgghWXYKIK9;;LKKVVV___hhhvvv|</span>
+<span class="s plain-str">wtiggWXXLKKFCC8;;///;;;HKKWVW___gghvwt</span>
+<span class="s plain-str">vvvghgvvv|</span>
+<span class="s plain-str">svvighWWWKKI;9;+++</span>
+<span class="s plain-str">tttiggWWWHKK;;;-++</span>
+<span class="s plain-str">svwfhg___VTWLKI;;;-//1//;;;HKKWWW`__gghvvv{~</span>
+<span class="s plain-str">gi`__TWVHKK;&lt;;1//+++&lt;;;HKKWWWghhvvv</span>
+<span class="s plain-str">wvvlgiWXXGKH;;;+++</span>
+<span class="s plain-str">svsfggXXXKKKXYWiggwvv</span>
+<span class="s plain-str">vvvigg\__TWW</span>
+<span class="s plain-str">Y[gggvvv</span>
+<span class="s plain-str">vtwighWYYKKK;;;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">wyyfggWWWACC333</span>
+<span class="s plain-str">~wttdggXYWKKK=;;?;;IKK[XWiggvwt{</span>
+<span class="s plain-str">vvvhhh[X[KHK;&lt;=413CCC[VWggg|{{</span>
+<span class="s plain-str">yyyhhhXWWCCC333###</span>
+<span class="s plain-str">x{{iggXWYggh{{|</span>
+<span class="s plain-str">yyyfggWYYiggx{{</span>
+<span class="s plain-str">vvv[`_KKK498()&#x27;</span>
+<span class="s plain-str">ytv`__III7;8</span>
+<span class="s plain-str">vvv\__KIH7;8&#x27;)&#x27;$&#x27;&#x27;000;;;KKKXXXgghx{{</span>
+<span class="s plain-str">x{{ghdvvv</span>
+<span class="s plain-str">y{{hggy{{</span>
+<span class="s plain-str">y{|gggY[Xghg{{|</span>
+<span class="s plain-str">fdgOOO@;=+,+</span>
+<span class="s plain-str">cffPPP=;;</span>
+<span class="s plain-str">x{{gggWWWWXXggg{{{</span>
+<span class="s plain-str">y{fhgXXXHKKQOPcgd</span>
+<span class="s plain-str">gfgSPP&lt;;;+++///;;;HKKXXXigg{y{</span>
+<span class="s plain-str">wvvggg{y{</span>
+<span class="s plain-str">iggQSW?&lt;?)+,</span>
+<span class="s plain-str">iggSSS???</span>
+<span class="s plain-str">vvv___higx{y</span>
+<span class="s plain-str">gggPSS&lt;??-//=;;LKKXXXghh{{{</span>
+<span class="s plain-str">vvv___HKK888+))</span>
+<span class="s plain-str">fggSSQ???,,,,,,,,,,,,,-+</span>
+<span class="s plain-str">vvv___LKK;88</span>
+<span class="s plain-str">dggWWWghg</span>
+<span class="s plain-str">hhhQQQ@??NKKXXXggg|{{</span>
+<span class="s plain-str">gggSSS===,,, <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">gghSSS&lt;????@@=?&lt;??;??@?=</span>
+<span class="s plain-str">gggTWWDDD033</span>
+<span class="s plain-str">vtw\__ghg</span>
+<span class="s plain-str">gghPSSDDDWWWghhx{{</span>
+<span class="s plain-str">gggSSS???,,, <span style="color:#30363d;font-size:0.75em">×18</span></span>
+<span class="s plain-str">fggTSSSSSPSSPSSPSSSSSTSS</span>
+<span class="s plain-str">QQQQQPSS___wvv</span>
+<span class="s plain-str">iggTQSLKK[^^svv</span>
+<span class="s plain-str">higfgggggiggigggggiggggg</span>
+<span class="s plain-str">gggPSSWWWhhh</span>
+<span class="s plain-str">fffOOO;;;+++</span>
+<span class="s plain-str">gggXXXghg{y{</span>
+<span class="s plain-str">vvv___KKK888((( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ppX;9oKK_993</span>
+<span class="s plain-str">XWgggvvv</span>
+<span class="s plain-str">vvv___KKK;;;,,,</span>
+<span class="s plain-str">WVhhh|{y</span>
+<span class="s plain-str">iggggggggggggggiggggggggfggggfghighg</span>
+<span class="s plain-str">gggggkhhgggigggggdggkhhgggfggiggfgg</span>
+<span class="s plain-str">hhhWWWDDD333###</span>
+<span class="s plain-str">fggSSSPSSPSSPSSSSSTSSSSSSSSVSTSSSfid</span>
+<span class="s plain-str">gggSSSSSSTSSTSQ</span>
+<span class="s plain-str">QSSSSQQQSSSTSSPSSSSSTSSPSSQSSTSSggg</span>
+<span class="s plain-str">vvv___KKK999+++</span>
+<span class="s plain-str">P10H)(S77</span>
+<span class="s plain-str">gggSSSQQQSSSSSSSSSSSSSSSTSSkhh~</span>
+<span class="s plain-str">gggSSS????????????????????????TSShig</span>
+<span class="s plain-str">gggVSS???=???=?</span>
+<span class="s plain-str">gggSSS???===????????????TSQggg</span>
+<span class="s plain-str">gggSSS???---</span>
+<span class="s plain-str">iggSSS???+++,,,,,,,,,+++,,,???SSSfgg</span>
+<span class="s plain-str">gggQQQ???+++,,,</span>
+<span class="s plain-str">fffOOO&lt;&lt;&lt;+++ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">gggSSS???---,,,+++,,,===QTSggg</span>
+<span class="s plain-str">S#!qCCsDCO</span>
+<span class="s plain-str">hhhSSS???+++</span>
+<span class="s plain-str">iggSSS===??????????????????;??SSSggg</span>
+<span class="s plain-str">gggSSS===/,,</span>
+<span class="s plain-str">hhhSSS===???===??????=??QSPggg</span>
+<span class="s plain-str">fggWWWSSSSSSSSSSSSSSSSSSSSSQQQSSSghh</span>
+<span class="s plain-str">gggSSS@??/,,</span>
+<span class="s plain-str">gggSSSSSSSSSQQQSSSSSSPSSTSQhhh</span>
+<span class="s plain-str">vvvgggggggggggggggiiigggggghhhkggggg~</span>
+<span class="s plain-str">fggSSS@??,,,</span>
+<span class="s plain-str">fggSSS???---</span>
+<span class="s plain-str">wyyiggXXXKKK;;;+++</span>
+<span class="s plain-str">fggSSS=??,,,</span>
+<span class="s plain-str">y{{fggWWWCCC333$$$</span>
+<span class="s plain-str">gggSSS&lt;??/,,</span>
+<span class="s plain-str">xww___KKK888(((</span>
+<span class="s plain-str">kfgTSS@??+,-</span>
+<span class="s plain-str">fggSSS???+,-</span>
+<span class="s plain-str">fggYWWhgk</span>
+<span class="s plain-str">fffOOO9;;)++</span>
+<span class="s plain-str">gggPSS@??+-+</span>
+<span class="s plain-str">gggSQQ@??,,,</span>
+<span class="s plain-str">twv_^^SSSdgf</span>
+<span class="s plain-str">gggSQS?@?,,,</span>
+<span class="s plain-str">~gfdyvt</span>
+<span class="s plain-str">gggSSS???/,,</span>
+<span class="s plain-str">iggQSS?&lt;?/-,</span>
+<span class="s plain-str">13GDDSWWfgg</span>
+<span class="s plain-str">svw___ggg</span>
+<span class="s plain-str">fggSSS???,,,</span>
+<span class="s plain-str">ighSSQ@?=,-)</span>
+<span class="s plain-str">fffNOO;&lt;&lt;+++</span>
+<span class="s plain-str">97LKIa\^svv</span>
+<span class="s plain-str">fggTWWggf</span>
+<span class="s plain-str">kgiSQS?=?,,,</span>
+<span class="s plain-str">gggWQS;??++,</span>
+<span class="s plain-str">vvv___LKK777(((</span>
+<span class="s plain-str">;9NOOgff</span>
+<span class="s plain-str">fffNOO`__svw</span>
+<span class="s plain-str">yx{iggXYWKKI;&lt;;@??PSQfid</span>
+<span class="s plain-str">ghgSSQ??=,-+</span>
+<span class="s plain-str">IKXXXdgf{y{</span>
+<span class="s plain-str">wvw\__KKK999+++</span>
+<span class="s plain-str">;9OOOfff</span>
+<span class="s plain-str">ghgXWVCCCOOOgcf</span>
+<span class="s plain-str">kghWVWACCWWWggg</span>
+<span class="s plain-str">cfgNOO9;;+++</span>
+<span class="s plain-str">vvv___ggg{{{</span>
+<span class="s plain-str">vvv^^^KKK788+&#x27;)</span>
+<span class="s plain-str">97LIK\__vvv</span>
+<span class="s plain-str">vvv___KKK;;;KKK___</span>
+<span class="s plain-str">ttt___KKK;;;KKK___vvv</span>
+<span class="s plain-str">~tttkhhXXXggg{{{</span>
+<span class="s plain-str">yyygggWWWCCC033%#$</span>
+<span class="s plain-str">31FCDWWWiggyyy</span>
+<span class="s plain-str">WXKKKKKKXXXgggyyy</span>
+<span class="s plain-str">hh___WWWIII[XXhhhvvv~~~</span>
+<span class="s plain-str">vvvgggXXXKKK;;;)++</span>
+<span class="s plain-str">WVXXXhhhvvv~~~</span>
+<span class="s plain-str">XWhhhwvv~~~</span>
+<span class="s plain-str">XYiggwvv~~~</span>
+<span class="s plain-str">XWgggvvv~~~</span>
+<span class="s plain-str">IK;;;;;;KKKXXXgggwww~~~</span>
+<span class="s plain-str">gkgggggggggiggigggggggggggggggggggggggfff___WWWIII;;;;;;KKKWWW___fffgggigg</span>
+<span class="s plain-str">giggggggigggggggggggggggggggggggggggggggggggggggggggggggggggggggggggfffa__</span>
+<span class="s plain-str">TTKKKCCC&lt;&lt;&lt;KKKVVV___fffggggggggggggggggggggggggfff___WWWKKK;;;///$$$</span>
+<span class="s plain-str">giiggggggggggggggggggggggggggggggggggggggggggggggggggggggggiggcff`__VWWKKK</span>
+<span class="s plain-str">CDKKKVVV___fffgggggggggggggggggggggggggggggggggggggggggggggggggggigggggghg</span>
+<span class="s plain-str">ghggggggggggggggggggggggggggghhhgggggg___WWWIIICCC999///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">KIWWW___fffggggggggggggggggggggggggggghhhggg___VVVKKK;;;///###///;;;KKKVVV</span>
+<span class="s plain-str">KKXWW___fffgggggggggggggggggggggfff___WWWKKK&lt;&lt;&lt;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">KKWWW___dddggggggggggggggggggggggggfff___VVV___fffgggggghhhggggggigggggggg</span>
+<span class="s plain-str">giiggggggggggggggggggggggggggggggggggggggggggggggggggggggggfggfff`__SVVKKK</span>
+<span class="s plain-str">ghggggggggggggggggggggggggggggggggggggfff___WWWKKK;;;///###</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSQSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;000///;;;CCCKKKOOOSSSSSS</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKL</span>
+<span class="s plain-str">CC;9;333///;;;CCCKKKOOOSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKDDD;;;///%%%</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSTSSOOOKKKCCC;;;</span>
+<span class="s plain-str">13;;;CCCKKKOOOSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSPSSTSSSSSSSSTSSSSQ</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKDDD999333+++###</span>
+<span class="s plain-str">KKOOOSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOPPPSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSTSSPSSQOOKKKACC;;;</span>
+<span class="s plain-str">/0&#x27;&#x27;&#x27;&#x27;&#x27;&#x27;///;;;DDDKKKOOOSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSPSSTSSSSSSSSTSSSSQ</span>
+<span class="s plain-str">SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSOOOKKKCCC;;;///&#x27;&#x27;&#x27;</span>
+<span class="s plain-str">31-+,$$$$$$)++333777&lt;&lt;&lt;????????????????????????;;;888333+++###</span>
+<span class="s plain-str">99?&lt;&lt;?????=?=????????????????===;;;;;;????????????????????????;;;888333+++</span>
+<span class="s plain-str">333___zzzuuuOOO###</span>
+<span class="s plain-str">uuuWWWDDD888222...,,,,,,+++++++++++++++++++++++++++</span>
+<span class="s plain-str">zzz\\\III===666333111000000000000000000000000000000</span>
+<span class="s plain-str">10000111111101000///---***$$$</span>
+</details>
+<div class="stats">Total unique strings: 1778 · Interesting: 188 · Noise filtered: 1045</div>
+</div></body></html>

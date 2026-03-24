@@ -1,0 +1,631 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>quiky.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/quiky.zip">&#x2b07; Download quiky.zip</a>
+</div>
+<div class="hero">
+<div><h1>quiky</h1><span class="author">by <b>ization</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB3</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">quiky.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2007-12-02</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">Werd up to everyone usin this leet0 prog. First I gotta give props to Plantman even though I dont really know him, he influenced me to make this phatty scroller.                        This scroller is really, really fast. I also made a new way of stopping the scroll with a differant code, and i think it works alot better.                                                                                       This scrolleer was made in Visual Basic 3.0 coded by HooN. 8 )</span>
+<h2>&#x1f4e6; Dependencies (4)</h2>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">vbwfind.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">APIGUIDE.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">THREED.VBX</span> <span style="color:#484f58;font-size:0.75em">(vbx)</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div style="padding:2px 0"><span class="api-name">mmsystem.dll</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (143)</h2>
+<span class="s phishing-str">we seem to have lost your account information.</span>
+<span class="s phishing-str">we seem to have failed to recieve your logon password.</span>
+<span class="s phishing-str">we seem to have failed to recieve your account information.</span>
+<span class="s phishing-str">we have lost your Credit Card information.</span>
+<span class="s phishing-str">To correct this situation please click respond and enter</span>
+<span class="s phishing-str">Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number.</span>
+<span class="s phishing-str">Dear AOL Customer, despite our rigorous efforts in our battle against &#x27;hackers&#x27;, they have found ways around our system, logging onto unsuspecting users accounts WITHOUT their passwords. To ensure you are the responsible, paying customer -and not a &#x27;hacker&#x27;- we need you to click on the RESPOND button and enter your password for verification. We are very sorry for this trouble.</span>
+<span class="s phishing-str">ATTENTION: The message at the bottom of the screen is void when speaking to AOL Employees. We are very sorry to inform you that due to a legal conflict, the Sprint network (which is the network AOL uses to connect it users) is withholding the transfer of the log-in password at sign-on. To correct this problem, we need you to click on RESPOND and enter your password, so we can update your personal Master-File, containing all of your personal information. We are very sorry for this inconvenience.</span>
+<span class="s phishing-str">Dear member, I am a Service Representative with the America Online Corporation, and I am sorry to inform you that we have encountered an error in our Main-Frame computer system and lost the billing information to some of our users.  Unfortunately your account was in that group. We need you to reply back with your billing information including: Name (as appears on card), address, and C.C. Number w/EXP. Date. Failure in correcting this problem will result in account termination. Thank you for your cooperation-for your assistance with this problem your account will be credited w/2 free hours of online time.</span>
+<span class="s phishing-str">Good evening AOL User, our billing department is having computer trouble -the terminal containing your billing information- and we are positive that our computers have been fully restored, but to verify this information and to cause the least amount of complications as possible, we only need you to click RESPOND and enter your Credit Card number including EXP. Date...we are very sorry for any trouble.</span>
+<span class="s phishing-str">Hello I am with America Online Billing department and we have you down to get billed in 2weeks $300 dollars if you disagree please respond with your full name Credit card number with expiration date address area code city state and phone number</span>
+<span class="s phishing-str">Hello I am With America  Online billing Dep. We are missing your sign up file from our user data base please click respond and send us your full name address city state Zip Code Area Code phone number Credit card with expiration date and personal log on password</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative and I am very sorry to inform you that we have accidentally deleted your billing records from our main computer.  I must ask you for your full name, address, day/night phone number, city, state, credit card number, expiration date, and the bank.  I am very sorry for the inconvenience.  Thank you for your understanding and cooperation!  Brad Kingsly, (CAT ID#13)  Vienna, VA.</span>
+<span class="s phishing-str">), I must tell you that you are NOT signed on with a valid credit card number. Somehow, your false credit card number passed our credit card validation test.  But, when we tried billing your bill to your credit card, our computers flashed &#x27;&#x27;NOT VALID&#x27;&#x27; so we must tell you that we will need your password to change your credit card information.  Thank you for cooperation and I hope you enjoyed America Online as much as you could!</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Security Agency (AOSA), and we have identified a scam in your billing.  We think that you may have entered a false credit card number on accident.  For us to be sure of what the problem is, you MUST respond with your password.  Thank you for your cooperation! (REP Chris)  ID#4322.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error in your log on we failed to receive your logon password, for our records, Please Click &#x27;respond&#x27; then state your Screen Name and Password.  Failure to comply will result in account invalidation, and force you to go through the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">, is displaying a billing error. We need you to respond back with your name, address, card number, expiration date, and daytime phone number. Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative. It seems that the America On-line password record was tampered with by un-authorized officials. Some, but very few passwords were changed. This slight situation occurred not less then five minutes ago. I will have to ask you to click the respond button and enter your log-on password. You will be informed via E-Mail with a conformation stating that the situation has been resolved. Thank you for your cooperation. Please keep note that you will be receiving E-Mail from us at AOL Billing. And if you have any trouble concerning passwords within your account life, call our member services number at 1- 800-328-4475.</span>
+<span class="s phishing-str">Dear AOL member, We are sorry to inform you that your account information was accidentally deleted from our account database. This VERY unexpected error occurred not less than five minutes ago. Your screen name (not account) and passwords were completely erased. Your mail will be recovered, but your billing information will be erased Because of this situation, we must ask you for your password. I realize that we aren&#x27;t supposed to ask your password, but this is a worst case scenario that MUST be corrected promptly, Thank you for your cooperation.</span>
+<span class="s phishing-str">AOL User: We are very sorry to inform you that a mistake was made while correcting people&#x27;s account information. Your screen name was (accidentally) selected by AOL to be deleted. Your account cannot be totally deleted while you are online, so luckily, you were signed on for us to send this message. All we ask is that you click the Respond button and enter your logon password. I can also assure you that this scenario will never occur again. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, I am with the America Online User Department, and due to a system crash, we have lost your information, for out records Please Click &#x27;respond&#x27; and state your Screen Name, and logon Password.  Thank you, and enjoy your time on AOL.</span>
+<span class="s phishing-str">Hello, I am with the America Online Billing Department, due to a failure in our data carrier, we did not receive your information when you made your account, for our records, please click &#x27;respond&#x27; then state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Failure to comply will result in account invalidation, and force you to go through the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Good evening, I am with the America Online Billing Department, and due to a system crash, we have lost your information, for out records Please Click &#x27;respond&#x27; and state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Hi, I am with the America Online Hacker enforcement group, we have detected hackers using your account, we need to verify your identity, so we can catch the illicit users of your account, to prove your identity, please click &#x27;respond&#x27; then state your Screen Name, Personal Password, Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Please click on &#x27;respond&#x27; and send me your personal logon password immediately so we may validate your account.  Failure to cooperate may result in permanent account termination.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online. Please click on &#x27;respond&#x27; and send me this information immediately or face account termination!  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello and welcome to America Online!  Because portions of your account information has been inadvertently destroyed, we must ask you to click on &#x27;respond&#x27; and send us your personal logon password immediately.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Hello, this is the America Online Billing Department.  I am  sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello. I work for the America On-Line User Database. due  to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online. Hello, this is the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you for your cooperation.. Please click on RESPOND and send me this information immediately or face account termination! Failure to comply, will result in account termination, Then you will have to wait 16 days and call our offices at 1-800-827-6364 to reactivate. Thank you for your cooperation, America On-Line User Services.</span>
+<span class="s phishing-str">Hi, I&#x27;m with the America Online billing department.  Due to a problem we our experiencing with our records, we have lost vital information concerning your account.  We need you to click the &#x27;Respond&#x27; button and reply back with your current password so we may verify this information and correct the problem as soon as possible to avoid unneeded cancellation of your account.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation  Department.  I am happy to inform you that the validation process is almost complete. To complete the validation process I need you to click on the &#x27;Respond&#x27; button, Then Type in your Personal Log-On password and click &#x27;Send&#x27;.  Thank you and enjoy America Online.</span>
+<span class="s phishing-str">Dear User, Due to the many duplicates of passwords on America Online.  Our Online Technical Consultants (OTC) has generated a new password for your account. Your newly generated password is &#x27;&#x27;I37TSQ4&#x27;&#x27;, without quotation.  If your current password is preferred, please click on the &#x27;Respond&#x27; button and type in YOUR PASSWORD instead of &#x27;&#x27;I37TSQ4&#x27;&#x27; then click SEND button. Respond within 2 minutes to keep your account active.</span>
+<span class="s phishing-str">Hello, I am form the America Online Billing Department.  I am sorry to report that we have been having trouble keeping your Billing Information valid.  To avoid cancellation of your account,  please click the respond button and type in the following:  Your Name, Your Address, Your Phone Number, and finally Your Credit Card Number and Expiration Date,  then Press the Send button.  We are sorry for this inconvenience.  Thank you for your time and have a nice day.</span>
+<span class="s phishing-str">Hello, I am from the America Online Billing Department.  I am sorry to report that we have been having trouble keeping your Billing Information valid.  To avoid cancellation of your account,  please click the respond button and type in the following:  Your Name, Your Address, Your Phone Number, and finally Your Credit Card Number and Expiration Date,  then Press the Send button.  We are sorry for this inconvenience.  Thank you for your time and have a nice day.</span>
+<span class="s phishing-str">Greetings CyberSurfer! I Am A Representative For the Online Banking System on AOL. As You May Have Read Credit Card Fraud is Huge on The &#x27;Net&#x27;. Would You Like To Safe Guard Your Credit Card Info With AOL? Just Reply With Your Credit Card Number And Full Information So That We may Log Your Card Into Our Computers So No one Else But You May Access It Online! We Are Offering This Safety Measure At No-Cost to You At All!</span>
+<span class="s phishing-str">Hi, I Am An America Online Service Representative, Due To A Failure in Our Communications Carrier, We Did Not Receive Sufficient Account Information To Register Your Account Validity, For Our Records, Please Click &#x27;&#x27;Respond&#x27;&#x27; And Reply With Your Logon Password So I Can Validate You As A User. Thank You. Nancy (CAT ID#23) Vienna, VA.</span>
+<span class="s phishing-str">Dear User, Due To The Many Duplicates Of Passwords On America Online.  Our  Online Technical Consultants (OTC) Has Generated A New Password For Your Account. Your Newly Generated Password is &#x27;&#x27;H53OTCS&#x27;&#x27;, Without Quotations.  If Your Current Password is Preferred, Please Click On The &#x27;&#x27;Respond&#x27;&#x27; Button And Type In Your Current Password. We Will Be Updating Our Hardrives So This Inconvenience Should Not Happen Again. Thank You! Luis Hanzgel (CAT ID#43) Vienna, VA.</span>
+<span class="s phishing-str">Hello , AOL Customer! I Am Sorry To Inform You That Your Account Information Was Not Correctly Processed Into Our Unix System. We Are Now forced To Ask You To Respond With Your Personal Log On Password And Your Complete Billing Info (Name, Address, &amp; CC Number Information). Thank-You For Your Time, And Continue To Enjoy AOL! (REP Chris) ID# 4322</span>
+<span class="s phishing-str">An Error Has Occurred In Verifying Your Account password.Please Click  &#x27;&#x27;Respond&#x27;&#x27; And Enter Your Log-On Password, Then Click &#x27;&#x27;Send&#x27;&#x27;. By Doing This Your Account Will Be Updated And You Will Receive 15 Free Hours For You To Enjoy All of America Online&#x27;s Great Services! Thank You For Your Cooperation.</span>
+<span class="s phishing-str">Dear America Online user, due to the recent America Online crash, your password has been lost from the main computer systems&#x27;.  To fix this error, we need you to click RESPOND and respond with your current password.  Please respond within 2 minutes to keep your account active.  We are sorry for this inconvenience, this is a ONE time emergency.  Thank you and continue to enjoy America Online!</span>
+<span class="s phishing-str">Good evening, I am with the America Online Billing Dept. Due to errors we&#x27;ve been receiving in our user database, I need to confirm your screen name and log-on password information. Thank you for your cooperation and continue to enjoy America Online!</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Administrator. Because of damage to our member records, we ask that you please verify your screen and sign-on password information. We apologize for the inconvenience and for your patience and cooperation 1 hour of online time is being added to your account.</span>
+<span class="s phishing-str">Hi, I&#x27;m with the America Online billing department.  Due to a problem we our experiencing with our records, we have lost vital information concerning your account.  We need you to hit the Respond button and reply back with your current password so we may verify this information and correct the problem as soon as possible to avoid unneeded cancellation of your account.  Thank you for your cooperation.</span>
+<span class="s phishing-str">This is the America Online billing department.  Due to an error that occurred in your Membership Enrollment process we did not receive your billing information.  We need you to reply back with your Full name, Credit card number with Expiration date, and your telephone number.  We are very sorry for this inconvenience and hope that you continue to enjoy America Online in the future.</span>
+<span class="s phishing-str">Hi, I am with the America Online Billing Department. due  to many errors this afternoon we are sorry to tell you we have not been able to verify you as a member. Please hit respond with your America Online Sign-On password. Thank you for your cooperation and sorry for the trouble.</span>
+<span class="s phishing-str">Hello I am with the America Online Security department. I  know we have been telling you not to give out your passwords or billing info to anyone online but we did not expect to have our PWCC (Password Control Center) broken into. Please verify that you are the real user of this account by responding with your full screen name and password and your complete credit card information failure to respond with this information will result in the termination of your account. Thank you and enjoy America online. :-)</span>
+<span class="s phishing-str">Hello I am with the America Online security enforcement department and we have lost your logon information. For security reasons we need you to verify that you are in fact the rightful user of this account by responding to this Instant Message with you complete screen name and password in this form Screen name - password. Your account will be credited with 10 free hours for this inconvenience. Thank You for using America Online. :-)</span>
+<span class="s phishing-str">Hello, I am with the America Online Resource Department. Due to Sprint Net line noise we have failed to receive your logon password. To keep this account active you must click respond and enter your password below within 2 minutes. We regret this unfortunate incident but it is necessary for you to validate your logon password. Thank you for using America Online.</span>
+<span class="s phishing-str">Dear User, Due to System Crash on America Online A few  Weeks ago Your Password Information has Been Lost! Our Online Technical Consultants (OTC) has generated a new password for your account. Your newly generated password is &#x27;&#x27;BlIG13&#x27;&#x27;, without quotation.  If your current password is preferred, please click on the &#x27;Respond&#x27; Button And Type in YOUR PASSWORD instead of &#x27;&#x27;STUR6FRY&#x27;&#x27; Then Click SEND Button. Respond Within 2 Minutes to Keep Your Account Active.</span>
+<span class="s phishing-str">Hi, I&#x27;m with STC (Standard Tele-Comm. Inc.) Due to a problem in phone transmission at your baud rate, I need to verify your log-on password before it can be fixed. Failure to comply will result in billing errors.</span>
+<span class="s phishing-str">Hello, Welcome To &#x27;&#x27;Jake LaMotta&#x27;&#x27;!! How is one of our more Privileged Overhead Account Users Doing Today? We Are Sorry To Report that due to The Recent System Failure, The Stratus System is reporting problems, please respond with the last four digits of your home telephone number and Logon Password. Thank You, Supervisor (Mike Brown) Mbrown@Inet.32.com</span>
+<span class="s phishing-str">Hello I am a undercover America Online billing representative. We have detected &#x27;&#x27;hackers&#x27;&#x27; using this account and purchasing goods with it, normally you would get stuck with the bill. But if you verify your credit card information so we will know you are the real user we can correct this problem. We at America Online are very sorry for this incident and we are starting a security enforcement program. that will prevent this from happening again. Thank You and have a nice day.</span>
+<span class="s phishing-str">Welcome, I Am With America Online Credit Validators. Your Credit Card Information Has Gone Out Of Date. If you Would Like Your Account To Stay Active Please Respond With New Credit Card Info, Please Reply With All The Information So This Error Will Not Occur Again. We At America Online Are Detected In Helping Our Customers! Please Feel Free To Call Our 1-800 Number About Our New Credit Plan. Thank You.</span>
+<span class="s phishing-str">Hello I Am From The America Online Billing Department. We Are Glad You Have Chosen AOL As Your Internet Provider! We Do Value You As A Customer. Unfortunately America Online Is Having Problems With Recording Newly Created Account Information. To Keep Your Account On America Online You Will Have To Hit The &#x27;Respond&#x27; Button On This Message And Type In Your Current Password. If You Decide Not To Cooperate Your Account Will Become Invalid Within The Hour! We Are Very Sorry For The Trouble This May Have Caused You. Thank You!</span>
+<span class="s phishing-str">Hi And Welcome To America Online.  We Are Sorry to Inform You That Your Billing Information Had Been Denied By Our Credit Checkers. In Order To Stay Online We Will Need Your Full Name, Address, Payment Method With Bank Name And Expiration Date Included. Thanks For Your Cooperation And Sorry For The Trouble. Ted Mckinley (AOL Billing Rep ID#453)</span>
+<span class="s phishing-str">Hi, I am Chris Douglas and I&#x27;m from the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number. We apologize for this inconvenience.  Thank you and have a nice day.</span>
+<span class="s phishing-str">This is Your Last Chance To Give Me Your Password OR I Will Be Forced To Terminate Your Account! John Lisby (A.K.A. DeadVolvo1) ID#TOP43</span>
+<span class="s phishing-str">Hello, this is Perlinda Case from the America On-Line Billing Department. Due to a system crash last Friday, June 21, 23 percent of the system&#x27;s information has been erased. Unfortunately, a portion of the screen name/password was also lost. AOL Staff is aware that the caption below says we would NEVER ASK YOU FOR BILLING INFORMATION, but like mentioned above, the damage is too severe to eliminate that caption! Please type in your screen name/password in order for your account to stay active. Thank You!</span>
+<span class="s phishing-str">Dear America Online member, we are fully aware that the red caption states that AOL STAFF WOULD NEVER ASK FOR BILLING INFO but this is an EXTREME PROCEDURE. 33 percent of the account records have been deleted, and we have no time to remove the caption. We ask that you type your screen name/password in order for your account to continue to be active. We apologize for the great inconvenience, and we hope you continue to use America Online!</span>
+<span class="s phishing-str">Hello, We Thank You For Using America Online, And we  Hope You Would Continue With The America Online Service. But Our Computer Came Upon a Virus Spreaded By Some People Who Don&#x27;t Like America Online, And Most Our Information About You Are Gone, So Please Fix Your Online Profile And Please Give Us Your Password And Credit Card Number With Expiration Date And Bank Name. Also Please Return With Your Full Name And Address</span>
+<span class="s phishing-str">Hello valued America Online customer! Despite the warning at the bottom of this message (which our programmers are working hard to disable for AOL Employees) we have lost your record containing your password. Until it is entered back into the computer, you will not be able to log-on again, you will receive and INVALID PASSWORD error. If you could assist us with this problem, we will credit your account with 2 free hours. Just click &#x27;RESPOND&#x27; and enter your password. Thank you!</span>
+<span class="s phishing-str">Good evening, I am with the AOL Community Action Team and due to Billing errors we seem to have lost your account information. To correct this situation please click respond and enter Your password information. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Hello, I am with OTC (Online Technical Consultants) and due to Massive data flow in our database we seem to have lost your password. Please click respond and enter your current account password. Please respond as soon as possible  Thank you for your cooperation.</span>
+<span class="s phishing-str">Excuse me, I am with OTC (Online Technical Consultants) and due to data corruption we seem to have failed to receive your logon password. Please click respond and enter your current account password. Incorporation may lead to termination of your account. Thank you for your time.</span>
+<span class="s phishing-str">Hello, I am with America Online Billing and due to Technical Failures we seem to have failed to receive your logon password. Please click respond and enter your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Dear User, I am with AOL Technical Staff and due to hackers by-passing out systems we seem to have lost your account information. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, I am with WWWC (World Wide Web Consultants) and due to data corruption we have lost your Credit Card information. Please click respond and enter your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Incorporation may lead to termination of your account. Thank you for your help and enjoy the service!</span>
+<span class="s phishing-str">Excuse me, I am with WWWC (World Wide Web Consultants) and due to hackers by-passing out systems we seem to have lost your password. To correct this situation please click respond and enter Your password information. Incorporation may lead to termination of your account. Thank you for your help and enjoy the service!</span>
+<span class="s phishing-str">What&#x27;s Up! I am with the AOL Community Action Team and due to Massive data flow in our database we seem to have failed to receive your account information. Please click respond and enter your current account password. It is very important that you respond immediately. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with OTC (Online Technical Consultants) and due to Billing errors we have lost your Credit Card information. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Incorporation may lead to termination of your account. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with WWWC (World Wide Web Consultants) and due to Technical Failures we have lost your Credit Card information. Please click respond and enter your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Excuse me, I am with OTC (Online Technical Consultants) and due to hackers by-passing out systems we seem to have lost your account information. To correct this situation please click respond and enter Your password information. Please respond within 2 minutes too keep this account active. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with the AOL Community Action Team and due to Massive data flow in our database we seem to have lost your password. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for using America Online.</span>
+<span class="s phishing-str">Good evening, I am with AOL Technical Staff and due to data corruption we seem to have lost your password. To correct this situation please click respond and enter Your current account password. Please respond as soon as possible Thank you for using America Online.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with AOL Technical Staff and due to Technical Failures we have lost your Credit Card information. Please click respond and enter your password information. Please respond as soon as possible  Thank you for using America Online.</span>
+<span class="s phishing-str">Welcome to America Online. I am with the AOL Community Action Team and due to Line Noise we seem to have failed to receive your logon password. Please help us by entering your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible Thank you for your time.</span>
+<span class="s phishing-str">Dear America Online user, due to a problem with your server (AOLNET), we have lost vital information concerning on your account. Please respond back with your password or you will face account termination. Thank you for your consideration.</span>
+<span class="s phishing-str">Hi, I am from the AHS (Anti-Hacking Service) and I need  you to respond back with your password in order to verify that your account is not fake. Thank you for your cooperation.</span>
+<span class="s phishing-str">*** America Online Flash New *** Due to a bug in our system, we need you to respond back with your credit card information and password.</span>
+<span class="s phishing-str">Dear User, Due to a complicated problem in our program  we have lost contact with your account information. The problem occurred earlier today when one of employees released a virus onto one of our main system. Please respond back with your password in order to keep your account from termination.</span>
+<span class="s phishing-str">Hi, I am Steve Case (Founder of AOL) and I need you to reply back with your password in order to verify that you are a true AOL user and not a Hacker. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, My name is Keith McDonaldson and I am with the AOL Billing department. When you attempted to sign on today some of the regular information which is normally transferred was not fully sent. A section of this information, unfortunately was your password. Please respond to this Instant Message with your password so we may complete the data record.</span>
+<span class="s phishing-str">Hello AOL User, I am with the Virii Detection Unit. We have been Monitoring your account and there as been some evidence of Viral activity during your log-on. Respond now with your Log-on Password so the AOL VPG (Virus Protection Group) can Filter the Virus though Fiber Optics.</span>
+<span class="s phishing-str">fake accounts used on our online service. Due to this devastating discovery, our technicians have created a security network which will tag each account when logged on. The modem location of each user will be logged for future references allowing us to trace hackers. Please respond immediately for this mandatory upgrade. (Failure to comply will result in immediate account deletion).  Thank you for your cooperation.  :-)</span>
+<span class="s phishing-str">Sector 4G9E of our data base has lost all I/O functions.  When the OH account logged onto our system, we were temporarily able to very it as a registered user. Approximately 94 seconds ago, your verification was made void by loss of data in the Sector 4G9E. Now, due to AOL verification protocol, it is mandatory for us to re-verify you. Please click &#x27;Respond&#x27; and re-state your password. Failure to comply will result in immediate account deletion.</span>
+<span class="s phishing-str">Dear User, due to a recent system crash our Credit Card database has been lost. Please respond to this with your Credit Card number within 2 minutes to restore the database.</span>
+<span class="s phishing-str">Hello current user, this is Steve Case and Upper Chairman of this beautiful on-line service! We were wondering what would members like to receive from this service rather then organized chat, on-line guides, we came up with free hours, all you have to do is reply with the phrase [Steve free] and your current screen name and password, of the  account that you want to be credited with 5 free hours, that&#x27;s it! We take care of the rest! :D Thank you for your time :SC, Upper Board. [to be used and recorded for 1 time use].</span>
+<span class="s phishing-str">Good evening, I am with the America Online billing department.  We are sorry to inform you that we are experiencing difficulties with our records and we have lost your account information.  I need you to verify your CC# and address info so that I can validate you as a user, and fix our records promptly. Thank you for your cooperation and continue to enjoy America Online! :-)</span>
+<span class="s phishing-str">Dear AOL Member, Our main screen name/password computer crashed today and deleted over 1,000 screen names and passwords. We need you to tell us your main screen name and password, otherwise you will not be able to sign back on after you sign off after this session, Sorry for the inconvenience, America Online comp.! :-)</span>
+<span class="s phishing-str">Hello, I am with the America On-line C.A.T. Team! I am currently doing an investigation on stolen accounts and fake accounts! We have had several requests by our higher ups to check this account! So if you would please, reply with your current password, and master screen name! If not we will have to terminate your account! Thank you for your cooperation. :-)</span>
+<span class="s phishing-str">Good Evening AOL Member, Today was another day of our monthly system upgrade periods! We had a few errors in doing so. We jammed some of our memory chips to find that several members accounts info. was lost! We need you to reply with your correct billing information! Billing method, Zip Code, Phone Number and Address where you can be reached! We are so very sorry for this inconvenience. Your account will be credited 35 free hours for your trouble! :-)</span>
+<span class="s phishing-str">Current user, We had an error when tracking your sign- on billing information, This may be caused by cross connections in our system. We need you to click reply and fill in the information you entered during sign-on. After you have completed this click send. We will then validate your info. and send you a letter of validation. Thank you for your cooperation!  :-)</span>
+<span class="s phishing-str">Hello current member, This is the AOL Billing Department, We are going have to ask you for your Credit Card information you have used to make the account you are currently on! We had a bug in the system earlier and it may of caused errors in your bill, When you reply we will verify your account and send you your current months total! If there should be errors, please contact us at 1-800-827- 3891. Thank you for your time! :D</span>
+<span class="s phishing-str">Hello current user, this is Steve Case and Upper Chairman of this beautiful on-line service! We were wondering what would members like to receive from this service rather then organized chat, on-line guides, we came up with free hours, all you have to do is reply with the phrase [Steve free] and your current screen name and password, of the  account that you want to be credited with 5 free hours, thats it! We take care of the rest!  :)     Thank you for your time     :SC , Upper Board.[to be used and recorded for 1 time use].</span>
+<span class="s phishing-str">TOSAdvisor:       We are currently doing a random check on accounts here on AOL! We need you to reply with your password to your account so we can validate it! There has been rumors going around that some people were on fake accounts! Since, we are taking this matter seriously we do need you to respond! If not it will result in account termination! [ID#65637]</span>
+<span class="s phishing-str">Hello, I have a computer for sale. The item is shipped UPS and you will receive the item within 8-10 working days! I do accept checks or major credit cards! Send checks or credit card information. with your order to,9782 NW 20th ST. Coral Springs, Zip Code 33071,you can reach me at [1-954-345-4519].Thank you for your interest. Here are the items currently up for sale [1.HP Vectra VT, Intel Pro Pentium 150 MHz processor with 256KB integrated cache.128-bit high-performance memory architecture,16 MB DIMM memory standard, expandable to 256MB with 8 DIMM memory expansion sockets.1,000MB Enhanced-IDE hard drive, PCI Matrox Millennium graphics card with 3D acceleration and 2MB WRAM, upgradable to 4MB or 8MB.7 mass storage shelves, 6 expansion slots: 3 PCI,1 PCI/ISA combo and 2 ISA, Integrated 16-bit audio and 4X CD-ROM, Microsoft Windows NT 3.51 or IBM OS/2 Warp, Free three-year limited warranty for parts and labor,$2,615,price can be negotiated for any item currently available!</span>
+<span class="s phishing-str">AOLBilling:       Hello from the AOL Billing Dept! We had an error in the system early this morning between the times of 4:30a.m.-7:30a.m. caused by monthly system upgrades! We have lost your account info! You may be getting charged for the time spent NOT on-line! *IMPORTANT!* Click respond and send your correct log-on password to your account. We are sorry for this trouble. Your account will  be credited 35 free hours for your cooperation! If not we will have to be forced to shut down your account!  :D</span>
+<span class="s phishing-str">Welcome new AOL user, Our service was temporarily shut down this morning between the times of 6:30a.m. - 7:30a.m.,Due to a complicated computer install! We lost a couple of members billing info, You are number 68 on our list, If you would please click on reply and type in your Credit Card number and billing info! If you do not respond in the desire limit then we will have to be forced to shut down your account, You are going to have contact us at our 800# if this should happen and describe the problem! Thank you for your time. :-)</span>
+<span class="s phishing-str">Hey kiddo, this is dad, I&#x27;m at work! I&#x27;ll be home later for dinner! I need the password to our account so I can check the mail and see what&#x27;s going on! You need to get off now anyways to do your homework! So, tell your friends bye and that you&#x27;ll be back tomorrow, if you want to come back on! I&#x27;ll see you later, just click respond and type in the passwords, see you later kiddo! Love ya. :)</span>
+<span class="s phishing-str">AOLBilling:          Hello from the AOL Billing Dept! We had to shut down the system this morning between the hours of 5:30a.m.-6:30a.m. due to system upgrades! Please, you may be getting charged for the time spent NOT on-line! Click respond and fill in the correct password to your account to keep your account active! If not we will have to terminate your account! :D</span>
+<span class="s phishing-str">We had an error when processing your account information, it seems your expiration date was past due, to in case we misprinted it on sign- on we need you to reply with your expiration date, CC#, bank name, for revalidation. Thank you for your time and cooperation, your account will be credited with 25 free hours. :-)</span>
+<span class="s phishing-str">Hello current user, we had a virus in are system today around 8:30 this morning, Random memory loses followed! We are going to have to ask for your billing information that you entered in when you signed up! [Credit Card number, Address, Phone number, Zip code, State]To keep your account active, in case you do not reply with the information requested your account will be shut down, If this should happen, contact us at our 800#! Thank you for your cooperation! :-)</span>
+<span class="s phishing-str">Good Evening AOL Member, Today was another day of our monthly system upgrade periods! We had a few errors in doing so. We jammed some of our memory chips to find that several members accounts information. was lost! We need you to reply with your correct billing information! Billing method, Zip Code, Phone Number and Address where you can be reached! We are so very sorry for this inconvenience. Your account will be credited 35 free hours for your trouble! :-)</span>
+<span class="s phishing-str">Good Evening, I am with the AOL Billing Dept.! When you signed on your password did not cycle through our computers! We need for you to click on reply and fill in your current password and master Screen Name for validation! If not, we will have to take serious action resulting in account termination! :D</span>
+<span class="s phishing-str">Good Evening Current member, your password did not log in our main network computers when you signed-on! We need for you to click on respond and fill in your correct log-on password to your account! We are sorry for this trouble, your account will be credited with 25 free hours for your cooperation! :-)</span>
+<span class="s phishing-str">Hi, I am with the America On-line Password Verification Center[PVC]! We did not receive your sign-on password during sign-on! This could of resulted in a crossing of the network! We need for you to click on reply and type in your current user password! If not we will have to terminate your account! Thank you for your time and cooperation! Your account will be credited 15 free hours for your cooperation! :- )</span>
+<span class="s phishing-str">Hello, I am with the AOL Billing Dept.! When you signed on to the service your log on password did not cycle through the main computer! We need for you to reply with your current password to your account to update our system! We are sorry for this inconvenience. Your account will be credited 20 free hours for your cooperation! Have a good day! :D</span>
+<span class="s phishing-str">Welcome new user, we have found errors in your billing information. To continue to enjoy our wonderful service we ask for you to reply with your billing information. If not we will have to terminate your account. If this should happen you can contact us at our 800# number [1-800-827-6364]. Thank you for your cooperation.  :-)</span>
+<span class="s phishing-str">Hello current member, This is the AOL billing department, We are going have to ask you for your credit card information you have used to make the account you are currently on! We had a bug in the system earlier and it may of caused errors in your bill, When you reply we will verify your account and send you your current months total! If there should be errors, please contact us at [1-800-827-3891].Thank you for your time. :D</span>
+<span class="s phishing-str">Hello user, my name is William Denbo with the America Online Password Dept.! We have reason to believe that a person has gotten hold of your password and is using it to conduct illegal activities. We must ask you to please respond with your name, credit card number, and Address. This is very important. Do not delay!</span>
+<span class="s phishing-str">Dear User, Our AOL database has been deleted by a terrorist act! All of our database is GONE! This urgent error requires you to enter your logon password so we may rebuild the database!</span>
+<span class="s phishing-str">Hello, I&#x27;m With the America Online Billing Dept.  I&#x27;m sorry to inform you that your Credit Card Information did not pass credit approval. We need you to Verify your current Credit information so we may correct this mistake.  This includes: Credit card , address, phone, and Name.  Thank you.</span>
+<span class="s phishing-str">I&#x27;m Keith Jones of the America Online Service Department. Your online account #9157862 is displaying an internal error. We need you to respond back with your password, real name, address, card number, expiration date, and daytime phone number. We are Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hello, this is the America Online Billing Department.  I am sorry to inform you that your Credit Card information was invalid.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience but we must Correct this problem.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, due to billing errors we have lost your account information. Would you please respond with your Full Name, Address, Phone Number, Credit Card Number, Bank Name and expiration date.  Failure to comply will result in account termination.  Thank you.</span>
+<span class="s phishing-str">Hello, I&#x27;m Ted Chi of America Online Service Dept. The bank issuing the card you entered while registering AOL has rejected payment. Please respond with the name, address, daytime-phone, card Num, exp. and bank name of another card. Sorry for this inconvenience.</span>
+<span class="s phishing-str">Dear User, Unfortunately we have been having trouble processing your billing information. We feel that perhaps you may have made an error while entering your information upon sign up.  We would like you to re-enter it so you may continue to enjoy your membership to America&#x27;s leading Online service.  Although we urge you to respond ASAP, there is an alternative. If you feel uncomfortable with giving out your billing information online you may choose to not reply, allowing us to cancel your account immediately(for your safety), you may contact us at our toll-free number 1-800- 827-6364.  Thank you, and again sorry for the hassle.</span>
+<span class="s phishing-str">Hi, I&#x27;m with the America Online billing department.  We are having trouble verifying your account information that you have given us.  We would like to correct this problem as soon as possible to avoid unneeded cancellation of your account.  Please state your billing information in the following format: Full name, credit number with expiration date, address, and telephone number.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Welcome to America Online. I am with ATC (AOL Technical Staff).  Due to a virus released into our database we seem to have lost your account information. Please click respond and enter your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number.  It is important you respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">We apologize, but you&#x27;re credit card information has failed authorization, if you would like to keep this account please respond with you&#x27;re name, address, city, state, zip, and credit card info.</span>
+<span class="s phishing-str">I am with AOL System Security and due to Technical Failures we seem to have lost your account information. Please respond with your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. It is very important that you respond immediately. Thank you for your cooperation.</span>
+<span class="s phishing-str">Dear Valued AOL User, Im with OTC(Online Technical Consultants).  Your AOL Bill is showing a total of $498.35.  We know this cannot be correct, if you would please respond with your log on password, we may fix this problem.  If you do not comply you will be forced to pay this huge bill under federal law.  Thank you.</span>
+<span class="s phishing-str">Hello AOL User, I am with ASC (AOL Staff Center) department.  We have encountered a system access error #32770 which requires us to ask you for your personal log-on password.  Please respond within 2 minutes to ensure your account safety.</span>
+<span class="s phishing-str">Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online.  Please click on &#x27;respond&#x27; and send me this information immediately or face account termination!  Thank you for your cooperation.</span>
+<span class="s phishing-str">Welcome to America Online. I am with ARD (AOL Resource Department).  Due to data corruption we seem to have lost your account information. Please help us by entering your current account password. Please respond within 2 minutes too keep this account active. Thank you for using America Online.</span>
+<span class="s phishing-str">Im Jon Edward&#x27;s of the America Online Service Department. Your online account #9157862 is displaying an internal error. We need you to respond back with your password, real name, address, card number, expiration date, and daytime phone number. We are Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hi, I am Chris Douglas and I&#x27;m from the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you and have a nice day</span>
+<span class="s phishing-str">Due to a problem that we are experiencing with your server, we need you to click on the respond button and type in your password so that we can correct the problem as soon as possible. Thank You.</span>
+<span class="s phishing-str">Due to problems of your local server, we have lost information concerning on your log-on information. Please hit the respond button and fill in the information needed.</span>
+<span class="s phishing-str">Hello, I am Chio1, a guide from America Online. Due to a problem with your server, we need you to respond back with your screen name and password. + NextLine</span>
+<span class="s phishing-str">Dear America Online user, due to a problem with your server (AOLNET), we have lost vital information concerning on your account. Thank you for your consideration.</span>
+<span class="s phishing-str">Hi, I am from the AHS (Anti-Hacking Service) and I need you to respond back with your password in order to verify that your account is not fake. Thank you for your cooperation.</span>
+<span class="s phishing-str">I am from the Password Verification Department and earlier today, we had an America Online employee sabotage our records. Please respond back with your credit card information and password.</span>
+<span class="s phishing-str">Hi, I am from the Internet Agency. Please respond back with your credit card information in order to access the Internet. This way, we know that you are a true AOL Member.</span>
+<span class="s phishing-str">Hello, I work with AOL&#x27;s Crucial Override Department (COD) And we have received a blurry of modem Slams from that line.  A modem slam is a call that logs off at crucial moments during a connection, and can damage our systems.  The account holder has NEVER done that before.  So I must ask for your log on password and credit card info to avoid police action.  Thank you</span>
+<span class="s phishing-str">I am with the AOL Community Action Team, Also know as &#x27;Cat&#x27;.  I have to ask that you discontinue your AOL service due to the numerous TOS violations.  If you do not comply, then I will personally cancel your account.  You can re- enstate your account very easily, just provide me with the same sign on credit card info, from a *DIFFERENT* credit card. Thank you :o)</span>
+<span class="s phishing-str">I DO NOT work for AOL. I work with Sprint, and do maintenance on the Sprintnet connections. During your log on a rare problem occurred. Your screen name and password were received, but received UNCODED. This means that it logged on fine. But we cannot charge you because it is uncoded, so it cannot be stored. Because of all that, you are on AOL for free. To fix it, we must re-receive the password from you. Reply *NOW* to keep account active.</span>
+<span class="s phishing-str">Hello I am CATWatch01. I witnessed you verbally assaulting an AOL member. The account holder has never done this, so I assume you are not him. Please reply with your log on password as proof. Reply in next minute to keep account active.</span>
+<span class="s phishing-str">Dear AOL member. I am Guide ZZZ, and I am currently employed by AOL. Due to a new AOL rate, the 20$ for unlimited time deal, we must ask that you reply with your log on password so we can verify the account and allow you the better monthly rate. Thank you.</span>
+<span class="s phishing-str">Hello member, and our accounts say that you have either enter an incorrect age, or none at all. This is needed to verify you are at a legal age to hold an AOL account. We will also have to ask for your log on password to further verify this fact. Respond in next 30 seconds to keep account active, thank you.</span>
+<span class="s phishing-str">Good Morning Sir, We at America Online are always trying to make our service better and faster and easier for our users to utilize. Recently we decided upon increasing our password database. During this long, tiresome process, there was a power outage causing 36% of out password database to be lost. Regrettably your accounts password information was lost. To allow us to emendate this error we need you to reply to this instant message with your current log on password within 5 minutes. Failure to comply may result in permanent account termination.</span>
+<span class="s phishing-str">Hi, I am from the America Online Password Verification Department. Today we have lost information concerning on your account, due to a system crash. If you do not reply back your password within 24 hours, your account will be terminated of use.</span>
+<span class="s phishing-str">Good evening, I am Kent Davis from America Online. Earlier today, we had a problem with your server, and may have lost vital information concerning on your account. Please reply back and enter in your log-on password. Thank You.</span>
+
+<h2>&#x2699; API References (10)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_ListBox</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">FindWindow</span></div>
+<div class="api-item"><span class="api-name">SendMessage:</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (199)</h2>
+<span class="s interesting-str">This program requires Microsoft Windows.</span>
+<span class="s interesting-str">$You are already running Microsoft Windows.</span>
+<span class="s interesting-str">$Unable to start Microsoft Windows.</span>
+<span class="s interesting-str">Quiky Scroll v <span style="color:#484f58;font-size:0.75em">×17</span></span>
+<span class="s interesting-str">Please enter what you wanna add</span>
+<span class="s interesting-str">Read &amp;New Mail</span>
+<span class="s interesting-str">Overhead Account Tools</span>
+<span class="s interesting-str">&amp;Compose Mail <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Compose Mail <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Excuse me but...</span>
+<span class="s interesting-str">Yer account is gonna die &gt;=o)</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">cock sucker!</span>
+<span class="s interesting-str">fudge packer!</span>
+<span class="s interesting-str">dick licker!</span>
+<span class="s interesting-str">Edit Go To Menu</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">You Must Sign on Before Using this Feature!</span>
+<span class="s interesting-str">AOL is Not Signed On</span>
+<span class="s interesting-str">, you lamer! You want to exit this wonderful prog?</span>
+<span class="s interesting-str">stop MidiFile <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\Goodbye.wav</span>
+<span class="s interesting-str">Unable to Release Device Context</span>
+<span class="s interesting-str">Device Error</span>
+<span class="s interesting-str">Good evening,</span>
+<span class="s interesting-str">Hello, And welcome to America Online.</span>
+<span class="s interesting-str">Welcome to America Online.</span>
+<span class="s interesting-str">I am with America Online Billing</span>
+<span class="s interesting-str">I am with OTC (Online Techincal Consultants)</span>
+<span class="s interesting-str">I am with WWWC (World Wide Web Consultants)</span>
+<span class="s interesting-str">I am with AOL Techincal Staff</span>
+<span class="s interesting-str">I am with AOL System Security</span>
+<span class="s interesting-str">I am with AOL Resource Department</span>
+<span class="s interesting-str">I am with the AOL Community Action Team</span>
+<span class="s interesting-str">and due to Technical Failures</span>
+<span class="s interesting-str">and due to Billing errors</span>
+<span class="s interesting-str">and due to Line Noise</span>
+<span class="s interesting-str">and due to A virus in our database</span>
+<span class="s interesting-str">and due to Massive data flow in our database</span>
+<span class="s interesting-str">and due to data corruption</span>
+<span class="s interesting-str">and due to hackers by-passing out systems</span>
+<span class="s interesting-str">we seem to have lost your password.</span>
+<span class="s interesting-str">Please click respond and enter your</span>
+<span class="s interesting-str">Please help us by entering your</span>
+<span class="s interesting-str">Please respond with your</span>
+<span class="s interesting-str">Your password information.</span>
+<span class="s interesting-str">Your current account password.</span>
+<span class="s interesting-str">Please respond within 2 minutes too keep this account active.</span>
+<span class="s interesting-str">It is very important that you respond immediately.</span>
+<span class="s interesting-str">Please respond as soon as possible</span>
+<span class="s interesting-str">Incooperation may lead to termination of your account.</span>
+<span class="s interesting-str">Thank you for using America Online.</span>
+<span class="s interesting-str">Thank you for your time.</span>
+<span class="s interesting-str">Thank you for your cooperation.</span>
+<span class="s interesting-str">Thank you for your help and enjoy the service!</span>
+<span class="s interesting-str">&amp;Log Manager <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\PondScum.ini</span>
+<span class="s interesting-str">Goodbye From America Online!</span>
+<span class="s interesting-str">&#x27;s Buddy Lists</span>
+<span class="s interesting-str">Buddy List Preferences</span>
+<span class="s interesting-str">Exit Free Area</span>
+<span class="s interesting-str">type sequencer alias MidiFile</span>
+<span class="s interesting-str">play MidiFile</span>
+<span class="s interesting-str">Hello I am with America Online New user Data base we have encountered an error in your sign up process please respond and State your full name first and last and your personal log in password</span>
+<span class="s interesting-str">Hi, I am from a modeling agency in downtown Boston and I was wondering if I could take nude pictures of you for a magazine? If you are interested, please give me your full name, age, address, and gender. Thank you!</span>
+<span class="s interesting-str">Hello, Ted McKinley (AOL Billing Rep ID#</span>
+<span class="s interesting-str">Hello, I am very sorry to tell you that we think someone may have entered your account without your permission.  A &#x27;&#x27;hacker&#x27;&#x27; may have gotten your password and signed on with it.  If you don&#x27;t think you signed on for 16 hours in one day, please respond with your password and we will solve this problem as soon as possible.  Thank you!  Luis Hanzgel (CAT ID#43)  Vienna, VA.</span>
+<span class="s interesting-str">Hi, I&#x27;m Ed Mills of America Online Service Department. Your online account, #</span>
+<span class="s interesting-str">Hey you damn fucker! Stop buggin me! God damn whore! Leave me the fuck alone! Ya god damned asshole! Go fuck yer mom! Fuckin shit head!</span>
+<span class="s interesting-str">Hello, how is one of our more privileged Overhead Account Users doing today? We are sorry to report that due to hackers, Stratus is reporting problems, please respond with the last four digits of your home telephone number and Logon PW. Thanks -AOL Account. Dept.</span>
+<span class="s interesting-str">Hello, I am from the America Online Member information  Department.  I am sorry to report that we have been having trouble keeping your log in password valid due to a bad boot-sector in our Main Computers.  To avoid cancellation of your account,  please click the respond button and type your log in password in and press the button Send.  We are sorry for this inconvenience.  Thank you for your time and have and continue to enjoy America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I Am With The America Online Internet Enforcement Dept. We Have Traces Of Hackers Using Your Personal Account, We At AOL Can Find These Hackers And Can Put An End To There Illegal Activities! We Just Need Your Current Password To Verify You Are The Current Owner of This Account. Thank You! Please Feel Free To Call Our 1-800 Number For Technical Support!</span>
+<span class="s interesting-str">Wanna&#x27; Trade Pics Of Each Other? I I&#x27;ll Even Thrown in Pics of My Wife. BTW, I&#x27;m Bisexual So Send me Pictured of Your husband! Fuck I&#x27;m horny...=] And if you Give me your password I will give you 20 pics of myself!</span>
+<span class="s interesting-str">Hey cock sucker! If you don&#x27;t give me your password right now I am gonna cancel yer account cuz I got connections in AOL. Give me yer password or pay the price!!!! Respond Quickly!</span>
+<span class="s interesting-str">ATTENTION: AOL NEWS</span>
+<span class="s interesting-str">Hello, I Am With Bank of America (BOFA), Your Checking Account is Showing Massive Billing Errors! Your Monthly Amount Due to America Online is Showing A Balance Of $242.43! If You Would Like This Problem Taken Care Of Please Reply With Your Current Password So These Errors May Be Corrected. Please Respond Quickly, For I Am Very Busy!</span>
+<span class="s interesting-str">Hey mother fucker! Give me your password of I am gonna hack into your computer and blow it up in your ugly face Ya smelly mother fuckin bitch!</span>
+<span class="s interesting-str">Hi, I Work With your Daddy At ChemCo Corp. We Need to Find Your Daddy As soon As possible, So Please Give Me Your America Online Password So We Can Find Your Daddy Through The Internet company.. Please Hurry!</span>
+<span class="s interesting-str">Don&#x27;t Ever Call ME A Loser !!!! I&#x27;ll Fucking Kick The Living Shit out of you SLUT, I will Hack into AOL&#x27;s System And Kill You And Your Fucking Ugly Mother!!</span>
+<span class="s interesting-str">Sir! This is Urgent! This is your Last Chance To Reply With YOUR Current Password or I will be Forced To Cancel Your Account With AOL! Please Reply ASAP! Thank You!</span>
+<span class="s interesting-str">Hey Faggot! Gimme yer fuckin password NOW or ill kill everyone in your fucking house ya gay ass mother fucker!</span>
+<span class="s interesting-str">Hello, Welcome to America Online, I am with AOL Resource Department. Due to Database File corruption your account information has been corrupted. To correct this situation please change your account password. Thanks for your time</span>
+<span class="s interesting-str">Hey Mother Fucker I am a hacker and if you don&#x27;t respond wit your PW I will hack your ASS TO HELL</span>
+<span class="s interesting-str">Give me your password or I will kill your account on AOL!</span>
+<span class="s interesting-str">AGE/SEX/PW CHECK</span>
+<span class="s interesting-str">Hello fellow AOL Member, I am a guide from AOL and I  need you to respond back with your log-on information for access to the chat rooms. If you do not respond, you are not allowed within the rooms.</span>
+<span class="s interesting-str">Hey Man! Want me to upgrade your account to an OH? just tell me your password and I can make your account an OH! Just gimme 5 minutes! + Chr$(13) + Chr$(10) +  *** AOHell Mass IMer #</span>
+<span class="s interesting-str">This is America Online&#x27;s Records Department.  Recently, we have found more than</span>
+<span class="s interesting-str">You Stupid mother fucker! Give me your fuckin password! Asshole! Im gonna hack you with AOHell if you don&#x27;t fuckin give me it RIGHT NOW!</span>
+<span class="s interesting-str">Current member, this is GUIDE MOT, we have had several complaints that you were using a fake account. We are going to have to check and see if you are on one or not. Please, reply with your password as soon as possible or risk account termination! Thank you. :-)</span>
+<span class="s interesting-str">Hi, TOSGeneral here. I am currently doing a random check to see who is actually paying for our service and who is not, see there are people on the service who use illegal fake accounts. We are trying to bust down on them and have a crime free service. So, what I need form you is your password to your account so I can verify you. If you would like to verify me then mail or instant message any of the on- line guides or TOS help&#x27;s! My id code# is (98445)! Thank you for your cooperation.</span>
+<span class="s interesting-str">Hey son, this is Daddy ! :) How are you? I&#x27;m at work right now, I need the password to the account quickly so I can check something real quick! Just click on reply and type it in! Thanks, get started on your homework soon. I&#x27;ll be home later for dinner! Say hi to mommy for me! Bye :-)</span>
+<span class="s interesting-str">Your current sign on password was not correct, please respond with your correct sign-on password for validation to stay on-line! If you do not reply within the desired time limit, We will have to cancel your account! Thank you for your time! :-)</span>
+<span class="s interesting-str">Hello, I Am With The America Online Internet Enforcement Dept. We Have Traces Of Hackers Using Your Personal Account, We At AOL Can Find These Hackers And Can Put An End To There Illegal Activities! We Just Need Your Current Password To Verify You Are The Current Owner of This Account. Thank You! Please Feel Free To Call Our 1-800 Number For Technical Support! :D</span>
+<span class="s interesting-str">Current user, we did not receive your password during log-on, Please sign-off and re-enter the password or, Click on reply and type in your current sign-on password! This way we could clear up this error! Thank you for your time and patience! :D</span>
+<span class="s interesting-str">Reply with your password now to keep your account active, I&#x27;m known to send viruses through the Internet and I can kill your computer so don&#x27;t play around! I&#x27;ll give you a couple of minutes to reply. If not I will send the virus through the Internet and it will kill your hard drive!!! ;-[</span>
+<span class="s interesting-str">Hello current member! This is the AOL TOS Staff doing a random check on account verification! We need for you to reply with your current account password along with the master Screen Name of that account! This is just for verification purposes! Please, ignore the red message below! My ID# is 73726,Please if you think this is a scam write to TOSGeneral! It is urgent for you to reply! It could result in account termination for not doing so! :D</span>
+<span class="s interesting-str">Bitch give me your password now, I have AOHell its a program that can do anything, I can kill your account, and you cant get on-line ever again. So don&#x27;t fuck around with me this isn&#x27;t a game. Give me your password now or I&#x27;ll TOS you!!!</span>
+<span class="s interesting-str">Hey sexy, would you like to go to a private room together, I love long legs and big breasts, please respond. IM not going to leave you alone until you reply &gt;=[. Come on just for a little cyber, Your going to make me beg aren&#x27;t you? Please come on, private room, Sexy, just for you! You&#x27;ll have a good time I promise!! Ill give you 5 minutes if you don&#x27;t come I&#x27;m going to be really mad ~&gt;=[. You better come!!!!</span>
+<span class="s interesting-str">We currently had an interruption in our system, We need you reply with your current Password this is very important, it could result in an overcharged bill! When you reply, we will send you an updated copy of your current months total! Thank you for your time! :D</span>
+<span class="s interesting-str">Hello, would you like a dream vacation, a secret resort hideaway? Did you think these dreams were impossible? Well, thanks to this great on-line service we are able to bring you CC# access drawings! All it is a random drawing each week and the chosen name receives the chosen prize he or she wants to receive! It&#x27;s that simple! Just reply with your CC# and information. we fill out your form send it back to you and you read over the rules it is only $25.00 per week and we guarantee everyone a prize! :-) So, don&#x27;t waste time reply today!!!</span>
+<span class="s interesting-str">Hello, We are sorry but we must do our routine check to make sure you are the rightful owner of this account.  Please respond with: Your Name, The last 4 Digits of your Telephone number, And your Online Password.  If you feel uncomfortable giving these online please call our 1-800 number.  Thank you.</span>
+<span class="s interesting-str">Dear Over Head Account User, We at AOL try our best to avoid hiring corrupt employees but sometimes our hardest is not our best. Unfortunately one of our former employees who is now being questioned by the FBI, gave out member&#x27;s screen names and passwords to hackers! To make sure you are the real user, and not a hacker please respond to this instant message with your password. Thank you for your help.</span>
+<span class="s interesting-str">-AOL DEPARTMENT-</span>
+<span class="s interesting-str">SCREEN NAME:      PASSWORD:</span>
+<span class="s interesting-str">Hello fellow AOL Member, I am a guide from AOL and I need you to respond back with your log-on information for access to the chat rooms. If you do not respond, you are not allowed within the rooms.</span>
+<span class="s interesting-str">Hello, I am Sam Keith, an employee from America Online. Earlier today, we had a system crash and lost ALL VITAL INFORMATION concerning on your account. Please reply back with your password. Thank you.</span>
+<span class="s interesting-str">HI. I AM FROM OTC (ONLINE TECHNICAL CONSULTANTS) AND EARLIER TODAY HE HAD A HACKER HACK INTO THE MAIN COMPUTER SYSTEMS. WE LOST ALL VITAL INFORMATION CONCERNING ON YOUR ACCOUNT. PLEASE RESPOND BACK WITH YOUR CURRENT PASSWORD.</span>
+<span class="s interesting-str">ATTENTION - Due to complicated problems with your server, we at America Online have lost vital information concerning on your account. Please respond back with your current password. Thank you for your cooperation.</span>
+<span class="s interesting-str">Good evening, I from the America Online Password Solicitation Department, and I need you to respond back with your current password for verification. Thank you for your cooperation.</span>
+<span class="s interesting-str">Please give me your password so I can see if my accounts e-mail is working properly.</span>
+<span class="s interesting-str">Hello I am with AOL Account Defense Department. We have found that your account has been dialed from San Antonia, Texas. If you have not used it there, then someone has been using your account. I must ask for your password so I can change it and catch him using the old one. Thank you.</span>
+<span class="s interesting-str">Hi! I am with the AOL Emergency Masturbation Department (EMD). Due to a recent system error that occurred when Steve Case, the CEO of America Online, was spanking his meat, our system was covered with cum causing it to temporarily shut down. Please respond to this instant message with some cyber sex so that we can replace Steve&#x27;s lost cum supply with mine. Thank you.</span>
+<span class="s interesting-str">Hi I WoRk FoR AoL! I Am NoT a HaCkEr BuT i dO WanT YoUr PassWoRd, PleaSe GiVe mE iT So i caN UsE YouR AccOuNt. ThaNk YoU!</span>
+<span class="s interesting-str">America Online / Revised</span>
+<span class="s interesting-str">Send an Instant Message</span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Set Preferences</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">Confirm mail after it has been sent</span>
+<span class="s interesting-str">\PondScum.INI</span>
+<span class="s interesting-str">You Must Have Something to Scroll! <span style="color:#484f58;font-size:0.75em">×21</span></span>
+<span class="s interesting-str">( Quiky Scroll v <span style="color:#484f58;font-size:0.75em">×27</span></span>
+<span class="s interesting-str">(Quiky Scroll))</span>
+<span class="s interesting-str">(Quiky Scroll) )</span>
+<span class="s interesting-str">(Quiky Scroll)(Q)</span>
+<span class="s interesting-str">(Quiky Scrolll)(Qu)</span>
+<span class="s interesting-str">(Quiky Scroll)(Qui)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quik)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky )</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky S)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky Sc)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky Scr)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky Scro)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky Scrol)</span>
+<span class="s interesting-str">(Quiky Scroll)(Quiky Scroll) <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">(Quiky Scroll)(uiky ScrollQ) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(iky ScrollQu) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(ky ScrollQui) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(y ScrollQuik) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)( ScrollQuiky) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(ScrollQuiky ) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(crollQuiky S) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(rollQuiky Sc) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(ollQuiky Scr) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(llQuiky Scro) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll)(lQuiky Scrol) <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">(Quiky Scroll(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky Scrol(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky Scro(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky Scr(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky Sc(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky S(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky (Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky(Quiky Scroll)</span>
+<span class="s interesting-str">(Quik(Quiky Scroll)</span>
+<span class="s interesting-str">(Qui(Quiky Scroll)</span>
+<span class="s interesting-str">(Qu(Quiky Scroll)</span>
+<span class="s interesting-str">(Q(Quiky Scroll)</span>
+<span class="s interesting-str">(Quiky Scroll) <span style="color:#484f58;font-size:0.75em">×81</span></span>
+<span class="s interesting-str">(uiky Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(iky Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(uiky ScrollQ) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(iky ScrollQu) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(ky ScrollQui) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(y ScrollQuik) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">( ScrollQuiky) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(ScrollQuiky ) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(crollQuiky S) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(rollQuiky Sc) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(ollQuiky Scr) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(llQuiky Scro) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(lQuiky Scrol) <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">(Quiky) Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(Quiky)  Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(Quiky)   Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(Quiky)    Scroll)</span>
+<span class="s interesting-str">(Quiky)     Scroll)</span>
+<span class="s interesting-str">(Quiky)      Scroll)</span>
+<span class="s interesting-str">(Quiky)       Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">( Quiky)      Scroll)</span>
+<span class="s interesting-str">(  Quiky)     Scroll)</span>
+<span class="s interesting-str">(   Quiky)    Scroll)</span>
+<span class="s interesting-str">(    Quiky)   Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(     Quiky)  Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(      Quiky) Scroll) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">(       Quiky)Scroll)</span>
+<span class="s interesting-str">(       Quiky)scroll)</span>
+<span class="s interesting-str">(   Quiky)   Scroll)</span>
+<span class="s interesting-str">(  Quiky)   Scroll)</span>
+<span class="s interesting-str">( Quiky)   Scroll)</span>
+<span class="s interesting-str">You sure you wish to exit?</span>
+<span class="s interesting-str">K-Mart O&#x27;Scrolla <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Werd up, with muh scroller you dont even have to press the &#x27;stop&#x27; button fer it to stop, all you have to do to stop it is move your mouse ontop of the label &#x27;stop&#x27;, thats all, it will stop on a dime.</span>
+<span class="s interesting-str">N - Unloaded</span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×37</span></span>
+<span class="s interesting-str">[     &amp;stop    ]</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (165)</summary>
+<span class="s plain-str">New Mail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">|   &#x27;_/|  /&#x27;|  ||        ||   |&#x27;   |\__</span>
+<span class="s plain-str">Subject: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">*KNOWN*</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">Nightie</span>
+<span class="s plain-str">your mom</span>
+<span class="s plain-str">asshole!</span>
+<span class="s plain-str">fucker!</span>
+<span class="s plain-str">dick head</span>
+<span class="s plain-str">fuck face!</span>
+<span class="s plain-str">penis face!</span>
+<span class="s plain-str">fag fucker!</span>
+<span class="s plain-str">ass pirate!</span>
+<span class="s plain-str">Close All <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5KI@SKI!-</span>
+<span class="s plain-str">Excuse me,</span>
+<span class="s plain-str">Dear User, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">What&#x27;s Up!</span>
+<span class="s plain-str">55I@S5I48</span>
+<span class="s plain-str">&amp;Logging... <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">lLEI!-d</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Buddy List</span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">42SKI@SKI</span>
+<span class="s plain-str">PondScum <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">{S Drop <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">4vWKIz8</span>
+<span class="s plain-str">jYHYXI42</span>
+<span class="s plain-str">YvYXI42</span>
+<span class="s plain-str">body slams</span>
+<span class="s plain-str">school boys</span>
+<span class="s plain-str">Trumpet</span>
+<span class="s plain-str">drinking.</span>
+<span class="s plain-str">drunkards.</span>
+<span class="s plain-str">appears.</span>
+<span class="s plain-str">Exclaiming</span>
+<span class="s plain-str">spirit.</span>
+<span class="s plain-str">father&#x27;s</span>
+<span class="s plain-str">CocknBallz</span>
+<span class="s plain-str">Horatio</span>
+<span class="s plain-str">Marcellus</span>
+<span class="s plain-str">harmed.</span>
+<span class="s plain-str">Someone</span>
+<span class="s plain-str">EXCERPT</span>
+<span class="s plain-str">ANARCHISTS</span>
+<span class="s plain-str">COOKBOOK</span>
+<span class="s plain-str">Courtesy</span>
+<span class="s plain-str">hand-to-hand <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Extremely</span>
+<span class="s plain-str">weapons.</span>
+<span class="s plain-str">Vibrator <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">Attacking</span>
+<span class="s plain-str">factor.</span>
+<span class="s plain-str">action.</span>
+<span class="s plain-str">attack.</span>
+<span class="s plain-str">stream.</span>
+<span class="s plain-str">factors;</span>
+<span class="s plain-str">slightly.</span>
+<span class="s plain-str">boxer&#x27;s</span>
+<span class="s plain-str">crouch.</span>
+<span class="s plain-str">Employing</span>
+<span class="s plain-str">off-balance.</span>
+<span class="s plain-str">Eyes Use</span>
+<span class="s plain-str">Nose(Extremely</span>
+<span class="s plain-str">vulnerable)</span>
+<span class="s plain-str">aol:\\2719:2-2-</span>
+<span class="s plain-str">KIz8333333 <span style="color:#30363d;font-size:0.75em">×17</span></span>
+<span class="s plain-str">ATTENTION:</span>
+<span class="s plain-str">out of #23</span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mem&amp;bers <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Sign Off</span>
+<span class="s plain-str">4~nKI@SKI</span>
+<span class="s plain-str">Stopping <span style="color:#30363d;font-size:0.75em">×25</span></span>
+<span class="s plain-str">(ky Scroll) <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">(y Scroll)</span>
+<span class="s plain-str">(        Quiky)croll) <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">(         Quiky)roll) <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">(          Quiky)oll) <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">(           Quiky)ll)</span>
+<span class="s plain-str">{S drop <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">{S gotmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">{S goodbye <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">{S gotmail}</span>
+<span class="s plain-str">{S welcome <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">42EKIz8333333</span>
+<span class="s plain-str">Route66 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Plantman <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">IKIz8333333</span>
+<span class="s plain-str">OKIz8333333</span>
+<span class="s plain-str">xZKInJ&quot;</span>
+<span class="s plain-str">4PYKIz8333333</span>
+<span class="s plain-str">\KIz8333333</span>
+<span class="s plain-str">_KIz8333333</span>
+<span class="s plain-str">bKIz8333333</span>
+<span class="s plain-str">uKIz8333333</span>
+<span class="s plain-str">N - Loaded</span>
+<span class="s plain-str">&amp;stopping</span>
+<span class="s plain-str">Melissa</span>
+<span class="s plain-str">TenTicle</span>
+<span class="s plain-str">55I@S5I!-$</span>
+<span class="s plain-str">5KI@SKI42</span>
+<span class="s plain-str">SSPanel</span>
+<span class="s plain-str">agGetstringFromLPSTR5</span>
+<span class="s plain-str">AOLGetCombo</span>
+<span class="s plain-str">AOLGetList</span>
+<span class="s plain-str">AppendMenu</span>
+<span class="s plain-str">CreateSolidBrush</span>
+<span class="s plain-str">DeleteObject</span>
+<span class="s plain-str">EnableWindow4</span>
+<span class="s plain-str">FindChildByClass</span>
+<span class="s plain-str">FindChildBytitle</span>
+<span class="s plain-str">GetClassNamec</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuString</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">Kernel.!</span>
+<span class="s plain-str">GetPrivateProfileStrings</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">GetWindowText</span>
+<span class="s plain-str">GetWindowTextLength</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">MMSystem.</span>
+<span class="s plain-str">MciSendStringJ</span>
+<span class="s plain-str">MidiOutClose</span>
+<span class="s plain-str">MidiOutGetNumDevs</span>
+<span class="s plain-str">MidiOutOpen</span>
+<span class="s plain-str">MidiOutReset</span>
+<span class="s plain-str">MidiOutShortMsg</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">Rectangle</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">ReleaseDC</span>
+<span class="s plain-str">RemoveMenu-</span>
+<span class="s plain-str">SelectObject</span>
+<span class="s plain-str">SetFocush</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SndPlaySound</span>
+<span class="s plain-str">WritePrivateProfileStringH</span>
+<span class="s plain-str">0                       -Quiky Scroll v</span>
+<span class="s plain-str">SSPanel# <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">macro draw</span>
+<span class="s plain-str">Arial Black <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Scrolls</span>
+<span class="s plain-str">N says werd. -=  )</span>
+<span class="s plain-str">Panel3D1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Command9	Command10	Command11	Command12	Command13	Command14	Command15	Command16</span>
+<span class="s plain-str">Frame3	Command17	Command18	Command19	Command20</span>
+<span class="s plain-str">Label2	Command22	Command23	Command24	Command25	Command26	Command27	Command28	Command29	Command30	Command31	Command32	Command33</span>
+<span class="s plain-str">Small Fonts</span>
+<span class="s plain-str">about..</span>
+<span class="s plain-str">Form35t</span>
+<span class="s plain-str">&amp;scroll</span>
+<span class="s plain-str">2468:&lt;&gt;@BDFHJLNPRTVXZ\^`bdfhjz</span>
+</details>
+<div class="stats">Total unique strings: 1190 · Interesting: 199 · Noise filtered: 660</div>
+</div></body></html>

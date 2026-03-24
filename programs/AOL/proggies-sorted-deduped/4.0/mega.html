@@ -1,0 +1,436 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mega.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/mega.zip">&#x2b07; Download mega.zip</a>
+</div>
+<div class="hero">
+<div><h1>xer</h1><span class="author">by <b>Common</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB5</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">xer.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-06-25</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (5)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM50.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA5.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">WinMM.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSINET.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">CHATOCX2.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (5)</h2>
+<span class="s interesting-str">InetCtlsObjects.Inet <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">C:\vb5\VB5.OLB</span>
+<span class="s interesting-str">C:\VB5\CHATSCAN3.oca</span>
+<span class="s interesting-str">C:\VB5\vbc21230.oca</span>
+<span class="s interesting-str">email adress</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (316)</summary>
+<span class="s plain-str">MegaCComs <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Loading</span>
+<span class="s plain-str">ErrorRaiM</span>
+<span class="s plain-str">Form_Load</span>
+<span class="s plain-str">Kernel32</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">Form_Unload</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">Chat1_ChatMsg</span>
+<span class="s plain-str">Timer2_Timer</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">timer1_Timer</span>
+<span class="s plain-str">Command1_Click</span>
+<span class="s plain-str">list2_Click</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">ExitWindowsEx</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">Label1_Click</span>
+<span class="s plain-str">SystemParametersInfoA</span>
+<span class="s plain-str">MakeItNow</span>
+<span class="s plain-str">InetCtlsObjects</span>
+<span class="s plain-str">FormOnTop</span>
+<span class="s plain-str">List1_DblClick</span>
+<span class="s plain-str">Text1_Change</span>
+<span class="s plain-str">Find Next</span>
+<span class="s plain-str">Search For</span>
+<span class="s plain-str">[Aim] Maker</span>
+<span class="s plain-str">Sn2make</span>
+<span class="s plain-str">Make It</span>
+<span class="s plain-str">Screen_Name</span>
+<span class="s plain-str">What_Said</span>
+<span class="s plain-str">0D0T0\0`0d0h0p0</span>
+<span class="s plain-str">6 606&lt;6D6L6T6\6d6l6t6|6</span>
+<span class="s plain-str">7 7$747&lt;7D7H7L7P7T7X7\7`7d7h7l7p7t7x7|7</span>
+<span class="s plain-str">9 9$9(9,9094989&lt;9@9D9H9L9P9T9X9\9`9d9h9l9p9t9</span>
+<span class="s plain-str">: :4:D:T:d:t:</span>
+<span class="s plain-str">; ;$;(;8;&lt;;L;X;\;h;l;x;|;</span>
+<span class="s plain-str">= =&amp;=,=2=8=&gt;=D=J=P=V=\=b=h=n=t=z=</span>
+<span class="s plain-str">00040L0T0h0l0</span>
+<span class="s plain-str">1H1P1\1`1x1</span>
+<span class="s plain-str">4(40484@4H4P4X4`4h4p4x4</span>
+<span class="s plain-str">5 5(50585@5H5P5X5`5h5p5x5</span>
+<span class="s plain-str">; ;(;8;H;P;`;p;x;</span>
+<span class="s plain-str">;4&lt;8&lt;&lt;&lt;@&lt;D&lt;H&lt;</span>
+<span class="s plain-str">&gt; &gt;(&gt;4&gt;8&gt;D&gt;H&gt;T&gt;d&gt;l&gt;|&gt;</span>
+<span class="s plain-str">0 0$0H0P0T0X0\0`0d0</span>
+<span class="s plain-str">0P1T1X1\1`1|1</span>
+<span class="s plain-str">3$343&lt;3L3\3d3t3</span>
+<span class="s plain-str">4$4,4&lt;4L4T4\4`4d4h4l4p4x4|4</span>
+<span class="s plain-str">5L5P5T5X5\5</span>
+<span class="s plain-str">54686&lt;6@6D6p6t6x6|6</span>
+<span class="s plain-str">6@7D7H7L7P7</span>
+<span class="s plain-str">9,949D9T9\9l9|9</span>
+<span class="s plain-str">;P&lt;T&lt;X&lt;\&lt;`&lt;h&lt;</span>
+<span class="s plain-str">&lt;H=L=P=T=X=`=</span>
+<span class="s plain-str">=X&gt;\&gt;`&gt;d&gt;h&gt;p&gt;</span>
+<span class="s plain-str">&gt;P?T?X?\?`?</span>
+<span class="s plain-str">0p0t0x0|0</span>
+<span class="s plain-str">0@1D1H1L1P1T1\1`1d1h1l1t1</span>
+<span class="s plain-str">24383D3`3p3</span>
+<span class="s plain-str">4,444D4L4\4d4t4|4</span>
+<span class="s plain-str">5 5$5(5,5054585&lt;5@5D5H5L5P5T5X5\5`5d5h5l5p5x5|5</span>
+<span class="s plain-str">5d6t6x6|6</span>
+<span class="s plain-str">7 7%70757\7`7h7m7x7}7</span>
+<span class="s plain-str">8 8%80858X8\8d8i8t8y8</span>
+<span class="s plain-str">8$9(90959@9E9`9d9l9q9|9</span>
+<span class="s plain-str">:	:4:8:@:E:P:U:x:|:</span>
+<span class="s plain-str">; ;%;D;H;P;U;`;e;</span>
+<span class="s plain-str">= =(=-=8===\=`=h=m=x=}=</span>
+<span class="s plain-str">14181@1E1P1U1p1t1|1</span>
+<span class="s plain-str">2	2$2(20252@2E2d2h2p2u2</span>
+<span class="s plain-str">3,30383=3H3M3l3p3x3}3</span>
+<span class="s plain-str">4	4(4,44494D4I4t4x4</span>
+<span class="s plain-str">50545&lt;5A5L5Q5x5|5</span>
+<span class="s plain-str">686&lt;6D6I6T6Y6</span>
+<span class="s plain-str">7 7$787&lt;7@7D7H7L7P7T7X7\7`7d7l7p7t7x7|7</span>
+<span class="s plain-str">&gt;7???D?M?R?X?]?c?h?q?</span>
+<span class="s plain-str">!0)050@0w0</span>
+<span class="s plain-str">1.1C1q1{1</span>
+<span class="s plain-str">2)242;2A2M2_2j2q2w2}2</span>
+<span class="s plain-str">7(74797E7J7V7</span>
+<span class="s plain-str">9=9]9e9t9</span>
+<span class="s plain-str">; ;0;R;^;w;</span>
+<span class="s plain-str">=U=\=k=s=</span>
+<span class="s plain-str">0)010@0i0</span>
+<span class="s plain-str">1%1M1_1e1u1</span>
+<span class="s plain-str">6%6-6]6k6</span>
+<span class="s plain-str">737P7_7k7</span>
+<span class="s plain-str">9-9B9j9r9~9</span>
+<span class="s plain-str">?1?7?L?Y?i?o?</span>
+<span class="s plain-str">1$1N1[1a1</span>
+<span class="s plain-str">252&lt;2f2s2y2</span>
+<span class="s plain-str">3#3/3P3V3{3</span>
+<span class="s plain-str">4&quot;4:4Y4_4y4</span>
+<span class="s plain-str">6&quot;6^6d6z6</span>
+<span class="s plain-str">6*7=7C7X7d7i7u7z7</span>
+<span class="s plain-str">9&quot;9@9R9h9t9</span>
+<span class="s plain-str">&lt;H=]=d=y=</span>
+<span class="s plain-str">&gt;6&gt;I&gt;O&gt;l&gt;</span>
+<span class="s plain-str">?H?[?a?{?</span>
+<span class="s plain-str">272?2N2w2</span>
+<span class="s plain-str">3)3J3j3r3</span>
+<span class="s plain-str">4+4K4Q4f4o4t4z4</span>
+<span class="s plain-str">565&lt;5Q5Z5_5e5k5</span>
+<span class="s plain-str">5	6!6&#x27;6T6r6</span>
+<span class="s plain-str">70797&gt;7D7J7</span>
+<span class="s plain-str">8$878=8j8</span>
+<span class="s plain-str">&lt;1&lt;7&lt;Q&lt;u&lt;</span>
+<span class="s plain-str">2.242D2M2W2c2m2</span>
+<span class="s plain-str">5G5V5n5t5</span>
+<span class="s plain-str">5K6Q6e6q6</span>
+<span class="s plain-str">6)797?7s7</span>
+<span class="s plain-str">7%8A8m8s8</span>
+<span class="s plain-str">=	=0=P=X=]=s=</span>
+<span class="s plain-str">&gt;G?g?w?}?</span>
+<span class="s plain-str">0?1D1P1]1</span>
+<span class="s plain-str">2&quot;3(3=3Y3</span>
+<span class="s plain-str">4/4E4R4b4h4</span>
+<span class="s plain-str">:5:=:I:e:</span>
+<span class="s plain-str">1%161O1j1</span>
+<span class="s plain-str">555U5]5l5</span>
+<span class="s plain-str">8)8F8a8r8</span>
+<span class="s plain-str">9-939]9c9</span>
+<span class="s plain-str">1!2?2^2w2</span>
+<span class="s plain-str">2&amp;3D3Q3w3</span>
+<span class="s plain-str">6!727N7f7r7</span>
+<span class="s plain-str">;7;=;Z;o;x;};</span>
+<span class="s plain-str">?4?&lt;?H?T?`?n?w?|?</span>
+<span class="s plain-str">252R2`2l2</span>
+<span class="s plain-str">4&amp;4B4b4j4o4|4</span>
+<span class="s plain-str">5%555;5c5~5</span>
+<span class="s plain-str">5	6!6.646R6^6v6</span>
+<span class="s plain-str">7 7-737Q7]7u7</span>
+<span class="s plain-str">8,828P8\8t8</span>
+<span class="s plain-str">9+919V9\9~9</span>
+<span class="s plain-str">0&amp;0H0N0c0</span>
+<span class="s plain-str">1)1/1D1l1</span>
+<span class="s plain-str">444A4c4i4~4</span>
+<span class="s plain-str">5&quot;5D5J5_5</span>
+<span class="s plain-str">767K7s7{7</span>
+<span class="s plain-str">9!909A9]9</span>
+<span class="s plain-str">:3:Z:`:z:</span>
+<span class="s plain-str">2,292?2]2j2</span>
+<span class="s plain-str">3*3L3Y3_3</span>
+<span class="s plain-str">5:5B5N5j5</span>
+<span class="s plain-str">8	9E9*:9:l:</span>
+<span class="s plain-str">0,0A0Q0j0</span>
+<span class="s plain-str">1%1/191Z1n1v1</span>
+<span class="s plain-str">2#2(2.242</span>
+<span class="s plain-str">30393A3K3T3Y3_3d3</span>
+<span class="s plain-str">3C4K4p4}4</span>
+<span class="s plain-str">848&lt;8N8h8t8</span>
+<span class="s plain-str">8!91989W9a9</span>
+<span class="s plain-str">&lt;5&lt;=&lt;C&lt;H&lt;R&lt;\&lt;x&lt;</span>
+<span class="s plain-str">2+252I2T2^2</span>
+<span class="s plain-str">3%393@3R3d3k3v3</span>
+<span class="s plain-str">505&lt;5N5]5</span>
+<span class="s plain-str">5&amp;6,6H6T6f6u6</span>
+<span class="s plain-str">7&gt;7D7`7l7~7</span>
+<span class="s plain-str">=0=E=M=V=h=}=</span>
+<span class="s plain-str">?A?L?^?g?</span>
+<span class="s plain-str">4!454G4g4</span>
+<span class="s plain-str">5-5Z5g5y5</span>
+<span class="s plain-str">6!6&#x27;6-626;6S6\6d6</span>
+<span class="s plain-str">95:R:Z:d:j:z:</span>
+<span class="s plain-str">&lt; &lt;)&lt;&gt;&lt;[&lt;c&lt;l&lt;</span>
+<span class="s plain-str">0(0L0T0]0n0</span>
+<span class="s plain-str">1&quot;1+1&lt;1]1</span>
+<span class="s plain-str">2+2O2W2`2q2</span>
+<span class="s plain-str">3%3.3?3`3</span>
+<span class="s plain-str">4:4^4f4o4</span>
+<span class="s plain-str">585@5I5Z5</span>
+<span class="s plain-str">757Y7a7j7{7</span>
+<span class="s plain-str">838;8D8U8|8</span>
+<span class="s plain-str">9	:0:T:\:e:v:</span>
+<span class="s plain-str">&amp;0J0R0[0l0</span>
+<span class="s plain-str">1$1,151F1m1</span>
+<span class="s plain-str">2 2G2k2s2|2</span>
+<span class="s plain-str">2!3E3M3V3g3</span>
+<span class="s plain-str">4&#x27;404A4h4</span>
+<span class="s plain-str">5B5f5n5w5</span>
+<span class="s plain-str">6@6H6Q6b6</span>
+<span class="s plain-str">7&quot;7+7&lt;7c7</span>
+<span class="s plain-str">8=8a8i8r8</span>
+<span class="s plain-str">9;9C9L9]9</span>
+<span class="s plain-str">;8;\;d;m;~;</span>
+<span class="s plain-str">&lt;6&lt;&gt;&lt;G&lt;X&lt;</span>
+<span class="s plain-str">&gt;3&gt;W&gt;_&gt;h&gt;y&gt;</span>
+<span class="s plain-str">?1?9?B?S?z?</span>
+<span class="s plain-str">1.1R1Z1c1t1</span>
+<span class="s plain-str">2,242=2N2u2</span>
+<span class="s plain-str">3(3O3s3{3</span>
+<span class="s plain-str">4)4M4U4^4o4</span>
+<span class="s plain-str">5&#x27;5/585I5p5</span>
+<span class="s plain-str">6#6J6n6v6</span>
+<span class="s plain-str">6$7H7P7Y7j7}7</span>
+<span class="s plain-str">7!80898&gt;8D8J8</span>
+<span class="s plain-str">0!0&gt;0U0}0</span>
+<span class="s plain-str">121:1I1N1^1d1q1</span>
+<span class="s plain-str">2 2(212&gt;2c2o2x2</span>
+<span class="s plain-str">333;3M3t3|3</span>
+<span class="s plain-str">3(4C4X4p4</span>
+<span class="s plain-str">5!535Z5b5j5z5</span>
+<span class="s plain-str">5 6+696a6i6</span>
+<span class="s plain-str">7!7M7[7r7z7</span>
+<span class="s plain-str">8-858;8S8c8u8{8</span>
+<span class="s plain-str">;5;;;L;R;X;</span>
+<span class="s plain-str">&lt; &lt;&amp;&lt;&gt;&lt;N&lt;`&lt;f&lt;l&lt;</span>
+<span class="s plain-str">181U1]1f1l1|1</span>
+<span class="s plain-str">2&#x27;2&gt;2v2~2</span>
+<span class="s plain-str">2&amp;3.3J3a3v3</span>
+<span class="s plain-str">4,444F4m4u4</span>
+<span class="s plain-str">6,6S6[6m6</span>
+<span class="s plain-str">;9;A;S;p;x;</span>
+<span class="s plain-str">&lt;5&lt;J&lt;g&lt;o&lt;w&lt;</span>
+<span class="s plain-str">0-050=0K0Q0v0|0</span>
+<span class="s plain-str">3-353O3v3~3</span>
+<span class="s plain-str">404X4_4v4~4</span>
+<span class="s plain-str">5$5)595?5L5^5</span>
+<span class="s plain-str">6&gt;6J6S6e6</span>
+<span class="s plain-str">7(7O7W7_7o7</span>
+<span class="s plain-str">838K8r8z8</span>
+<span class="s plain-str">959=9E9U9r9</span>
+<span class="s plain-str">0)0;0A0G0</span>
+<span class="s plain-str">1&amp;1?1Q1W1]1</span>
+<span class="s plain-str">2,242H2[2p2</span>
+<span class="s plain-str">2!3(3;3u3</span>
+<span class="s plain-str">404D4L4`4l4w4}4</span>
+<span class="s plain-str">6&#x27;6&lt;6P6X6k6q6|6</span>
+<span class="s plain-str">:2:9:D:T:</span>
+<span class="s plain-str">&gt;Z&gt;`&gt;f&gt;x&gt;</span>
+<span class="s plain-str">3(303A3Y3</span>
+<span class="s plain-str">4G4h4p4}4</span>
+<span class="s plain-str">5)555@5R5]5</span>
+<span class="s plain-str">647:7@7F7p7</span>
+<span class="s plain-str">9	:#:):7:</span>
+<span class="s plain-str">&lt; &lt;)&lt;Q&lt;x&lt;</span>
+<span class="s plain-str">?E?S?^?l?w?</span>
+<span class="s plain-str">0&quot;0-0;0]0e0u0</span>
+<span class="s plain-str">2&#x27;222A2[2f2~2</span>
+<span class="s plain-str">2G3_3r3z3</span>
+<span class="s plain-str">5$5,5F5N5W5w5</span>
+<span class="s plain-str">888@8E8N8S8Y8_8t8|8</span>
+<span class="s plain-str">;1;:;?;E;K;`;h;</span>
+<span class="s plain-str">=7=R=g=s=</span>
+<span class="s plain-str">=	&gt;7&gt;P&gt;^&gt;f&gt;{&gt;</span>
+<span class="s plain-str">1+161E1n1</span>
+<span class="s plain-str">4%4-4;4I4[4</span>
+<span class="s plain-str">7(7?7O7]7f7</span>
+<span class="s plain-str">8&amp;8:8E8`8g8</span>
+<span class="s plain-str">9A9F9Q9Z9d9~9</span>
+<span class="s plain-str">=P=d=r={=</span>
+<span class="s plain-str">0&#x27;070X0`0m0x0</span>
+<span class="s plain-str">1.1U1^1i1}1</span>
+<span class="s plain-str">2;2E2g2q2</span>
+<span class="s plain-str">3!3C3M3o3</span>
+<span class="s plain-str">4/4:4F4p4</span>
+<span class="s plain-str">4&#x27;5B5O5[5c5l5w5</span>
+<span class="s plain-str">6&#x27;6D6L6^6</span>
+<span class="s plain-str">6&#x27;7@7H7U7b7</span>
+<span class="s plain-str">=1=7=&lt;=E=g=</span>
+<span class="s plain-str">1=1U1[1v1</span>
+<span class="s plain-str">3(313A3N3k3</span>
+<span class="s plain-str">6E6N6S6Y6^6y6</span>
+<span class="s plain-str">7&amp;7/797Q7</span>
+<span class="s plain-str">7@8H8T8~8</span>
+<span class="s plain-str">&gt;3?A?T?f?l?r?</span>
+<span class="s plain-str">041:1@1F1j1w1</span>
+<span class="s plain-str">2&amp;212?2J2X2c2q2|2</span>
+<span class="s plain-str">3 3+393D3R3]3k3v3</span>
+<span class="s plain-str">4%434&gt;4L4W4e4p4~4</span>
+<span class="s plain-str">5-585F5Q5_5j5x5</span>
+<span class="s plain-str">6&#x27;626@6K6Y6d6r6}6</span>
+<span class="s plain-str">7!7,777B7M7X7c7n7y7</span>
+<span class="s plain-str">9$9/9Q9W9`9r9}9</span>
+</details>
+<div class="stats">Total unique strings: 1848 · Interesting: 5 · Noise filtered: 1520</div>
+</div></body></html>
