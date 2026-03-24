@@ -21,23 +21,34 @@ If you can run these proggies (Wine, VM, or actual old Windows), we need:
 
 ## Ways to Help (Developers)
 
-### Python
-- Batch decompilation orchestrator (push exe → decompile → pull source)
-- Metadata parsers for decompiled VB source
-- HTML analysis page improvements
+### Decompilation Pipeline
+The biggest open task. We have a working end-to-end pipeline that decompiles VB5/VB6 exes inside a QEMU/KVM Windows 10 VM, but it needs to run at scale across 1,826 executables. The pipeline uses:
+- `virtio-serial` for host-to-guest communication (Python on both sides)
+- GUI automation via a C2 DLL injected into VB Decompiler Pro
+- File-based command protocol (write command file, read result file)
+
+What needs building:
+- **Batch orchestrator** (`batch_decompile.py`): loop through all exes in the DB, push each to the VM, trigger decompile, pull results, update DB. Must resume on crash.
+- **Snapshot rotation**: revert VM to clean state every 50 exes to prevent state drift
+- **Metadata parser improvements**: extract form layouts, control names, API calls from decompiled .frm/.bas files into structured JSON
+- **Source code cleanup**: strip decompiler noise (address annotations, empty subs), resolve procedure names from known base modules
+
+Start here: `tools/vm/` for the VM infrastructure, `tools/generate_analysis.py` for the HTML generator, `tools/single_decompile.py` for the current single-exe pipeline.
 
 ### HTML/CSS/JS
-- Analysis page design improvements
-- Interactive features for the proggie index
+- Analysis page design improvements (dark theme, responsive layout)
+- Interactive features for the proggie index (already has search, sort, filter chips)
+- Jinja2 template migration for the detail pages
 
 ### VB6 Knowledge
 - Help interpret decompiled source code
-- Identify shared base modules and techniques across proggies
+- Identify shared base modules and techniques across proggies (many proggies share the same punter/phisher code)
 - Document AOL API patterns and window classes
 
 ## Getting Started
 
 ```bash
+git lfs install
 git clone https://github.com/ssstonebraker/aolunderground-proggies.git
 cd aolunderground-proggies
 
