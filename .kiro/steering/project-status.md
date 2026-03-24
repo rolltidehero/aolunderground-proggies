@@ -49,7 +49,7 @@ docs/
   specs/vb_decompiler_wine/            # Spec: old Wine-based decompiler (superseded)
   steering/                            # Always-loaded rules (qemu, win32, ahk, etc.)
 
-proggie_db.sqlite                      # THE database (2,138 proggies, 1,706 exes, 8,475 deps)
+proggie_db.sqlite                      # THE database (2,138 proggies, 1,941 exes, 8,475 deps)
 proggie-index.txt                      # Tab-delimited index (2,138 entries, all paths valid)
 proggie-index.md                       # Browsable version of index
 ```
@@ -61,12 +61,13 @@ proggie-index.md                       # Browsable version of index
 | Total zip archives | 6,061 (with dupes) |
 | Deduped AOL zips | 2,138 |
 | AIM proggies | 649 |
-| VB6 exes | ~1,177 |
-| VB5 exes | ~319 |
-| VB4-32 exes | ~286 |
-| VB3 exes | ~119 |
-| non-VB exes | ~208 |
-| Decompilable (VB5+VB6) | ~1,496 |
+| VB6 exes | 805 |
+| VB5 exes | 349 |
+| VB4-32 exes | 458 |
+| VB4-16 exes | 6 |
+| VB3 exes | 211 |
+| non-VB exes | 112 |
+| Decompilable (all VB) | 1,829 |
 
 ## VM Infrastructure
 
@@ -120,6 +121,26 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
       - Progressive disclosure: functions collapsed, expand to show code
       - String frequency badges, PE artifact filtering, greet name tags
       - DB-based metadata, single-file mode, responsive dark theme
+      - Nav bar: back-to-index + download zip link on every detail page
+      - Landing page: index.html with auto-detected featured proggies (Jinja2)
+      - Known issues (T7.8):
+        - [ ] Code breakdown percentages may be off — computed from decompiled binary
+              function sizes, not cleaned source sizes. bodini shows 50% custom but
+              actual source files are ~80% custom code.
+        - [x] Proc name resolution — addr_to_name map built in metadata.json from
+              decompiled filenames + basmod_reference.json canonical names. Applied
+              in both render_functions (Decompiled Functions section) and
+              render_code_breakdown (Code Breakdown section). MonkEFade added to
+              basmod_reference.json. bodini: 1,099/1,123 resolved (24 are intentional
+              annotation references). Works for both plugin (.vb) and old (.bas) formats.
+        - [ ] Author evidence classifier too broad — any string containing "by:" or
+              "written by" gets classified as author evidence. Long help text paragraphs
+              that mention "by" leak through. Fixed: removed bare "By + Name" pattern,
+              added length filter (>80 chars without explicit credit phrase → interesting).
+              Still imperfect — needs manual review per proggie.
+        - [ ] Jinja2 migration incomplete — landing page uses Jinja2 templates, detail
+              pages still use string concatenation in generate_analysis.py. Full migration
+              to Jinja2 templates is a future task.
 - Full design: see docs/2026-03-07-pla.md Phase 7
 - Task breakdown: see .kiro/specs/canonical_proggie_db/tasks.md
 
@@ -130,10 +151,16 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 - [x] VM setup: Win10 x86 + QGA + C2 agent + VB Decompiler Pro
 - [x] End-to-end decompile proven (anexbust.exe → 62 files, metadata.json, HTML enriched)
 - [x] Gold image + production-clean snapshot
-- [x] Canonical DB built: 2,138 proggies, 1,706 exes, 8,475 deps, 9,395 files
+- [x] Canonical DB built: 2,138 proggies, 1,941 exes, 8,475 deps, 9,395 files
 - [x] Metadata imported: 2,138 named, 1,198 with author, 36 with password
 - [x] Zips repacked: 1,402 zips updated with missing DLLs/OCXs
 - [x] Index regenerated: proggie-index.txt + proggie-index.md with real paths
+- [x] Fixed case-sensitive .exe glob: added 234 missing exes (was 1,707, now 1,941)
+- [x] AOHell 95 v3.0 screenshots: 14 clean feature screenshots + animated.gif walkthrough
+- [x] AOHell phishing phrases from PHISH.FRM source added to strings DB
+- [x] FRM SVG parser fixed: skip non-visual controls, handle nested frame offsets
+- [x] Author evidence dedup: normalize whitespace before comparing
+- [x] Landing page: added decompilable count, fixed AOHell title + trimmed thumbnail
 - [x] Query tool tested: --stats, --search, --vb, --deps, --missing-deps all working
 
 ## Quick Commands

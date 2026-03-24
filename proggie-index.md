@@ -15,6 +15,7 @@
 | AoAsCii Shop | firestorm | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoascii.zip |
 | AoAsCii Shop 2 | firestorm | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoasci2.zip |
 | AOEVIL | entering | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoevil.zip |
+| aohell 95 | Da Chronic | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aohell 95 for aol 2.5-3.0.zip |
 | barronscom | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/barronscom.zip |
 | blitz1im | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/blitz 1 im.zip |
 | cuntpunt | Unknown | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/cuntpunt.zip |
@@ -27,7 +28,6 @@
 | FNLPC40 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/final peace.zip |
 | HOLY | plopo | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/holy fucking shit termer 3.2 yr06.zip |
 | infmmer | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/infinity mm'er for aol 4.0.zip |
-| INSTALL | Da Chronic | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aohell 95 for aol 2.5-3.0.zip |
 | LTKOFF | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/license to kill for aol 2.5 and 3.0.zip |
 | MALARIA | kemo | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/malaria termer.zip |
 | MMer | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/cruel intentions.zip |
@@ -271,6 +271,7 @@
 | bIack assassin1 | akujie n kao | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blackass1.zip |
 | bidle151 | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bidle151.zip |
 | BiO hAzArD | James and Brian. Have fun | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/biohazard2.zip |
+| bio2 | reza | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bio2.zip |
 | BIOBEA~1 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bio beast for aol 4.0.zip |
 | biohazard² | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/biohazard.zip |
 | BioSphere | sponge | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/biosphere.zip |
@@ -303,6 +304,7 @@
 | Blitz | None | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blitzanti.zip |
 | blizah coms | Blizah | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blizah.zip |
 | blizahphader | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blizahphader.zip |
+| blizzard server v4� | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blizzard server v4%b9 for aol 4.0.zip |
 | Blood Runs Cold | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bloodrunscold.zip |
 | Blood Runs Cold v2 | FesTa | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/brcv2.zip |
 | blue x'er | nas | VB5 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bluexer.zip |
@@ -319,6 +321,7 @@
 | Bond40 | SaBan | VB5 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/james bond toolz aol4 password=picka.zip |
 | bone buster | flux | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bone buster aol8 yr2003 XP.zip |
 | boogyman | BooGyMaN | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/boogyman2.zip |
+| booked | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/booked.zip |
 | BoOTFiN | VE0V | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bootfin.zip |
 | Bot City 2005 | BrU | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/botcity2005.zip |
 | BoXFaDeR2 | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/boxfader.zip |
@@ -597,6 +600,7 @@
 | e-fex | s Realm is a tsp | VB4-32 | unknown | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/liquidefex.zip |
 | E=MP3 V2.0 By CLoNeR | ZIP | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/e = mp3 v2.0 aol7-9 winXP yr05.zip |
 | Earth Siege | Hyper | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/earthsiege.zip |
+| earth siege v2 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/earth siege v2 for aol 4.0 and 5.0 yr2k.zip |
 | eC cloner v.1 | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/ecclonerv1.zip |
 | eC v.1 by ex0r | ex0r | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/ec v3 cracker aol7-9 yr2006 win98-xp.zip |
 | ech0 | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/echoside.zip |
@@ -830,6 +834,7 @@
 | Horrific Scroll ² | Phazz | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/horrificscroll2.zip |
 | horrific scroll ╣╖╣ | Phazz | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/horrific11.zip |
 | HPhader | NiNJa | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hyper.zip |
+| hurricane mp3 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hurricane mp3.zip |
 | hush | DeV | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hush70.zip |
 | hush ccom | DeV | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hushccom.zip |
 | hydro | X6725 | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hydromm.zip |
@@ -994,7 +999,7 @@
 | leper | TFish | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/leprecy tos'er.zip |
 | Lesbian Program | CiNDy | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/lesbian.zip |
 | Lesenfant | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/les enfants horrible for aol 4.0.zip |
-| lethalbyice | Chr0me | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/lethalinjection.zip |
+| lethalbyice | Chr0me iCe | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/lethalinjection.zip |
 | lexidle│ | None | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/lexidle3.zip |
 | LeY cRipTa By.Alvaro1 | Ley spider ley | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/leycripta.zip |
 | LeY Fader V2 | LeY cReaToR | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/leyfaderv2.zip |
@@ -1112,6 +1117,7 @@
 | Micro | TimeBomb | VB3 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/microtools.zip |
 | Microidle | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/micro idler for aol 4.0 and 5.0.zip |
 | mifiaXP | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/mafiaxp.zip |
+| millennium falcon massmail | s: platinum 'n Hustla | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/millennium falcon massmail aol5 yr01.zip |
 | Millennium Server Tools | JDE | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/millennium server toolz 5.0 aol5-6 password= %a0%f4%bf%f4.zip |
 | Millennium Server Tools | JDE | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/mst4.zip |
 | millennium7 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/millennium 7 for aol 4.0.zip |
@@ -1248,6 +1254,7 @@
 | phat mp3·² | font color=#98ccff | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phatmp3.zip |
 | PHATLAGS | Taz | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phatlags.zip |
 | phats | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phats.zip |
+| phaze c-com | Zero | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phaze c-com for aol 4.0 and 5.0.zip |
 | PhazerPhader ²·º | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phazer phader%b2%b7%ba for aol 4.0-7.0.zip |
 | Phazer·Phader | Swift | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phazerphader.zip |
 | pheap idle² | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/pheap2.zip |
@@ -1316,8 +1323,6 @@
 | Progzhell Idle 2.0 | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/progzhell2.zip |
 | prog╣ | font face=tahoma color=#c0c0c0>Phazz | VB4-32 | unknown | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/prog1.zip |
 | Project | Sizc | VB4-32 | unknown | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/y2idle.zip |
-| Project1 | reza | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/bio2.zip |
-| Project1 | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/booked.zip |
 | Project420all | BiX | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/four20.zip |
 | project_gt | scott | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/projectgt.zip |
 | ProPheTTixX2 | shlep | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/proph.zip |
@@ -1451,10 +1456,6 @@
 | Server | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/server helper for aol 4.0 and 5.0.zip |
 | Serverhelper2 | Acrylic | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/acrylic50.zip |
 | ServerhelperAOL6 | Acrylic. Keep looking for updates | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/acrylic60.zip |
-| SETUP | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blizzard server v4%b9 for aol 4.0.zip |
-| SETUP | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/earth siege v2 for aol 4.0 and 5.0 yr2k.zip |
-| setup | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/hurricane mp3.zip |
-| setup | Zero | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/phaze c-com for aol 4.0 and 5.0.zip |
 | sFg 2.0 by coz aka tyler | coz | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/sfg2.zip |
 | shallow ccomz | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/shallow.zip |
 | shark bait²·º | txt | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/sharkbait2.zip |
@@ -1554,7 +1555,6 @@
 | spobby | digit | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/spobby.zip |
 | SpynesXer | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/unibombers x'er for aol 4.0 and 5.0.zip |
 | SS | of this program (me | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/sleek.zip |
-| ST6UNST | s: platinum 'n Hustla | VB6 | p-code | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/millennium falcon massmail aol5 yr01.zip |
 | staff toolz | bliss | VB4-32 | unknown | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/stafftoolz1.zip |
 | staff toolz 2.0 | bliss | VB4-32 | unknown | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/stafftoolzv2.zip |
 | staind coms | None | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/staind.zip |
@@ -1920,6 +1920,7 @@
 | iCrack | kyle | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/icrack.zip |
 | idleroom 1.0 | flj19 | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/idleroom1.zip |
 | IHS By [boggle] | Boggle | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/ihs.zip |
+| judgement night 4.0 final | step | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/judgement night 4.0 final for aol 6.0 yr01.zip |
 | knucktoolzv1 | Unknown | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/knucktoolzv1.zip |
 | Move Pendings | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/movequeues.zip |
 | Mystic | Foxhall | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/mystic.zip |
@@ -1932,7 +1933,6 @@
 | Revolution_X Final | Revolution_X | VB5 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/revxfinal.zip |
 | room bust xp | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/xp room buster aol8 XP.zip |
 | scroLL Out | brickz | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/scrollout.zip |
-| SETUP | step | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/judgement night 4.0 final for aol 6.0 yr01.zip |
 | simplephader | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/simplephade.zip |
 | Spieler v² | ZiON | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/spielerv2.zip |
 | Thunda | None | VB6 | native | programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/thunda.zip |

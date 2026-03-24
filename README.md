@@ -1,14 +1,99 @@
-# Info
-Historic Vault of Programs and code that interface with AOL and AIM
+# AOL Underground Proggies Archive
+
+Historic vault of ~6,000 AOL/AIM proggie archives (3.1GB) from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole underground scene, preserved and cataloged.
 
 Let's repopulate the Gibson!
 
-Please contribute your files to this repository!
+Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
 
-Brought to you by the AOL Underground Podcast:
-[AOL Underground Podcast](https://aolunderground.com)
+## 📊 Current Stats
 
-Thank you to:
+| What | Count |
+|------|-------|
+| Deduplicated AOL proggies | 2,138 |
+| AIM proggies | 649 |
+| HTML analysis pages | 1,821 |
+| Programs with author attribution | 1,198 |
+| Detected executables | 1,941 |
+| VB exes (decompilable) | 1,829 |
+| Strings extracted | 11.6 million |
+| Decompiled so far | 3 (pipeline proven, batch run next) |
+
+📄 **[Full Project Status](docs/PROJECT_STATUS.md)** — what we've done, what's next, how to help
+
+## 🔎 Finding Proggies
+
+- **[proggie-index.html](proggie-index.html)** — Interactive web search (recommended)
+- **[proggie-index.md](proggie-index.md)** — Browse by category with markdown tables
+- **[proggie-index.txt](proggie-index.txt)** — Greppable tab-delimited file
+
+```bash
+# Search by name
+python3 tools/query_proggies.py --search "punter"
+
+# Search strings across all exes (unzip first)
+unzip exe_strings.db.zip  # only needed once
+python3 tools/query_strings.py "AOL Frame25"
+
+# VB version breakdown
+python3 tools/query_proggies.py --stats
+```
+
+## 🎉 2026 Reorganization
+
+This repository has been reorganized for better discoverability:
+- **Duplicate Detection:** 6,061 archives merged down to 2,138 unique proggies via SHA256
+- **Version Tagging:** Sorted by AOL version (2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+- **Metadata Database:** SQLite DB with names, authors, VB versions, dependencies, compile dates
+- **Analysis Pages:** Per-proggie HTML pages with API refs, string analysis, dependency trees
+- **API-Based Version Detection:** Accurate detection using actual AOL API signatures ([details](docs/old-plans/AOL_VERSION_DETECTION.md))
+
+**Old links broken?** Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `archive-original` branch.
+
+## 🤝 Contributing
+
+**We need help!** See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to contribute, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
+
+Quick wins:
+- **Got proggies?** Submit them! Even duplicates help verify our collection
+- **Remember which AOL version a proggie worked with?** [549 need verification](NEEDS_REVIEW.md)
+- **Know the author of a proggie?** Open an issue with corrections
+- **Can run proggies?** We need screenshots (Wine, VM, or real old Windows)
+
+## 📦 Missing Proggies
+
+- Guide Punt by Stoney (guide.exe)
+- Magenta by ReDxKinG (latest version)
+- Reset 1.0 by skribe
+- 1-888'd by skribe
+- Macro Studio by i88i
+- Gemini Macro by anubis
+- Macro House
+- Pup Tool by Pen (puptool.zip)
+
+## 📁 Repository Structure
+
+```
+programs/AOL/proggies-sorted-deduped/
+  proggies-by-version/          # 2,138 zips sorted by AOL version
+  <name>.html                   # Per-proggie analysis pages
+  <name>/                       # Assets (screenshots, source)
+
+tools/
+  build_proggie_db.py           # Build the SQLite database
+  query_proggies.py             # Search and query
+  query_strings.py              # Search 11.6M extracted strings
+  detect_vb_version.py          # VB version detection
+  generate_analysis.py          # HTML page generator
+
+proggie_db.sqlite               # The database
+exe_strings.db.zip              # 11.6M extracted strings (unzip before querying)
+proggie-index.html              # Interactive search
+```
+
+## Thank You
+
+Contributors and sources:
 * Len from Lens Hell
 * https://web.archive.org/web/20220321112058/http://kadeklizem.com/AOL%20Progs%20ARCHIVE.rar
 * http://www.aciddr0p.net/
@@ -17,95 +102,10 @@ Thank you to:
 * https://github.com/darcfx/darcfx-submissions
 * https://github.com/raysuelzer/ProgzRescue
 
-# Missing Proggies
-Currently looking for these proggies
+## Committing Large Files
 
-* Guide Punt by Stoney  - A program I made, I'd really like to find this.  I believe it was guide.exe.
-* Magenta by ReDxKinG - Recently version 2.0 was found (in this archive), however we are still looking for the latest version
-* Reset 1.0 by skribe (TOSers/termer/account reseter)
-* 1-888'd by skribe (TOSers/termer/account reseter)
-* Macro studio by i88i (level9.zip ?)
-* Gemini Macro by anubis
-* Macro house
-* Pup Tool by Pen (puptool.zip)
-
-## commiting large amount of files
-
-FYI if you ever try to commit a lot of zip files you will probably run in to errors.
-
-A way around that is to use the included file:
-```
-gcommitfile.sh <filename>
-```
-
-### Example Use
-Recursively commiting all files in current directory:
-
-```
-find . -exec gcommitfile.sh {} \;
-```
-
-Recursively commiting all files in current directory but omiting directory "unsorted-zip":
-
-```
-find . -not -path "./unsorted-zip/*" -exec gcommitfile.sh {} \;
-```
-
-
-# Directory Details
-
-## oldscool_windows_tools
-Tools compatible with Windows XP (many later versions are not)
-
-* 7zip - 7z2107.exe (decompression)
-* autoruns.exe - See what starts with system (Sysinternals tool)
-* TweakUiPowertoySetup.exe - *Awesome tool to tweak the GUI of Windows XP*
-* ProcessExplorerNT.zip - task manager on steroids (Sysinternal tool)
-* Notepad ++ - npp.7.9.2.Installer.exe
-* WinCDEmu-4.1.exe - *Use this to mount ISO or IMGs*
-* winhex.zip - Hex editor
-
-# Other
-Items unrelated to programming/proggies or windows tools
-
-* nfos.zip - Old warez scene nfo files
-
-## programming
-
-Mostly Visual Baisc files for interacting with AOL and AIM
-
-## programs
-Compiled AOL AND AIM programs used to interact with AOL.  Also known as Proggies.
-
-### 🎉 Repository Reorganization (2026)
-
-This repository has been reorganized for better discoverability! Changes include:
-- **Duplicate Detection:** Merged archives containing identical .exe files
-- **Version Tagging:** Proggies now organized by AOL version compatibility (2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
-- **Enhanced Metadata:** Program names, authors, dependencies, and passwords extracted
-- **Searchable Interfaces:** Multiple ways to find what you need
-- **API-Based Version Detection:** Accurate version detection using actual AOL API signatures ([Learn More](docs/AOL_VERSION_DETECTION.md))
-
-### Finding Proggies
-
-**Search Tools:**
-- [proggie-index.html](proggie-index.html) - Interactive web search (recommended)
-- [proggie-index.md](proggie-index.md) - Browse by category with markdown tables
-- [proggie-index.txt](proggie-index.txt) - Greppable tab-delimited file
-
-**Old Links Broken?**
-- Check [REDIRECTS.md](.github/REDIRECTS.md) to find where files moved
-- View original structure: switch to `archive-original` branch
-
-**Want to Help?**
-- See [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for proggies needing version verification
-- Submit corrections via issues or pull requests
-
-### Automated List Updates
-The proggie list is automatically updated via GitHub Actions whenever new files are added. Contributors don't need to manually update the list - just add your proggies and push!
-
-To manually update the list locally:
+`exe_strings.db.zip` is tracked via [Git LFS](https://git-lfs.github.com/). Install LFS before cloning:
 ```bash
-make update-list
+git lfs install
+git clone https://github.com/ssstonebraker/aolunderground-proggies.git
 ```
-

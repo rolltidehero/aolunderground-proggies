@@ -1,6 +1,6 @@
 # Proggies Needing Version Review
 
-**Total needing review:** 549 of 2144 proggies
+**Total needing review:** 549 of 2,138 proggies
 
 These proggies need manual version verification:
 - No AOL API signatures detected

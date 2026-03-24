@@ -18,19 +18,24 @@ SORTED_DIR = Path("programs/AOL/proggies-sorted-deduped")
 DB_PATH = Path("exe_strings.db")
 DECOMPILED_DIR = Path("decompiled")
 
-# AOL API → version range mapping (from docs/old-plans/AOL_VERSION_DETECTION.md)
+# AOL API → version range mapping
+# Evidence: strings extracted from installed AOL 2.5, 4.0, 5.0 binaries (2026-03-24)
+# Classes marked 2.5+ verified in C:\AOL25A\TOOL\MANAGER.AOL / MORG.AOL / JGAOL.DLL
+# Classes marked 4.0+ first appear in C:\America Online 4.0\objwrap.dll
+# Upper bounds unknown beyond 5.0 — using proggie DB evidence for later versions
 AOL_API_VERSIONS = {
     'AOL Frame25': '2.5–3.0', 'AOL Frame': '4.0+',
-    '_AOL_Modal': '2.5–7.0', '_AOL_Palette': '2.5–5.0',
-    '_AOL_Glyph': '4.0–7.0', '_AOL_Timer': '6.0–7.0',
-    '_AOL_Icone': '6.0–7.0', '_AOL_RadioBox': '6.0–7.0',
-    '_AOL_FontCombo': '4.0–7.0', '_AOL_Edit': '4.0–7.0',
-    '_AOL_Listbox': '4.0–9.0', '_AOL_Static': '4.0–9.0',
-    '_AOL_Button': '4.0–7.0', '_AOL_Checkbox': '4.0–7.0',
-    '_AOL_Combobox': '4.0–9.0', '_AOL_Icon': '4.0–9.0',
-    '_AOL_Spin': '4.0–7.0', 'AOL Child': '4.0–9.0',
-    'AOL Toolbar': '4.0–9.0', 'RICHCNTL': '2.5+',
-    'MDIClient': '4.0–9.0',
+    '_AOL_Button': '2.5+', '_AOL_Combobox': '2.5+',
+    '_AOL_Edit': '2.5+', '_AOL_Glyph': '2.5+',
+    '_AOL_Icon': '2.5+', '_AOL_Listbox': '2.5+',
+    '_AOL_Modal': '2.5+', '_AOL_Palette': '2.5+',
+    '_AOL_Spin': '2.5+', '_AOL_Static': '2.5+',
+    '_AOL_View': '2.5+', '_AOL_Tree': '2.5+',
+    '_AOL_Checkbox': '4.0+', '_AOL_FontCombo': '4.0+',
+    '_AOL_Timer': '6.0+', '_AOL_Icone': '6.0+',
+    '_AOL_RadioBox': '6.0+',
+    'AOL Child': '4.0+', 'AOL Toolbar': '4.0+',
+    'RICHCNTL': '2.5+', 'MDIClient': '2.5+',
     'FindWindowA': 'Win32 API', 'FindWindowExA': 'Win32 API',
     'SendMessageA': 'Win32 API', 'PostMessageA': 'Win32 API',
     'GetWindowTextA': 'Win32 API', 'SetWindowPos': 'Win32 API',
@@ -68,25 +73,26 @@ PE_ARTIFACT_RE = re.compile(
 )
 
 HIGHLIGHT_PATTERNS = [
-    (re.compile(r'(\b(?:coded|programmed|made|created|written|designed|developed)\s+by\s*:?\s*.+)', re.I), 'author'),
-    (re.compile(r'(\bby\s*:\s*\S.+)', re.I), 'author'),
-    (re.compile(r'(\bBy\s+[A-Z][\w\-]+(?:\s*[&+]\s*[A-Z][\w\-]+)*)', re.I), 'author'),
-    (re.compile(r'(\b(?:author|coder|programmer)\s*:?\s*.+)', re.I), 'author'),
-    (re.compile(r'(.+\s+presents\b)', re.I), 'author'),
-    (re.compile(r'(\b(?:credits?|greets?|greetz)\b)', re.I), 'credits'),
-    (re.compile(r'(AOL Frame|AOL Child|_AOL_\w+|FindWindow\w*|SendMessage\w*|SetWindowText)', re.I), 'api'),
-    (re.compile(r'(frm\w+\.FRM|\.FRM\b)', re.I), 'form'),
-    (re.compile(r'(MSVBVM\d+|VB\d+RUN|\.ocx|\.vbx)', re.I), 'dep'),
+    # Author patterns — no .+ needed, we just detect presence then use the full string
+    (re.compile(r'\b(?:coded|programmed|made|created|written|designed|developed)\s+by\b', re.I), 'author'),
+    (re.compile(r'\bby\s*:\s*\S', re.I), 'author'),
+    (re.compile(r'\b(?:author|coder|programmer)\s*:', re.I), 'author'),
+    (re.compile(r'\bpresents\b', re.I), 'author'),
+    (re.compile(r'\b(?:credits?|greets?|greetz)\b', re.I), 'credits'),
+    (re.compile(r'AOL Frame|AOL Child|_AOL_\w+|FindWindow\w*|SendMessage\w*|SetWindowText', re.I), 'api'),
+    (re.compile(r'frm\w+\.FRM|\.FRM\b', re.I), 'form'),
+    (re.compile(r'MSVBVM\d+|VB\d+RUN|\.ocx|\.vbx', re.I), 'dep'),
 ]
 
 PHISHING_RE = re.compile(
-    r'(?:password|billing\s+(?:dept|rep|department|info)|credit\s+card|'
+    r'(?:billing\s+(?:dept|rep|department|info)|credit\s+card\s+(?:number|info)|'
     r'expiration\s+date|log.?on\s+password|click\s+respond|'
     r'verify\s+(?:your|that\s+you)|re-?verify|account\s+(?:will\s+be\s+(?:credited|deleted|terminated)|deletion)|'
-    r'enter\s+your\s+(?:log|password|full\s+name)|'
+    r'enter\s+your\s+(?:log|password|full\s+name|screen)|'
     r'we\s+(?:have\s+lost|seem\s+to\s+have|need\s+you\s+to)|'
     r'failure\s+to\s+(?:respond|comply)|terminate\s+your\s+account|'
-    r'bank\s+name|credit\s+checkers|billing\s+information)',
+    r'bank\s+name|billing\s+information|'
+    r'dear\s+(?:aol\s+)?(?:member|user|customer)|(?:screen\s*name|s/?n)\s+and\s+password)',
     re.I
 )
 
@@ -179,22 +185,25 @@ def parse_existing_meta(html_path: Path) -> dict:
     return meta
 
 
-def get_meta_from_db(zip_stem):
+def get_meta_from_db(zip_stem, conn=None):
     """Get metadata from proggie_db.sqlite — primary source."""
-    db = Path("proggie_db.sqlite")
-    if not db.exists(): return None
-    conn = sqlite3.connect(str(db))
+    own_conn = conn is None
+    if own_conn:
+        db = Path("proggie_db.sqlite")
+        if not db.exists(): return None
+        conn = sqlite3.connect(str(db))
     row = conn.execute(
-        "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path "
+        "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path, p.zip_path "
         "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? LIMIT 1",
         (zip_stem,)
     ).fetchone()
-    conn.close()
+    if own_conn: conn.close()
     if not row: return None
     meta = {
         'program': row[0] or zip_stem, 'author': row[1] or 'Unknown',
         'aol_version': row[2] or '?', 'category': row[3] or '?',
         'exe': row[4] or '?', 'vb': row[5] or '?', 'compile': row[6] or '?',
+        'zip_path': row[8] or '',
     }
     # Read PE timestamp for compile date
     if row[7]:
@@ -222,18 +231,35 @@ def _read_pe_timestamp(exe_path):
 
 
 def get_strings_from_db(conn, exe_path):
-    """Return all strings (with duplicates for frequency counting)."""
-    rows = conn.execute("SELECT value FROM strings WHERE exe_path = ? ORDER BY id", (exe_path,)).fetchall()
+    """Return all strings (with duplicates for frequency counting). Cap at 5000 to avoid pathological regex on bloated exes."""
+    rows = conn.execute("SELECT value FROM strings WHERE exe_path = ? ORDER BY id LIMIT 5000", (exe_path,)).fetchall()
     return [v.strip() for (v,) in rows if v.strip()]
 
 
+def _build_exe_path_index(conn):
+    """Build basename->paths lookup from exe_strings.db (once, ~0.7s)."""
+    from collections import defaultdict
+    idx = defaultdict(list)
+    for (p,) in conn.execute("SELECT DISTINCT exe_path FROM strings"):
+        idx[os.path.basename(p).lower()].append(p)
+    return dict(idx)
+
+# Module-level cache, populated on first use or by workers
+_exe_path_index = None
+
 def find_exe_in_db(conn, exe_name, archive_base):
+    global _exe_path_index
     if not exe_name or exe_name == '?': return None
-    rows = conn.execute("SELECT DISTINCT exe_path FROM strings WHERE exe_path LIKE ?", (f"%/{exe_name}",)).fetchall()
-    if len(rows) == 1: return rows[0][0]
-    for (p,) in rows:
+    if _exe_path_index is None:
+        _exe_path_index = _build_exe_path_index(conn)
+    candidates = _exe_path_index.get(exe_name.lower(), [])
+    if len(candidates) == 1: return candidates[0]
+    # Prefer AOL proggies paths over AIM or other
+    aol = [p for p in candidates if 'proggies/' in p.lower()]
+    pool = aol or candidates
+    for p in pool:
         if archive_base.lower() in p.lower(): return p
-    return rows[0][0] if rows else None
+    return pool[0] if pool else None
 
 
 def load_decompile_data(zip_stem, exe_name):
@@ -333,7 +359,14 @@ summary:hover{color:#58a6ff}
 .ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
 @media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
 @media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
 </style>"""
+
+GITHUB_RAW = "https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/"
 
 
 def _extract_program_name(decomp):
@@ -366,14 +399,23 @@ def render_hero(meta, archive_name, decomp):
     author = meta.get('author', 'Unknown')
 
     # Try to extract real program name from decompiled source
-    if decomp and program == meta.get('exe', '').replace('.exe', ''):
-        program = _extract_program_name(decomp) or program
+    if decomp:
+        proj_name = (decomp.get('project') or {}).get('name', '')
+        if proj_name:
+            program = proj_name
+        elif program == meta.get('exe', '').replace('.exe', ''):
+            program = _extract_program_name(decomp) or program
     author = meta.get('author', 'Unknown')
     version = meta.get('aol_version', '?')
     cat = meta.get('category', '?')
     exe = meta.get('exe', '?')
     vb = meta.get('vb', '?')
     compile_type = meta.get('compile', '?')
+
+    # Fall back to decompile metadata for VB version / compile type
+    if decomp:
+        if vb == '?': vb = decomp.get('vb_version', '?')
+        if compile_type == '?': compile_type = decomp.get('compile_type', '?')
 
     # Try to get better author from decompile data
     if decomp and author in ('Unknown', '?'):
@@ -392,12 +434,19 @@ def render_hero(meta, archive_name, decomp):
     if compile_type != '?':
         ct_label = {'native': 'Native Code', 'p-code': 'P-Code'}.get(compile_type, compile_type)
         lines.append(f'<span class="badge badge-compile">{e(ct_label)}</span>')
-    lines.append(f'<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">{e(exe)}</span>')
+    # Exe name badge — fall back to decomp exe_name
+    exe_display = exe
+    if exe_display == '?' and decomp:
+        exe_display = decomp.get('exe_name', '?')
+    if exe_display != '?':
+        lines.append(f'<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">{e(exe_display)}</span>')
     compile_date = meta.get('compile_date')
     if compile_date:
         lines.append(f'<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled {e(compile_date)}</span>')
-    # Base module badges from decompile data
-    if decomp:
+    if decomp and decomp.get('has_original_source'):
+        lines.append('<span class="badge" style="background:#1a2a1a;color:#3fb950;border:1px solid #238636">Original Source Code</span>')
+    # Base module badges from decompile data (skip for original source — all modules are app code)
+    if decomp and not decomp.get('has_original_source'):
         for bas in decomp.get('bas_modules', []):
             known = decomp.get('base_module')
             if known and known.get('name', '').lower() == bas.lower():
@@ -624,6 +673,21 @@ function wtShow(el){var i=el.querySelector('.wt-img');if(i)i.style.display=i.sty
                 lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
             lines.append('</details>')
             found = True
+        installs = sorted(img_dir.glob('install_*.png'))
+        if installs:
+            _inst_labels = {
+                'welcome': 'Welcome', 'directory': 'Select Directory', 'overwrite': 'Overwrite Prompt',
+                'searching': 'Searching for VBRUN300.DLL', 'need_vbrun': 'VBRUN300.DLL Required',
+                'features_irc': 'New Features & IRC Setup', 'disclaimer': 'Disclaimer',
+                'complete': 'Installation Complete', 'startmenu': 'Start Menu Shortcuts',
+            }
+            lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Installer screenshots</summary>')
+            for img in installs:
+                key = img.stem.replace('install_', '')
+                label = _inst_labels.get(key, key.replace('_', ' ').title())
+                lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
+            lines.append('</details>')
+            found = True
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 
@@ -643,6 +707,9 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
             ocr_captions[m.group(1).lower()] = f['control_caption']
 
     lines = ['<h2>&#x1f5bc; Forms &amp; Controls</h2>']
+    form_count = len(decomp['forms'])
+    ctrl_count = sum(len(f.get('controls', [])) for f in decomp['forms'])
+    lines.append(f'<details><summary>{form_count} forms, {ctrl_count} controls</summary>')
     for form in decomp['forms']:
         lines.append('<div class="card">')
         lines.append(f'<h3>{e(form["name"])}</h3>')
@@ -672,6 +739,7 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
         if timers:
             lines.append(f'<div style="margin-top:6px;color:#484f58;font-size:0.8em">Timers: {", ".join(e(t["name"]) if isinstance(t, dict) else e(t) for t in timers)}</div>')
         lines.append('</div>')
+    lines.append('</details>')
     return '\n'.join(lines)
 
 
@@ -715,6 +783,43 @@ def _render_menu_tree(menus):
     return html
 
 
+def _make_proc_resolver(decomp):
+    """Build a proc name resolver from decompile metadata.
+
+    Returns (replace_in_code, resolve_name) tuple:
+    - replace_in_code(code_text) → HTML with Proc_ refs replaced by colored spans
+    - resolve_name(raw_name) → resolved canonical name string
+    """
+    if not decomp:
+        return (lambda t: H.escape(t), lambda n: n)
+    cb = decomp.get('code_breakdown') or {}
+    proc_names = cb.get('proc_names', {})
+    addr_names = decomp.get('addr_to_name', {})
+    e = H.escape
+
+    def resolve_name(raw_name):
+        m = re.match(r'(Proc_\d+)_(\d+)_([A-F0-9]+)', raw_name)
+        if not m:
+            return raw_name
+        short = f'{m.group(1)}_{m.group(2)}'
+        return proc_names.get(short) or addr_names.get(m.group(3)) or raw_name
+
+    def replace_in_code(code_text):
+        from clean_code import clean_for_display
+        cleaned = clean_for_display(code_text)
+        escaped = e(cleaned)
+        def _sub(m):
+            short = f'{m.group(1)}_{m.group(2)}'
+            addr = m.group(3)
+            canon = proc_names.get(short) or addr_names.get(addr)
+            if canon:
+                return f'<span style="color:#d2a8ff" title="{m.group(0)}">{canon}</span>'
+            return m.group(0)
+        return re.sub(r'(Proc_\d+)_(\d+)_([A-F0-9]+)', _sub, escaped)
+
+    return replace_in_code, resolve_name
+
+
 def render_functions(decomp):
     """Render functions with progressive disclosure — collapsed by default."""
     if not decomp:
@@ -723,6 +828,7 @@ def render_functions(decomp):
     if not funcs_by_mod:
         return ''
     e = H.escape
+    replace_in_code, resolve_name = _make_proc_resolver(decomp)
     lines = ['<h2>&#x1f4dc; Decompiled Functions</h2>']
     for mod_name, funcs in funcs_by_mod.items():
         lines.append(f'<details class="fn-group"><summary><b>{e(mod_name)}</b> ({len(funcs)} functions)</summary>')
@@ -731,10 +837,11 @@ def render_functions(decomp):
             # Clean up display name
             display = re.sub(r"^(?:Private |Public )?(?:Sub |Function )", '', name)
             display = re.sub(r"\s*'[0-9A-Fa-f]+$", '', display)  # strip address comment
+            display = resolve_name(display)
             sz = f['size']
             sz_label = f'{sz}b' if sz < 1024 else f'{sz/1024:.1f}KB'
             lines.append(f'<details class="fn-item"><summary>{e(display)} <span class="sz">{sz_label}</span></summary>')
-            lines.append(f'<pre>{e(f["code"])}</pre>')
+            lines.append(f'<pre>{replace_in_code(f["code"])}</pre>')
             lines.append('</details>')
         lines.append('</details>')
     return '\n'.join(lines)
@@ -751,22 +858,7 @@ def render_code_breakdown(decomp):
     bas_modules = decomp.get('bas_modules', [])
     bas_label = ', '.join(bas_modules) if bas_modules else 'base module'
 
-    # Build proc name replacement: Proc_1_27_420A50 → SendMail
-    proc_names = cb.get('proc_names', {})
-    def _replace_procs(code_text):
-        """Clean decompiler noise and replace Proc_N_M_ADDR with canonical names."""
-        from clean_code import clean_for_display
-        cleaned = clean_for_display(code_text)
-        escaped = e(cleaned)
-        if not proc_names:
-            return escaped
-        def _sub(m):
-            short = f'{m.group(1)}_{m.group(2)}'
-            canon = proc_names.get(short)
-            if canon:
-                return f'<span style="color:#d2a8ff" title="{m.group(0)}">{canon}</span>'
-            return m.group(0)
-        return re.sub(r'(Proc_\d+)_(\d+)_[A-F0-9]+', _sub, escaped)
+    _replace_procs, _resolve_name = _make_proc_resolver(decomp)
 
     lines = ['<h2>&#x1f4ca; Code Breakdown</h2>']
 
@@ -825,14 +917,8 @@ def render_code_breakdown(decomp):
             else:
                 cap_note = ''
             call_names = f.get('calls_base_names', [])
-            # Resolve any remaining Proc_N_M names via proc_names
-            resolved = []
-            for cn in call_names:
-                if cn.startswith('Proc_'):
-                    short = re.match(r'(Proc_\d+_\d+)', cn)
-                    resolved.append(proc_names.get(short.group(1), cn) if short else cn)
-                else:
-                    resolved.append(cn)
+            # Resolve any remaining Proc_N_M names
+            resolved = [_resolve_name(cn) for cn in call_names]
             call_note = f' → calls: {", ".join(resolved)}' if resolved else ''
             lines.append(f'<details class="fn-item"><summary>{e(name)}{cap_note} <span class="sz">{sz_label}{call_note}</span></summary>')
             lines.append(f'<pre>{_replace_procs(f["code"])}</pre>')
@@ -840,7 +926,14 @@ def render_code_breakdown(decomp):
         lines.append('</details>')
 
     # Cherry-picked functions (matched to known .bas modules)
-    cherry = cb.get('cherry_picked', [])
+    cherry_raw = cb.get('cherry_picked', [])
+    # Deduplicate: if multiple decompiled funcs match the same canonical func, keep best score
+    seen_funcs = {}
+    for f in cherry_raw:
+        key = f'{f["matched_module"]}.{f["matched_func"]}'
+        if key not in seen_funcs or f['match_score'] > seen_funcs[key]['match_score']:
+            seen_funcs[key] = f
+    cherry = list(seen_funcs.values())
     if cherry:
         # Group by source module
         by_mod = {}
@@ -876,9 +969,9 @@ def render_code_breakdown(decomp):
     if reachable:
         lines.append(f'<details><summary><b>Used {e(bas_label)} Functions</b> ({len(reachable)} called)</summary>')
         for f in reachable:
-            canon = f.get('canonical_name', '')
-            display = f'{canon}()' if canon else f['name']
-            proc_note = f' <span style="color:#484f58">({e(f["name"])})</span>' if canon else ''
+            canon = f.get('canonical_name', '') or _resolve_name(f['name'])
+            display = f'{canon}()' if canon != f['name'] else _resolve_name(f['name'])
+            proc_note = f' <span style="color:#484f58">({e(f["name"])})</span>' if canon != f['name'] else ''
             sz = f['size']
             sz_label = f'{sz}b' if sz < 1024 else f'{sz/1024:.1f}KB'
             lines.append(f'<details class="fn-item"><summary>{e(display)}{proc_note} <span class="sz">{sz_label}</span></summary>')
@@ -965,17 +1058,19 @@ def render_greets(greet_names, greet_text):
     return '\n'.join(lines)
 
 
-def render_deps_from_db(zip_stem):
+def render_deps_from_db(zip_stem, conn=None):
     """Render structured dependencies from proggie_db."""
-    db = Path("proggie_db.sqlite")
-    if not db.exists(): return ''
-    conn = sqlite3.connect(str(db))
+    own_conn = conn is None
+    if own_conn:
+        db = Path("proggie_db.sqlite")
+        if not db.exists(): return ''
+        conn = sqlite3.connect(str(db))
     rows = conn.execute('''
         SELECT d.dep_name, d.dep_type, d.source, d.in_zip, d.system_dll, d.vb_runtime
         FROM deps d JOIN exes e ON d.exe_id = e.id JOIN proggies p ON e.proggie_id = p.id
         WHERE p.zip_stem = ?
     ''', (zip_stem,)).fetchall()
-    conn.close()
+    if own_conn: conn.close()
     if not rows: return ''
     e = H.escape
     runtime = [(r[0], r[1]) for r in rows if r[5]]  # vb_runtime
@@ -1006,24 +1101,112 @@ def _parse_frm_controls(frm_path):
     m = re.search(r'ClientHeight\s*=\s*(\d+)', text)
     if m: form_h = int(m.group(1))
 
-    # Parse controls
-    for block in re.finditer(r'Begin\s+(\w+(?:\.\w+)?)\s+(\w+)\s*\r?\n(.*?)End\r?\n', text, re.S):
-        ctrl_type = block.group(1).split('.')[-1] if '.' in block.group(1) else block.group(1)
-        ctrl_name = block.group(2)
-        body = block.group(3)
-        props = {}
-        for pm in re.finditer(r'(\w+)\s*=\s*(.+)', body):
-            props[pm.group(1)] = pm.group(2).strip().strip('"')
-        if 'Left' in props and 'Top' in props:
-            controls.append({
-                'type': ctrl_type, 'name': ctrl_name,
-                'caption': props.get('Caption', ''),
-                'left': int(props.get('Left', 0)),
-                'top': int(props.get('Top', 0)),
-                'width': int(props.get('Width', 600)),
-                'height': int(props.get('Height', 300)),
-            })
+    # Non-visual control types to skip
+    NONVISUAL = {'Timer', 'VBMsg', 'CommonDialog', 'MCI', 'InvisibleIcon',
+                 'OLE', 'Data', 'Winsock', 'Inet', 'MAPI'}
+
+    # Parse nested Begin/End blocks with parent offset tracking
+    lines = text.splitlines()
+    stack = []  # (ctrl_type, ctrl_name, offset_x, offset_y)
+    ox, oy = 0, 0
+    for line in lines:
+        stripped = line.strip()
+        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
+        if m:
+            raw_type = m.group(1).split('.')[-1] if '.' in m.group(1) else m.group(1)
+            stack.append((raw_type, m.group(2), ox, oy))
+            continue
+        if stripped == 'End' and stack:
+            _, _, ox, oy = stack.pop()
+            continue
+        if not stack:
+            continue
+        pm = re.match(r'(\w+)\s*=\s*(.+)', stripped)
+        if not pm:
+            continue
+        key, val = pm.group(1), pm.group(2).strip()
+        cur_type, cur_name = stack[-1][0], stack[-1][1]
+        # When we see Left/Top of a container (Frame/SSFrame/SSPanel), record its offset for children
+        if key == 'Left' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            try:
+                parent_ox, parent_oy = stack[-2][2], stack[-2][3] if len(stack) > 1 else (0, 0)
+            except IndexError:
+                parent_ox = 0
+            # Update stack entry with this container's absolute position
+            pox = stack[-2][2] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, pox + int(val.split("'")[0].strip()), stack[-1][3])
+        elif key == 'Top' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            poy = stack[-2][3] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, stack[-1][2], poy + int(val.split("'")[0].strip()))
+
+    # Re-parse with proper nesting using a simpler recursive approach
+    controls = []
+    _parse_nested(text.splitlines(), controls, 0, 0, NONVISUAL)
     return controls, form_w, form_h
+
+
+def _parse_nested(lines, controls, ox, oy, nonvisual, start=0):
+    """Recursively parse Begin/End blocks, accumulating parent offsets."""
+    i = start
+    props = {}
+    cur_type = cur_name = None
+    while i < len(lines):
+        stripped = lines[i].strip()
+        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
+        if m:
+            raw = m.group(1)
+            ctype = raw.split('.')[-1] if '.' in raw else raw
+            cname = m.group(2)
+            if ctype == 'Form' or ctype == 'MDIForm':
+                i = _parse_nested(lines, controls, 0, 0, nonvisual, i + 1)
+                continue
+            # Collect this control's props and children
+            child_props = {}
+            children_start = i + 1
+            # Find matching End, collecting props and recursing into children
+            j = i + 1
+            depth = 1
+            child_lines = []
+            while j < len(lines) and depth > 0:
+                s = lines[j].strip()
+                if re.match(r'Begin\s+', s):
+                    depth += 1
+                elif s == 'End':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif depth == 1:
+                    pm = re.match(r'(\w+)\s*=\s*(.+)', s)
+                    if pm:
+                        val = pm.group(2).strip().split("'")[0].strip().strip('"')
+                        child_props[pm.group(1)] = val
+                j += 1
+
+            if ctype not in nonvisual and 'Left' in child_props and 'Top' in child_props:
+                try:
+                    left = int(child_props.get('Left', 0))
+                    top = int(child_props.get('Top', 0))
+                    width = int(child_props.get('Width', 600))
+                    height = int(child_props.get('Height', 300))
+                except ValueError:
+                    i = j + 1
+                    continue
+                controls.append({
+                    'type': ctype, 'name': cname,
+                    'caption': child_props.get('Caption', ''),
+                    'left': ox + left, 'top': oy + top,
+                    'width': width, 'height': height,
+                })
+                # Recurse into children with this control's offset
+                if ctype in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+                    _parse_nested(lines, controls, ox + left, oy + top, nonvisual, i + 1)
+
+            i = j + 1
+            continue
+        if stripped == 'End':
+            return i + 1
+        i += 1
+    return i
 
 
 def render_form_layout(form_name, frm_path):
@@ -1051,6 +1234,7 @@ def render_form_layout(form_name, frm_path):
     }
 
     lines = [f'<svg width="{svg_w}" height="{svg_h}" style="background:#161b22;border:1px solid #30363d;border-radius:4px;margin:8px 0">']
+    lines.append('<style>svg .ctrl:hover{opacity:0.8;stroke-width:2}</style>')
     for c in controls:
         x = int(c['left'] * scale)
         y = int(c['top'] * scale)
@@ -1059,12 +1243,14 @@ def render_form_layout(form_name, frm_path):
         fill = colors.get(c['type'], '#2a2a2a')
         stroke = border_colors.get(c['type'], '#484f58')
         cap = c['caption'][:20] if c['caption'] else c['name'][:15]
-        lines.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
+        tip = f'{c["type"]}: {c["name"]}'
+        if c['caption']: tip += f' — "{c["caption"][:30]}"'
+        lines.append(f'<rect class="ctrl" x="{x}" y="{y}" width="{w}" height="{h}" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2" style="cursor:pointer"><title>{e(tip)}</title></rect>')
         # Only add text if control is big enough
         if w > 20 and h > 10:
             tx = x + 3
             ty = y + min(h, 12)
-            lines.append(f'<text x="{tx}" y="{ty}" fill="{stroke}" font-size="8" font-family="monospace">{e(cap)}</text>')
+            lines.append(f'<text x="{tx}" y="{ty}" fill="{stroke}" font-size="8" font-family="monospace" style="pointer-events:none">{e(cap)}</text>')
     lines.append('</svg>')
     return '\n'.join(lines)
     """Extract and render About/Help dialog text as blockquotes."""
@@ -1113,7 +1299,7 @@ def render_about_text(decomp):
     return '\n'.join(out)
 
 
-def generate_html(meta, strings, archive_name, html_path):
+def generate_html(meta, strings, archive_name, html_path, conn=None):
     """Generate the full HTML page."""
     e = H.escape
     zip_stem = archive_name.replace('.zip', '')
@@ -1121,6 +1307,16 @@ def generate_html(meta, strings, archive_name, html_path):
 
     # Load decompile data if available
     decomp = load_decompile_data(zip_stem, exe_name) if exe_name != '?' else None
+    # Fallback: if no exe in DB, check decompiled dir for any metadata.json
+    if not decomp:
+        decomp_base = DECOMPILED_DIR / zip_stem
+        if decomp_base.exists():
+            for sub in decomp_base.iterdir():
+                if sub.is_dir() and (sub / 'metadata.json').exists():
+                    decomp = load_decompile_data(zip_stem, sub.name)
+                    if decomp:
+                        exe_name = sub.name
+                        break
 
     # Build string frequency map (count before dedup)
     str_freq = {}
@@ -1157,12 +1353,6 @@ def generate_html(meta, strings, archive_name, html_path):
                     in_greets = False
                     if len(s) > 5: greet_text.append(s)
 
-    # Decompiled string set for dedup
-    decomp_str_set = set()
-    if decomp:
-        for ds in decomp.get('strings', []):
-            decomp_str_set.add(ds if isinstance(ds, str) else ds.get('value', ''))
-
     for s in strings:
         s = s.strip()
         if not s or s in seen: continue
@@ -1173,8 +1363,7 @@ def generate_html(meta, strings, archive_name, html_path):
             continue  # shown in greet tags
         elif is_phishing(s):
             categorized['phishing'].append(s)
-        elif classify(s):
-            cls = classify(s)
+        elif (cls := classify(s)):
             # DLLs go to dep, not interesting
             if cls == 'dep':
                 categorized['dep'].append(s)
@@ -1182,8 +1371,6 @@ def generate_html(meta, strings, archive_name, html_path):
                 categorized[cls].append(s)
         elif is_junk(s):
             junk.append(s)
-        elif s in decomp_str_set:
-            continue  # shown in decompile sections
         elif is_interesting(s):
             # Filter DLL-like strings from interesting
             if re.match(r'^[\w.-]+\.(dll|ocx|vbx|tlb|olb)$', s, re.I):
@@ -1196,15 +1383,48 @@ def generate_html(meta, strings, archive_name, html_path):
     # Filter author evidence: remove help text, keep only real author signals
     real_author = []
     for s in categorized.get('author', []):
-        # Skip generic help/instruction text
-        if re.search(r'you can|click on|going to|options>', s, re.I) and not re.search(r'coded by|made by|programmed by|written by|by\s*:', s, re.I):
-            interesting.append(s)  # move to interesting instead
-        else:
+        # Short strings with "by" pattern are likely real credits
+        # Long strings are almost always help text that happens to contain "by"
+        is_credit = re.search(r'(?:coded|programmed|made|created|written|designed|developed)\s+by\s*:?\s*\S', s, re.I)
+        is_byline = re.match(r'^.{0,60}\bby\s*:\s*\S', s, re.I)
+        is_presents = re.search(r'presents\s*$', s, re.I)
+        if len(s) > 80 and not is_credit and not is_byline:
+            interesting.append(s)
+        elif is_credit or is_byline or is_presents or len(s) <= 60:
             real_author.append(s)
+        else:
+            interesting.append(s)
     categorized['author'] = real_author
+
+    # Deduplicate author evidence by normalized whitespace
+    seen_norm = set()
+    deduped_author = []
+    for s in categorized['author']:
+        norm = re.sub(r'\s+', ' ', s).strip().lower()
+        if norm not in seen_norm:
+            deduped_author.append(s)
+            seen_norm.add(norm)
+    categorized['author'] = deduped_author
+
+    # Merge author_evidence from metadata.json (decompiled source may have strings not in exe_strings.db)
+    if decomp:
+        for ev in decomp.get('author_evidence', []):
+            norm = re.sub(r'\s+', ' ', ev).strip().lower()
+            if norm not in seen_norm:
+                categorized['author'].append(ev)
+                seen_norm.add(norm)
 
     # Build page
     lines = [f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>{e(archive_name)} — Analysis</title>{CSS}</head><body><div class="container">']
+
+    # Nav bar (back to index + download)
+    zip_path = meta.get('zip_path', '')
+    dl_link = f'{GITHUB_RAW}{zip_path}' if zip_path else ''
+    lines.append('<div class="topnav">')
+    lines.append('<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>')
+    if dl_link:
+        lines.append(f'<a class="dl-btn" href="{e(dl_link)}">&#x2b07; Download {e(archive_name)}</a>')
+    lines.append('</div>')
 
     # Hero
     lines.append(render_hero(meta, archive_name, decomp))
@@ -1217,35 +1437,14 @@ def generate_html(meta, strings, archive_name, html_path):
     about = render_about_text(decomp)
     if about: lines.append(about)
 
-    # Phishing
-    if categorized['phishing']:
-        lines.append(f'<h2>&#x1f3a3; Phishing Template ({len(categorized["phishing"])})</h2>')
-        for s in categorized['phishing']:
-            lines.append(f'<span class="s phishing-str">{e(s)}</span>')
-
     # Author evidence (only real signals)
     if categorized['author']:
         lines.append(f'<h2>&#x1f58a; Author Evidence ({len(categorized["author"])})</h2>')
         for s in categorized['author']:
             lines.append(f'<span class="s author-str">{e(s)}</span>')
 
-    # Greets
-    lines.append(render_greets(sorted(greet_names), greet_text))
-
-    # API refs split into subsections
-    lines.append(render_api_refs(categorized['api'], decomp))
-
-    # Forms & Controls with SVG layouts
-    lines.append(render_forms(decomp, zip_stem, exe_name))
-
-    # Functions (progressive disclosure)
-    lines.append(render_functions(decomp))
-
-    # Code breakdown (base module vs app code)
-    lines.append(render_code_breakdown(decomp))
-
-    # Dependencies from DB (structured)
-    deps_html = render_deps_from_db(zip_stem)
+    # Dependencies from DB (structured) — right after author info
+    deps_html = render_deps_from_db(zip_stem, conn)
     if deps_html:
         lines.append(deps_html)
     elif categorized['dep']:
@@ -1269,6 +1468,24 @@ def generate_html(meta, strings, archive_name, html_path):
             lines.append(' · '.join(info_parts))
             lines.append('</div>')
 
+    # Phishing
+    if categorized['phishing']:
+        lines.append(f'<h2>&#x1f3a3; Phishing Template ({len(categorized["phishing"])})</h2>')
+        for s in categorized['phishing']:
+            lines.append(f'<span class="s phishing-str">{e(s)}</span>')
+
+    # Greets
+    lines.append(render_greets(sorted(greet_names), greet_text))
+
+    # API refs split into subsections
+    lines.append(render_api_refs(categorized['api'], decomp))
+
+    # Forms & Controls with SVG layouts
+    lines.append(render_forms(decomp, zip_stem, exe_name))
+
+    # Code breakdown (base module vs app code) — single code section
+    lines.append(render_code_breakdown(decomp))
+
     # Interesting strings with frequency
     if interesting:
         lines.append(f'<h2>&#x2b50; Interesting Strings ({len(interesting)})</h2>')
@@ -1286,20 +1503,57 @@ def generate_html(meta, strings, archive_name, html_path):
             lines.append(f'<span class="s plain-str">{e(s)}{freq_badge}</span>')
         lines.append('</details>')
 
-    # Stats footer
+    # Stats footer (only if there are strings to report)
     total = len(seen)
-    lines.append(f'<div class="stats">Total unique strings: {total} · Interesting: {len(interesting)} · Noise filtered: {len(junk)}</div>')
+    if interesting or other:
+        lines.append(f'<div class="stats">Total unique strings: {total} · Interesting: {len(interesting)} · Noise filtered: {len(junk)}</div>')
     lines.append('</div></body></html>')
     return '\n'.join(lines)
+
+
+def _process_one(html_path_str):
+    """Worker function for multiprocessing — generates one HTML page."""
+    html_path = Path(html_path_str)
+    conn = sqlite3.connect(str(DB_PATH))
+    pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+
+    meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+    exe_name = meta.get('exe', '')
+    archive_name = html_path.stem + '.zip'
+    archive_base = html_path.stem
+
+    exe_path = find_exe_in_db(conn, exe_name, archive_base)
+    strings = get_strings_from_db(conn, exe_path) if exe_path else []
+
+    if not strings:
+        decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+        if not decomp:
+            decomp_base = DECOMPILED_DIR / archive_base
+            if decomp_base.exists():
+                for sub in decomp_base.iterdir():
+                    if sub.is_dir() and (sub / 'metadata.json').exists():
+                        decomp = load_decompile_data(archive_base, sub.name)
+                        if decomp:
+                            exe_name = sub.name
+                            break
+        if decomp and decomp.get('strings'):
+            strings = decomp['strings']
+        elif not exe_path:
+            conn.close()
+            if pdb: pdb.close()
+            return 'skip'
+
+    page = generate_html(meta, strings, archive_name, html_path, pdb)
+    html_path.write_text(page, encoding='utf-8')
+    conn.close()
+    if pdb: pdb.close()
+    return 'ok'
 
 
 def main() -> int:
     if not DB_PATH.exists():
         print(f"Error: {DB_PATH} not found", file=sys.stderr)
         return 1
-
-    conn = sqlite3.connect(str(DB_PATH))
-    generated = skipped = 0
 
     # Support single-file mode
     if len(sys.argv) > 1:
@@ -1311,34 +1565,126 @@ def main() -> int:
     total = len(html_files)
     print(f"Processing {total} HTML pages", file=sys.stderr)
 
-    for i, html_path in enumerate(html_files):
-        meta = get_meta_from_db(html_path.stem) or parse_existing_meta(html_path)
-        exe_name = meta.get('exe', '')
-        archive_name = html_path.stem + '.zip'
-        archive_base = html_path.stem
+    if total > 4:
+        import multiprocessing
+        workers = max(1, multiprocessing.cpu_count() - 1)
+        generated = skipped = 0
+        with multiprocessing.Pool(workers) as pool:
+            for i, result in enumerate(pool.imap_unordered(_process_one, [str(p) for p in html_files], chunksize=16)):
+                if result == 'ok':
+                    generated += 1
+                else:
+                    skipped += 1
+                if (i + 1) % 200 == 0:
+                    print(f"  {i+1}/{total} processed, {generated} regenerated", file=sys.stderr)
+    else:
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+        generated = skipped = 0
+        for html_path in html_files:
+            meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+            exe_name = meta.get('exe', '')
+            archive_name = html_path.stem + '.zip'
+            archive_base = html_path.stem
+            exe_path = find_exe_in_db(conn, exe_name, archive_base)
+            strings = get_strings_from_db(conn, exe_path) if exe_path else []
+            if not strings:
+                decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+                if not decomp:
+                    decomp_base = DECOMPILED_DIR / archive_base
+                    if decomp_base.exists():
+                        for sub in decomp_base.iterdir():
+                            if sub.is_dir() and (sub / 'metadata.json').exists():
+                                decomp = load_decompile_data(archive_base, sub.name)
+                                if decomp:
+                                    exe_name = sub.name
+                                    break
+                if decomp and decomp.get('strings'):
+                    strings = decomp['strings']
+                elif not exe_path:
+                    skipped += 1
+                    continue
+            page = generate_html(meta, strings, archive_name, html_path, pdb)
+            html_path.write_text(page, encoding='utf-8')
+            generated += 1
+        conn.close()
+        if pdb: pdb.close()
 
-        exe_path = find_exe_in_db(conn, exe_name, archive_base)
-        strings = get_strings_from_db(conn, exe_path) if exe_path else []
-
-        # Fall back to metadata.json strings if exe_strings.db doesn't have this exe
-        if not strings:
-            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
-            if decomp and decomp.get('strings'):
-                strings = decomp['strings']
-            elif not exe_path:
-                skipped += 1
-                continue
-
-        page = generate_html(meta, strings, archive_name, html_path)
-        html_path.write_text(page, encoding='utf-8')
-        generated += 1
-
-        if (i + 1) % 200 == 0:
-            print(f"  {i+1}/{total} processed, {generated} regenerated", file=sys.stderr)
-
-    conn.close()
     print(f"Done: {generated} regenerated, {skipped} skipped")
+
+    # Generate landing page
+    generate_landing_page()
+
     return 0
+
+
+def generate_landing_page():
+    """Generate index.html landing page with auto-detected featured proggies."""
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+    db = Path("proggie_db.sqlite")
+    if not db.exists():
+        print("Warning: proggie_db.sqlite not found, skipping landing page", file=sys.stderr)
+        return
+
+    conn = sqlite3.connect(str(db))
+
+    # Stats
+    total_proggies = conn.execute("SELECT COUNT(*) FROM proggies").fetchone()[0]
+    total_decompiled = conn.execute("SELECT COUNT(*) FROM exes WHERE decompile_status='done'").fetchone()[0]
+    total_decompilable = conn.execute("SELECT COUNT(*) FROM exes WHERE vb_version != 'non-VB'").fetchone()[0]
+    total_html = sum(1 for _ in SORTED_DIR.rglob("*.html"))
+
+    # Auto-detect featured: any proggie with a screenshot
+    featured = []
+    for asset_dir in sorted(SORTED_DIR.rglob("screenshot.png")):
+        stem = asset_dir.parent.name
+        ver_dir = asset_dir.parent.parent.name
+        row = conn.execute(
+            "SELECT p.name, p.author, p.aol_version, e.vb_version "
+            "FROM proggies p LEFT JOIN exes e ON e.proggie_id=p.id WHERE p.zip_stem=? LIMIT 1",
+            (stem,)
+        ).fetchone()
+        if not row:
+            continue
+        detail_url = f"programs/AOL/proggies-sorted-deduped/{ver_dir}/{stem}.html"
+        screenshot_url = f"programs/AOL/proggies-sorted-deduped/{ver_dir}/{stem}/screenshot.png"
+        # Check for main_form.png (preferred, larger)
+        # Prefer screenshot.png (trimmed) for thumbnails; main_form.png is full-screen
+        main_form = asset_dir.parent / "main_form.png"
+        if main_form.exists() and not asset_dir.exists():
+            screenshot_url = f"programs/AOL/proggies-sorted-deduped/{ver_dir}/{stem}/main_form.png"
+        featured.append({
+            'name': row[0] or stem,
+            'author': row[1] or 'Unknown',
+            'aol_version': row[2] or '?',
+            'vb': row[3] or '?',
+            'detail_url': detail_url,
+            'screenshot_url': screenshot_url,
+            'has_source': (asset_dir.parent / "source").is_dir(),
+            'has_gif': (asset_dir.parent / "animated.gif").exists(),
+        })
+    conn.close()
+
+    # Render
+    env = Environment(
+        loader=FileSystemLoader(str(Path(__file__).parent / 'templates')),
+        autoescape=select_autoescape(['html']),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    template = env.get_template('index.html')
+    html = template.render(
+        total_proggies=f"{total_proggies:,}",
+        total_html=f"{total_html:,}",
+        total_decompiled=total_decompiled,
+        total_decompilable=f"{total_decompilable:,}",
+        total_strings='11.6M',
+        remaining=f"{total_decompilable - total_decompiled:,}",
+        featured=featured,
+    )
+    Path("index.html").write_text(html, encoding='utf-8')
+    print(f"Landing page: index.html ({len(featured)} featured proggies)")
 
 
 if __name__ == '__main__':

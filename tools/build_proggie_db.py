@@ -314,7 +314,7 @@ def extract_and_catalog(db):
 
         # Find and analyze exes
         exe_rows = []
-        for fp in dest.rglob('*.exe'):
+        for fp in [p for p in dest.rglob('*') if p.suffix.lower() == '.exe']:
             if fp.name.lower() in SKIP_EXES:
                 continue
             try:
