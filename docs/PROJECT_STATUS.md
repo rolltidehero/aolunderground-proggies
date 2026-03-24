@@ -4,7 +4,7 @@
 
 ## What Is This?
 
-We're preserving and reverse-engineering ~6,000 AOL/AIM "proggies" — the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole scene. Most were written in Visual Basic 3–6 and distributed on AOL itself or via html pages.
+We're preserving and reverse-engineering ~2,800 AOL/AIM "proggies" — the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole scene. Most were written in Visual Basic 3–6 and distributed on AOL itself or via html pages.
 
 This repo is the largest known collection. We're building tooling to catalog every program, decompile the source code, and make it all browsable and searchable — a living museum of AOL underground history.
 
