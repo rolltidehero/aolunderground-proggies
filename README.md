@@ -1,12 +1,12 @@
 # AOL Underground Proggies Archive
 
-Historic vault of ~2,800 unique AOL/AIM proggie archives from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole underground scene, preserved and cataloged.
+Historic vault of about 2,800 unique AOL/AIM proggie archives from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders, the whole underground scene, preserved and cataloged.
 
 Let's repopulate the Gibson!
 
 Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
 
-## 📊 Current Stats
+## Current Stats
 
 | What | Count |
 |------|-------|
@@ -19,13 +19,13 @@ Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
 | Strings extracted | 11.6 million |
 | Decompiled so far | 3 (pipeline proven, batch run next) |
 
-📄 **[Full Project Status](docs/PROJECT_STATUS.md)** — what we've done, what's next, how to help
+[Full Project Status](docs/PROJECT_STATUS.md) - what we've done, what's next, how to help
 
-## 🔎 Finding Proggies
+## Finding Proggies
 
-- **[proggie-index.html](proggie-index.html)** — Interactive web search (recommended)
-- **[proggie-index.md](proggie-index.md)** — Browse by category with markdown tables
-- **[proggie-index.txt](proggie-index.txt)** — Greppable tab-delimited file
+- [proggie-index.html](proggie-index.html) - Interactive web search (recommended)
+- [proggie-index.md](proggie-index.md) - Browse by category with markdown tables
+- [proggie-index.txt](proggie-index.txt) - Greppable tab-delimited file
 
 ```bash
 # Search by name
@@ -39,7 +39,7 @@ python3 tools/query_strings.py "AOL Frame25"
 python3 tools/query_proggies.py --stats
 ```
 
-## 🎉 2026 Reorganization
+## 2026 Reorganization
 
 This repository has been reorganized for better discoverability:
 - **Duplicate Detection:** 6,061 archives merged down to 2,138 unique proggies via SHA256
@@ -48,19 +48,19 @@ This repository has been reorganized for better discoverability:
 - **Analysis Pages:** Per-proggie HTML pages with API refs, string analysis, dependency trees
 - **API-Based Version Detection:** Accurate detection using actual AOL API signatures ([details](docs/old-plans/AOL_VERSION_DETECTION.md))
 
-**Old links broken?** Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `archive-original` branch.
+Old links broken? Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `archive-original` branch.
 
-## 🤝 Contributing
+## Contributing
 
-**We need help!** See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to contribute, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
+We need help! See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to contribute, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
 
 Quick wins:
-- **Got proggies?** Submit them! Even duplicates help verify our collection
-- **Remember which AOL version a proggie worked with?** [549 need verification](NEEDS_REVIEW.md)
-- **Know the author of a proggie?** Open an issue with corrections
-- **Can run proggies?** We need screenshots (Wine, VM, or real old Windows)
+- Got proggies? Submit them! Even duplicates help verify our collection
+- Remember which AOL version a proggie worked with? [549 need verification](NEEDS_REVIEW.md)
+- Know the author of a proggie? Open an issue with corrections
+- Can run proggies? We need screenshots (Wine, VM, or real old Windows)
 
-## 📦 Missing Proggies
+## Missing Proggies
 
 - Guide Punt by Stoney (guide.exe)
 - Magenta by ReDxKinG (latest version)
@@ -71,7 +71,7 @@ Quick wins:
 - Macro House
 - Pup Tool by Pen (puptool.zip)
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 programs/AOL/proggies-sorted-deduped/
