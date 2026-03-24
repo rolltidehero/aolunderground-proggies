@@ -2,16 +2,18 @@
 
 **Total needing review:** 549 of 2,138 proggies
 
-These proggies need manual version verification:
-- No AOL API signatures detected
-- Low confidence version detection
-- Conflicting version evidence
+These proggies were assigned to the "unknown" AOL version because our automated detection couldn't determine which version of AOL they targeted. We detect AOL versions by looking for API calls to specific AOL window classes (like "AOL Frame25" for AOL 4.0, or "_AOL_Icon" for AOL 3.0). These proggies either:
+- **No signatures**: The exe doesn't contain any known AOL API strings, so we can't tell which AOL version it was built for
+- **Low confidence**: The exe has API strings that match multiple AOL versions
+- **Conflicting evidence**: The exe has API strings from different AOL versions
+
+If you used any of these proggies back in the day and remember which AOL version they worked with, we'd love to know.
 
 ## How to Help
 
-1. Extract and test the proggie on different AOL versions
-2. Check README files or documentation for version info
-3. Submit corrections via issues or pull requests
+1. Look through the list below for proggies you recognize
+2. If you know which AOL version it targeted, open an issue or PR with the correction
+3. Even partial info helps ("I used this on AOL 4.0" or "this was definitely a 3.0-era tool")
 
 ---
 
