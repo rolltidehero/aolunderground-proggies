@@ -162,6 +162,14 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 - [x] Author evidence dedup: normalize whitespace before comparing
 - [x] Landing page: added decompilable count, fixed AOHell title + trimmed thumbnail
 - [x] Query tool tested: --stats, --search, --vb, --deps, --missing-deps all working
+- [x] GitHub Pages live: https://ssstonebraker.github.io/aolunderground-proggies/
+- [x] GitHub Actions workflow for Pages deployment (HTML + images only)
+- [x] exe_strings.db.zip tracked via Git LFS (2.4GB → 301MB compressed)
+- [x] generate_index.py rewritten to use DB (was merge_report.json)
+- [x] All download links point to GitHub raw/main (not Pages, not reorganize)
+- [x] generate_analysis.py download URLs fixed: raw/main instead of raw/reorganize
+- [x] Removed obsolete update-proggie-list.yml workflow
+- [x] README + CONTRIBUTING updated: LFS instructions, unzip note, branch refs to main
 
 ## Quick Commands
 
@@ -169,8 +177,9 @@ DB is built. Next: batch process ~1,496 VB5/VB6 exes.
 # Launch decompiler VM
 tools/vm/scripts/launch-decompiler.sh run
 
-# Browse proggie HTML pages (nginx on port 8088)
-# http://192.168.5.175:8088/programs/AOL/proggies-sorted-deduped/4.0/anexbust.html
+# Browse proggie HTML pages
+# https://ssstonebraker.github.io/aolunderground-proggies/
+# http://linux:8088/programs/AOL/proggies-sorted-deduped/4.0/anexbust.html
 
 # Query proggies DB (metadata, VB versions, deps, decompile status)
 python3 tools/query_proggies.py --stats

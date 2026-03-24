@@ -1,14 +1,15 @@
 # AOL Underground Proggies — Project Status
 
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-03-24
 
 ## What Is This?
 
-We're preserving and reverse-engineering ~6,000 AOL/AIM "proggies" — the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole scene. Most were written in Visual Basic 3–6 and distributed on  AOL itself or via html pages.
+We're preserving and reverse-engineering ~6,000 AOL/AIM "proggies" — the underground tools from the late 1990s and early 2000s that automated AOL. Punters, phishers, chat tools, mail bombers, scrollers, faders — the whole scene. Most were written in Visual Basic 3–6 and distributed on AOL itself or via html pages.
 
 This repo is the largest known collection. We're building tooling to catalog every program, decompile the source code, and make it all browsable and searchable — a living museum of AOL underground history.
 
 **Podcast:** [AOL Underground](https://aolunderground.com)
+**Live Site:** https://ssstonebraker.github.io/aolunderground-proggies/
 
 ## What We've Accomplished
 
@@ -27,39 +28,51 @@ This repo is the largest known collection. We're building tooling to catalog eve
   - Dependency listings (VB runtime, system DLLs, bundled files)
   - AOL API references (which window classes and APIs each proggie uses)
   - String analysis (interesting strings extracted from the binary)
+  - SVG form layouts from decompiled .frm control positions
+  - Progressive disclosure: functions collapsed, expand to show code
 - **Interactive search** via [proggie-index.html](../proggie-index.html)
 - **Greppable index** via [proggie-index.txt](../proggie-index.txt)
+- **GitHub Pages** auto-deployed via GitHub Actions on every push to main
 
 ### VB Version Breakdown
 
 | Version | Count | Notes |
 |---------|-------|-------|
-| VB6 | 802 | Most common, fully decompilable |
-| VB5 | 339 | Fully decompilable |
-| VB4-32 | 300 | Partially decompilable |
-| VB3 | 168 | Partially decompilable |
-| Non-VB | 95 | Delphi, C++, etc. |
+| VB6 | 805 | Most common, fully decompilable |
+| VB5 | 349 | Fully decompilable |
+| VB4-32 | 458 | Partially decompilable |
+| VB4-16 | 6 | Partially decompilable |
+| VB3 | 211 | Partially decompilable |
+| Non-VB | 112 | Delphi, C++, etc. |
+| **Decompilable (all VB)** | **1,829** | |
 
 ### Decompilation Pipeline (In Progress)
 - Network-isolated Windows 10 VM with automated VB Decompiler Pro
 - End-to-end pipeline proven: push exe → decompile → pull source → generate HTML
-- **3 of ~1,141 VB5/VB6 exes decompiled** so far (pipeline works, batch processing next)
+- **3 of ~1,829 VB exes decompiled** so far (pipeline works, batch processing next)
 - Decompiled output includes: .frm forms, .bas modules, .vbp project files
 - Source code browsable in the HTML analysis pages with syntax highlighting
 
 ### Strings Database
 - **11.6 million strings** extracted from 2,452 executables
 - Searchable — find which proggies reference specific AOL APIs, screen names, or techniques
+- Distributed as `exe_strings.db.zip` (301MB compressed, 2.4GB uncompressed) via Git LFS
+
+### Infrastructure
+- GitHub Pages live with auto-deploy workflow
+- Download links serve zips from GitHub raw URLs (no Pages size limit issues)
+- `exe_strings.db.zip` tracked via Git LFS
+- Nginx dev server at `http://linux:8088/` for local browsing
 
 ## What's Next
 
-### Batch Decompilation (~1,138 VB5/VB6 exes remaining)
-The pipeline works end-to-end but needs to run at scale. Each exe takes ~2.5 minutes. Full batch = ~47 hours of VM time. We need:
+### Batch Decompilation (~1,826 VB exes remaining)
+The pipeline works end-to-end but needs to run at scale. Each exe takes ~2.5 minutes. Full batch = ~76 hours of VM time. We need:
 - Batch orchestrator script (resume-on-crash, progress tracking)
 - Snapshot rotation (revert VM to clean state every 50 exes)
 - Metadata parser to extract form layouts, control names, API calls from decompiled source
 
-### VB3/VB4 Decompilation (~468 exes)
+### VB3/VB4 Decompilation (~675 exes)
 Different decompiler needed. Partial results expected (no full source recovery for VB3/VB4).
 
 ### Screenshots & GIFs
@@ -125,8 +138,10 @@ tools/
   query_strings.py              # Search the strings database
   detect_vb_version.py          # VB version detection engine
   generate_analysis.py          # HTML analysis page generator
+  generate_index.py             # Interactive search page generator
 
 proggie_db.sqlite               # The database (2,138 proggies, all metadata)
+exe_strings.db.zip              # 11.6M strings (unzip before querying)
 proggie-index.html              # Interactive web search
 proggie-index.txt               # Tab-delimited greppable index
 ```
@@ -134,10 +149,10 @@ proggie-index.txt               # Tab-delimited greppable index
 ## Quick Start for Contributors
 
 ```bash
-# Clone the repo
+# Clone (install Git LFS first)
+git lfs install
 git clone https://github.com/ssstonebraker/aolunderground-proggies.git
 cd aolunderground-proggies
-git checkout reorganize
 
 # Search for a proggie
 python3 tools/query_proggies.py --search "punter"
@@ -145,7 +160,8 @@ python3 tools/query_proggies.py --search "punter"
 # See VB version stats
 python3 tools/query_proggies.py --stats
 
-# Search strings across all exes
+# Search strings across all exes (unzip first)
+unzip exe_strings.db.zip  # only needed once
 python3 tools/query_strings.py "AOL Frame25"
 
 # Browse analysis pages locally
@@ -154,6 +170,6 @@ python3 tools/query_strings.py "AOL Frame25"
 
 ## Links
 
+- **Live Site:** https://ssstonebraker.github.io/aolunderground-proggies/
 - **Repository:** https://github.com/ssstonebraker/aolunderground-proggies
 - **Podcast:** https://aolunderground.com
-- **Branch:** `reorganize` (all active work happens here)
