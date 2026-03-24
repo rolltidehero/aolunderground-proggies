@@ -89,6 +89,26 @@ This repository has been reorganized for better discoverability:
 
 Old links broken? Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `archive-original` branch.
 
+## Decompilation Pipeline
+
+We're recovering the original VB source code from every executable using an automated pipeline:
+
+1. Push the exe into a network-isolated Windows 10 VM (QEMU/KVM)
+2. VB Decompiler Pro opens and decompiles it via GUI automation
+3. Pull the decompiled .frm/.bas/.vbp files back to the host
+4. Parse metadata (forms, controls, API calls, strings) into JSON
+5. Generate an enriched HTML analysis page with the source code
+
+**Status:** Pipeline proven end-to-end on 3 exes. 1,826 remaining. Each takes about 2.5 minutes, so the full batch is roughly 76 hours of VM time.
+
+**What we need help with:**
+- Batch orchestrator with resume-on-crash (Python, talks to VM via virtio-serial)
+- Metadata parsers for decompiled VB source (extract form layouts, API calls, control names)
+- Source code cleanup (strip decompiler noise, resolve proc names from known base modules)
+- HTML template improvements for the analysis pages
+
+See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the full technical breakdown.
+
 ## Contributing
 
 We need help! See [CONTRIBUTING.md](CONTRIBUTING.md) for details, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
