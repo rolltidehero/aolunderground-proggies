@@ -1,10 +1,63 @@
 # AOL Underground Proggies Archive
 
-Historic vault of about 2,800 unique AOL/AIM proggie archives from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders, the whole underground scene, preserved and cataloged.
+About 2,800 unique AOL/AIM proggie archives from the late 1990s and early 2000s. Punters, phishers, chat tools, mail bombers, scrollers, faders, the whole underground scene, preserved and cataloged.
 
 Let's repopulate the Gibson!
 
 Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
+
+[Browse the archive](https://ssstonebraker.github.io/aolunderground-proggies/) | [Search proggies](https://ssstonebraker.github.io/aolunderground-proggies/proggie-index.html) | [Full project status](docs/PROJECT_STATUS.md)
+
+## Quick Start
+
+```bash
+# Install Git LFS (required for the strings database)
+git lfs install
+
+# Clone the repo
+git clone https://github.com/ssstonebraker/aolunderground-proggies.git
+cd aolunderground-proggies
+
+# Search for a proggie by name
+python3 tools/query_proggies.py --search "punter"
+```
+
+Output:
+```
+  Name                          Author       AOL  VB      Zip
+  Punt                          Unknown      2.5  VB3     programs/AOL/.../2.5/punt.zip
+  PuntStat                      Unknown      3.0  VB3     programs/AOL/.../3.0/puntstat.zip
+  bodini                        bodini       4.0  VB6     programs/AOL/.../4.0/bodini.zip
+  ...
+Found 47 matches
+```
+
+```bash
+# See stats
+python3 tools/query_proggies.py --stats
+```
+
+Output:
+```
+Total proggies: 2,138
+  AOL: 2,118  AIM: 20
+  With author: 1,198  With password: 36
+VB versions: VB6=805 VB5=349 VB4-32=458 VB3=211 non-VB=112
+```
+
+```bash
+# Search 11.6 million extracted strings across all exes
+unzip exe_strings.db.zip    # one-time, extracts 2.4GB database
+python3 tools/query_strings.py "AOL Frame25"
+```
+
+Output:
+```
+  anexbust.exe: AOL Frame25
+  bodini.exe: FindWindow "AOL Frame25"
+  ...
+Found in 342 executables
+```
 
 ## Current Stats
 
@@ -19,25 +72,11 @@ Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
 | Strings extracted | 11.6 million |
 | Decompiled so far | 3 (pipeline proven, batch run next) |
 
-[Full Project Status](docs/PROJECT_STATUS.md) - what we've done, what's next, how to help
-
 ## Finding Proggies
 
-- [proggie-index.html](proggie-index.html) - Interactive web search (recommended)
+- [proggie-index.html](https://ssstonebraker.github.io/aolunderground-proggies/proggie-index.html) - Interactive web search with filters and sorting
 - [proggie-index.md](proggie-index.md) - Browse by category with markdown tables
 - [proggie-index.txt](proggie-index.txt) - Greppable tab-delimited file
-
-```bash
-# Search by name
-python3 tools/query_proggies.py --search "punter"
-
-# Search strings across all exes (unzip first)
-unzip exe_strings.db.zip  # only needed once
-python3 tools/query_strings.py "AOL Frame25"
-
-# VB version breakdown
-python3 tools/query_proggies.py --stats
-```
 
 ## 2026 Reorganization
 
@@ -52,7 +91,7 @@ Old links broken? Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `a
 
 ## Contributing
 
-We need help! See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to contribute, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
+We need help! See [CONTRIBUTING.md](CONTRIBUTING.md) for details, or check the [full project status](docs/PROJECT_STATUS.md#how-to-help).
 
 Quick wins:
 - Got proggies? Submit them! Even duplicates help verify our collection
@@ -85,6 +124,7 @@ tools/
   query_strings.py              # Search 11.6M extracted strings
   detect_vb_version.py          # VB version detection
   generate_analysis.py          # HTML page generator
+  generate_index.py             # Interactive search page generator
 
 proggie_db.sqlite               # The database
 exe_strings.db.zip              # 11.6M extracted strings (unzip before querying)
