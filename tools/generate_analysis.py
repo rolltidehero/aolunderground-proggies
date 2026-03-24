@@ -366,7 +366,7 @@ summary:hover{color:#58a6ff}
 .topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
 </style>"""
 
-GITHUB_RAW = "https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/"
+GITHUB_RAW = "https://github.com/ssstonebraker/aolunderground-proggies/raw/main/"
 
 
 def _extract_program_name(decomp):
