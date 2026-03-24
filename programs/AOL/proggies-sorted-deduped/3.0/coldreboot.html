@@ -1,0 +1,413 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>coldreboot.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/3.0/coldreboot.zip">&#x2b07; Download coldreboot.zip</a>
+</div>
+<div class="hero">
+<div><h1>COLD</h1><span class="author">by <b>tasz</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 3.0</span>
+<span class="badge badge-vb">VB3</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">COLD.EXE</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2007-12-02</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">coded by:</span>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_AOL_ListBox</span></div>
+<div class="api-item"><span class="api-name">_AOL_EDIT</span></div>
+<div class="api-item"><span class="api-name">_AOL_VIEW</span></div>
+<div class="api-item"><span class="api-name">_AOL_LISTBOX</span></div>
+<div class="api-item"><span class="api-name">aol Frame25</span></div>
+<div class="api-item"><span class="api-name">_AOL_TREE</span></div>
+<div class="api-item"><span class="api-name">_aol_edit</span></div>
+<div class="api-item"><span class="api-name">AOL FRAME25</span></div>
+<div class="api-item"><span class="api-name">_AOL_ICON</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">AOL CHILD</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (172)</h2>
+<span class="s interesting-str">This program requires Microsoft Windows.</span>
+<span class="s interesting-str">$You are already running Microsoft Windows.</span>
+<span class="s interesting-str">$Unable to start Microsoft Windows.</span>
+<span class="s interesting-str">P&amp;ersonal Filing Cabinet</span>
+<span class="s interesting-str">tool\aolchat.aol</span>
+<span class="s interesting-str">AOL is already set to New User.</span>
+<span class="s interesting-str">Screen name must be at least SEVEN characters long.</span>
+<span class="s interesting-str">\idb\main.idx</span>
+<span class="s interesting-str">Buddy List Window <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">America  Online <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&gt;Instant Message From: <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×26</span></span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×35</span></span>
+<span class="s interesting-str">Send an Instant Message <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Instant Message From: <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Target&#x27;s IMs are off or target is offline.</span>
+<span class="s interesting-str">Target&#x27;s IMs are off or target is offline, or an error occured.</span>
+<span class="s interesting-str">Chat Preferences <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Compose Mail <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">You have no new mail.</span>
+<span class="s interesting-str">No New Mail!</span>
+<span class="s interesting-str">duplicate mails deleted.</span>
+<span class="s interesting-str">Invitation From: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Ay wot dill?!? Whatcha TOSin&#x27; TheVeggie fer?</span>
+<span class="s interesting-str">Don&#x27;t TOS TheVeggie!</span>
+<span class="s interesting-str">I Need Help!</span>
+<span class="s interesting-str">Report A Violation</span>
+<span class="s interesting-str">Violations via Instant Messages</span>
+<span class="s interesting-str">Category of Chat Room</span>
+<span class="s interesting-str">Chat Room Name</span>
+<span class="s interesting-str">CUT and PASTE a copy of the IM here</span>
+<span class="s interesting-str">cold.wav <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Do you fuck sheep?</span>
+<span class="s interesting-str">times loaded <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">cold5.wav</span>
+<span class="s interesting-str">cold3.wav</span>
+<span class="s interesting-str">please enter handle for load</span>
+<span class="s interesting-str">You didnt meet the requirements!</span>
+<span class="s interesting-str">This program is no longer usable!</span>
+<span class="s interesting-str">punt somebody!</span>
+<span class="s interesting-str">You currently have</span>
+<span class="s interesting-str">punts. This is load number</span>
+<span class="s interesting-str">. You&#x27;ll keep getting this annoying message box till you get 10 punts..hahahahahahaha</span>
+<span class="s interesting-str">Aint a dick?</span>
+<span class="s interesting-str">Tasz Owns Vex, PuPP and Sly</span>
+<span class="s interesting-str">Tasz Owns Yew</span>
+<span class="s interesting-str">l|[ no name to check dummy!!!</span>
+<span class="s interesting-str">l|[ name needs to be longer dummy!</span>
+<span class="s interesting-str">l|[ name&#x27;s more than 10 letters dipshit!</span>
+<span class="s interesting-str">cannot currently receive Instant Messages. <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">is online and able to receive Instant Messages. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">is not currently signed on. <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">ffline or ghosting</span>
+<span class="s interesting-str">c:\Evdnce.dat</span>
+<span class="s interesting-str">l|[ nobody was punted moron! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">final4.wav</span>
+<span class="s interesting-str">l|[ a name would help dumbfuck!</span>
+<span class="s interesting-str">l|[ doh, zero!</span>
+<span class="s interesting-str">l|[ braggin string on <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">called me vex <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">fatal error screen <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">yer owned, son!</span>
+<span class="s interesting-str">beastiality, ewww <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">guides are cool!! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">start a server!! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">test this anti <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">rim my ass!@! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">preteen pics?? <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">taszs enemy! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">uhh wassup doc? <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">who punted me?? <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">im me for cyber! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">haha{S goodbye} <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">annoying fuck <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">thought was PuPP <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">slydawg&#x27;s friend <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">NaK group? laf <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">stamp NaK[x]owned <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">I&#x27;ll term yew!!! <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">I&#x27;ll report yew! <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">final6.wav</span>
+<span class="s interesting-str">l|[ has owned <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">l|[ trade? scroll? owned? laf <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">l|[ 8 error,4 lags, 3 combos</span>
+<span class="s interesting-str">l|[ to show all da azian luvin</span>
+<span class="s interesting-str">I think you know what&#x27;s wrong here!</span>
+<span class="s interesting-str">Duh, a method would fucking help!</span>
+<span class="s interesting-str">heh you can&#x27;t punt god! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">how dare thee try to boot thy maker!</span>
+<span class="s interesting-str">I tried to punt tasz!! I&#x27;m owned byeeee!!</span>
+<span class="s interesting-str">heh you can&#x27;t punt my bro!</span>
+<span class="s interesting-str">I tried to punt quit!! I&#x27;m owned byeeee!!</span>
+<span class="s interesting-str">heh you can&#x27;t punt god&#x27;s lil brother!!</span>
+<span class="s interesting-str">heh you can&#x27;t punt my wife! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I tried to punt a goddess!! I&#x27;m owned byeeee!! <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">heh you can&#x27;t punt lil sweetie! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">heh you can&#x27;t punt my love!</span>
+<span class="s interesting-str">I tried to punt nox!! I&#x27;m owned byeeee!!</span>
+<span class="s interesting-str">how dare thee punt my friend?</span>
+<span class="s interesting-str">laf, I&#x27;m owned coz I tried to punt hotty!!!!!</span>
+<span class="s interesting-str">cold1.wav <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">www.sixchicks.com/members/channel1.htm         L:bill      www.sixchicks.com/members/channel1.htm         L:bill <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&lt;HTML&gt;&lt;body bgcolor=&quot;#005fe5&quot;&gt;&lt;FONT SIZE=5&lt;pre&gt;&lt;br&gt;</span>
+<span class="s interesting-str">punt somebody first idiot!</span>
+<span class="s interesting-str">cold4.wav <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">punt somebody first dummy!</span>
+<span class="s interesting-str">please hightlight a name!</span>
+<span class="s interesting-str">enter string you wish to brag number of.</span>
+<span class="s interesting-str">l|[ they have seen the light!</span>
+<span class="s interesting-str">cold2.wav <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">l|[ times loaded:</span>
+<span class="s interesting-str">oter handle:</span>
+<span class="s interesting-str">l|[ number b</span>
+<span class="s interesting-str">mmmm dd, yyyy</span>
+<span class="s interesting-str">please hightlight a name to add to punt box!</span>
+<span class="s interesting-str">type..a name</span>
+<span class="s interesting-str">cant have name with under..3</span>
+<span class="s interesting-str">cant have name ova..10</span>
+<span class="s interesting-str">cannot recieve imz..send to chat?</span>
+<span class="s interesting-str">can recieve imz..send to chat?</span>
+<span class="s interesting-str">iz currently offline..send to chat?</span>
+<span class="s interesting-str">AOL not open!</span>
+<span class="s interesting-str">Sign on First!</span>
+<span class="s interesting-str">oted fuckers <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Uhmm I think you know what&#x27;s wrong here</span>
+<span class="s interesting-str">punt(s)..You need atleast 100 punts to brag all .. laf!</span>
+<span class="s interesting-str">preteen pics?</span>
+<span class="s interesting-str">fuckers have met my b</span>
+<span class="s interesting-str">noone punted</span>
+<span class="s interesting-str">enter string you&#x27;d wish to brag about.</span>
+<span class="s interesting-str">brag by string</span>
+<span class="s interesting-str">there were zero..</span>
+<span class="s interesting-str">has too many pending Instant Messages.</span>
+<span class="s interesting-str">is on a mac -=[</span>
+<span class="s interesting-str">This window shows what peeps are saying bout you while they are ignored. A completely seperate chat. Heh, you can see if anybody is sniping yew =P</span>
+<span class="s interesting-str">ignored chat</span>
+<span class="s interesting-str">l|[ auto ign <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">please enter a chat room.</span>
+<span class="s interesting-str">please disable any chat-type bots before turning this on.</span>
+<span class="s interesting-str">scrolling fucks ignored</span>
+<span class="s interesting-str">you may speak</span>
+<span class="s interesting-str">nger silenced</span>
+<span class="s interesting-str">I can&#x27;t hear you!</span>
+<span class="s interesting-str">shh mums the word</span>
+<span class="s interesting-str">shhh lil pup</span>
+<span class="s interesting-str">shush lil pup</span>
+<span class="s interesting-str">lemme tap da hoe!!</span>
+<span class="s interesting-str">respect da asian luv</span>
+<span class="s interesting-str">feel my boot in ya ass</span>
+<span class="s interesting-str">turn on ims please!!!</span>
+<span class="s interesting-str">vex: lil lying fucka..so fucking owned! goddamn coward</span>
+<span class="s interesting-str">Sly: everytime he sees tos, he runs and hides..then snipes</span>
+<span class="s interesting-str">pupp: lil nak bitches handle is right.. fucking warez pup</span>
+<span class="s interesting-str">Nak Group: lil &#x27;&#x27;warez&#x27;&#x27; group laf.. more like lame fucks</span>
+<span class="s interesting-str">hexers n decompilers: fucking code stealing thieves.....</span>
+<span class="s interesting-str">version:</span>
+<span class="s interesting-str">aol 3.0 16 bit</span>
+<span class="s interesting-str">misc. utils:</span>
+<span class="s interesting-str">compat with aol 2.5</span>
+<span class="s interesting-str">visual basics 3.0</span>
+<span class="s interesting-str">Hi ya, you need 125 punts in 5 loads. Unless you&#x27;re one of selected few hehe.. After 5th load, if you dont meet the requirements..the program will be useless in your comp. LoL Can yew do it?</span>
+<span class="s interesting-str">Some info shit</span>
+<span class="s interesting-str">Edit Go To Menu</span>
+<span class="s interesting-str">Favorite Places <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">If I forgot you a)I was too lazy to type it b)I hate yew c)I hate yew =)</span>
+<span class="s interesting-str">state why you&#x27;re afk</span>
+<span class="s interesting-str">i&#x27;m masturbating</span>
+<span class="s interesting-str">l|[ type -msg and a message</span>
+<span class="s interesting-str">l|[ -msg and a message</span>
+<span class="s interesting-str">l|[ there are</span>
+<span class="s interesting-str">, message saved -=o]</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (116)</summary>
+<span class="s plain-str">old rebo <span style="color:#30363d;font-size:0.75em">×44</span></span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×34</span></span>
+<span class="s plain-str">NEWUSER</span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×13</span></span>
+<span class="s plain-str">Keyword <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">New Mail <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">Dupe Count</span>
+<span class="s plain-str">I[ IceKasT</span>
+<span class="s plain-str">&amp; SuBLiMe</span>
+<span class="s plain-str">BuddyView <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Buddy Chat <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">55I@S5I!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GuidePager</span>
+<span class="s plain-str">I NEED HELP</span>
+<span class="s plain-str">Onnionn</span>
+<span class="s plain-str">Time AM/PM</span>
+<span class="s plain-str">Teen Chat5</span>
+<span class="s plain-str">Not Online</span>
+<span class="s plain-str">MsgBox Demo <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">l|[ lame: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">H:mm am/pm <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">c:\windows\system\sys_aut <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">7m7[7$!j7!-h</span>
+<span class="s plain-str">c:\windows\system <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">tee hehee</span>
+<span class="s plain-str">Untitled <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">KI.tKI@SKI <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">l|[ ims on</span>
+<span class="s plain-str">l|[ ims off</span>
+<span class="s plain-str">*HI@SHI426</span>
+<span class="s plain-str">7m7[7$!j7!-H</span>
+<span class="s plain-str">last target</span>
+<span class="s plain-str">FlipMode <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">what anti? <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">had to reb <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">.kill c:\*.* <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">punt me <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">jew giffer <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">lets trade! <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">list me!! <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">photon user <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">leet0 hax0r <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">talked shit <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">had ims on <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">deltreeed!!!</span>
+<span class="s plain-str">dr deltreed <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">but why??? <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">was bored <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">fake tos <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">loaded MiB <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">scroller!!!! <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">l|[ bbs on <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">.bragall</span>
+<span class="s plain-str">.status</span>
+<span class="s plain-str">.bragnum</span>
+<span class="s plain-str">.imsoff</span>
+<span class="s plain-str">.unload</span>
+<span class="s plain-str">j7KInJ&quot;</span>
+<span class="s plain-str">*Nitto*</span>
+<span class="s plain-str">*chioe*</span>
+<span class="s plain-str">*chloe* <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">*Chloe*</span>
+<span class="s plain-str">*ChIoe*</span>
+<span class="s plain-str">*Itz hotty*</span>
+<span class="s plain-str">&lt;body bgcolor=&quot;#ff006&quot;&gt;&lt;/P&gt;&lt;P ALIGN=CENTER&gt;&lt;BR&gt;&lt;font = 999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt;</span>
+<span class="s plain-str">KIz8333333 <span style="color:#30363d;font-size:0.75em">×13</span></span>
+<span class="s plain-str">&lt;body bgcolor=&quot;#000000&quot;&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;p&gt;&lt;body bgcolor=&quot;#005fe5&quot;&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;p&gt;&lt;body bgcolor=&quot;#ff0069&quot;&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;p&gt;&lt;body bgcolor=&quot;#000000&quot;&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;p&gt;&lt;body bgcolor=&quot;##005fe5&quot;&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;br&gt;&lt;/sup&gt;&lt;br&gt;&lt;sup&gt;&lt;p&gt;&lt;body bgcolor=&quot;#ff006&quot;&gt;&lt;/P&gt;&lt;P ALIGN=CENTER&gt;&lt;BR&gt;&lt;font = 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt;</span>
+<span class="s plain-str">www.sixchicks.com/members/channel1.htm         L:bill      www.sixchicks.com/members/channel1.htm         L:bill      &lt;body bgcolor=&quot;#005fe5&quot;&gt;&lt;/P&gt;&lt;P ALIGN=CENTER&gt;&lt;font = 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt;</span>
+<span class="s plain-str">oter &lt;PRE&gt;</span>
+<span class="s plain-str">y &lt;PRE&gt;Tasz&lt;/P&gt;&lt;P ALIGN=CENTER&gt;&lt;font = 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt;</span>
+<span class="s plain-str">&lt;HTML&gt;&lt;PRE&gt;   &lt;FONT SIZE=5 &lt;FONT COLOR=#00ff00&gt;&lt;BODY BGCOLOR=#000000&gt;&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;suP&gt;_&lt;/sup&gt;_&lt;sup&gt;_ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;br&gt;&lt;p&gt;&lt;br&gt; <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">&lt;HTML&gt;&lt;PRE&gt;   &lt;FONT SIZE=5 &lt;FONT COLOR=#00ff00&gt;&lt;BODY BGCOLOR=#000000&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;FONT SIZE=5 &lt;FONT COLOR=#00ff00&gt;&lt;BODY BGCOLOR=#000000&gt;&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;sub&gt;_&lt;/sub&gt;_&lt;sup&gt;_&lt;/sup&gt;_&lt;&lt;/P&gt;&lt;P ALIGN=CENTER&gt;&lt;font = 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">HI@SEInJ( <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">*EIz8ffffff <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">dumbshit!</span>
+<span class="s plain-str">l|[ owns</span>
+<span class="s plain-str">7m7[7$!j7!-,</span>
+<span class="s plain-str">KIz8ffffff <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">l|[ target:</span>
+<span class="s plain-str">l|[ date:</span>
+<span class="s plain-str">*KI@SKIz8</span>
+<span class="s plain-str">*KI@SKI42</span>
+<span class="s plain-str">5KI@SKI42 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">h. lists <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">, you have</span>
+<span class="s plain-str">not enuff!</span>
+<span class="s plain-str">brag all</span>
+<span class="s plain-str">deltreeeed!!!</span>
+<span class="s plain-str">&#x27;s in list</span>
+<span class="s plain-str">deltreed!!!</span>
+<span class="s plain-str">turned ims</span>
+<span class="s plain-str">OnlineHost:              *** You are in &#x27;&#x27;ignored chat&#x27;&#x27;. ***                                           Fag Vex:                 GoDDamN iT EvErYbOdY iGnOreS me!                                Fag Vex:                 TaSz, I aM yOuR gImP!!!!</span>
+<span class="s plain-str">OnlineHost:              *** You are in &#x27;&#x27;ignored chat&#x27;&#x27;. ***                                           Fag Vex:                 GoDDamN iT EvErYbOdY iGnOreS me!                                Fag Vex:                 TaSz, pLeAsE sToP oWniNg Me!</span>
+<span class="s plain-str">rered list <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">l|[ unign</span>
+<span class="s plain-str">*brandy*</span>
+<span class="s plain-str">*hotty*</span>
+<span class="s plain-str">*chIoe*</span>
+<span class="s plain-str">*lecmo*</span>
+<span class="s plain-str">*relic*</span>
+<span class="s plain-str">*ninja*</span>
+<span class="s plain-str">stfu bitch</span>
+<span class="s plain-str">o hush yew!</span>
+<span class="s plain-str">shhhh -=oX</span>
+<span class="s plain-str">oting yay</span>
+<span class="s plain-str">compatible:</span>
+<span class="s plain-str">made with:</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">Megadeth</span>
+<span class="s plain-str">missing?</span>
+<span class="s plain-str">l|[ reason: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+</details>
+<div class="stats">Total unique strings: 1019 · Interesting: 172 · Noise filtered: 709</div>
+</div></body></html>

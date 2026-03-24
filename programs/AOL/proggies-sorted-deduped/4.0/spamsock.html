@@ -1,0 +1,754 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>spamsock.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/spamsock.zip">&#x2b07; Download spamsock.zip</a>
+</div>
+<div class="hero">
+<div><h1>spamsock3</h1><span class="author">by <b>kai</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">spamsock3.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-02-21</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (5)</h2>
+<span class="s author-str">spam sock by: kai</span>
+<span class="s author-str">by: kai</span>
+<span class="s author-str">[beta] by: kai.</span>
+<span class="s author-str">created by kai</span>
+<span class="s author-str">[beta] by: kai</span>
+<h2>&#x1f4e6; Dependencies (4)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (7)</h2>
+<span class="s phishing-str">our records show that you&#x27;re credit card information has expired.</span>
+<span class="s phishing-str">the billing information for your account was deleted.</span>
+<span class="s phishing-str">In order to enjoy your America Online experience and keep your account active, you &lt;b&gt;must&lt;/b&gt; enter your credit card information within 24 hours of receiving this e-mail.</span>
+<span class="s phishing-str">the credit card information for your account has expired.</span>
+<span class="s phishing-str">In order to enjoy your America Online experience and keep your account active, you &lt;b&gt;must&lt;/b&gt; enter new, &lt;i&gt;*valid*&lt;/i&gt; credit card information within 24 hours of receiving this e-mail.</span>
+<span class="s phishing-str">To enter new credit card information and keep your account active, please &lt;a href=</span>
+<span class="s phishing-str">America Online Billing Department and Staff</span>
+
+<h2>&#x2699; API References (14)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (327)</h2>
+<span class="s interesting-str">00-C00winsock spammer to be used with aol 4.0</span>
+<span class="s interesting-str">Comic Sans MS <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">all rights reserved.  patent pending. copyright</span>
+<span class="s interesting-str">2000 kai ind.      i will not be held responsible for what you do with this program, i created this program for educational purposes and not to be used improperly. if used improperly,i can&#x27;t be held responsible. void where prohibited. enjoy the prog and cut the bull shit. ~&gt;</span>
+<span class="s interesting-str">c:\WINDOWS\Desktop\David\vb\vb6\VB6.OLB</span>
+<span class="s interesting-str">C:\WINDOWS\SYSTEM\MSWINSCK.oca</span>
+<span class="s interesting-str">- mail preferences</span>
+<span class="s interesting-str">use random subj/body for each all-night spam mail</span>
+<span class="s interesting-str">this will select a random pre-saved mail from the list on the left to send during all-night spam (each mail is different)</span>
+<span class="s interesting-str">close/save all mails</span>
+<span class="s interesting-str">clear all pre-saved mails</span>
+<span class="s interesting-str">remove selected mail</span>
+<span class="s interesting-str">add new mail</span>
+<span class="s interesting-str">pre-saved mail [untitled] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">save as a different mail</span>
+<span class="s interesting-str">save current mail</span>
+<span class="s interesting-str">body of mail</span>
+<span class="s interesting-str">subject of mail</span>
+<span class="s interesting-str">email address to say the mail is from [from@domain.com]</span>
+<span class="s interesting-str">list of scams/spams</span>
+<span class="s interesting-str">stop trying to check server(s)</span>
+<span class="s interesting-str">click for list/server options</span>
+<span class="s interesting-str">close this window</span>
+<span class="s interesting-str">add server to server list</span>
+<span class="s interesting-str">server to add (enter to add; or click &#x27;add&#x27;)</span>
+<span class="s interesting-str">spamsock servers (click/drag to rearrange, right click for options) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">[inactive] <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&amp;check server(s)</span>
+<span class="s interesting-str">&amp;selected server</span>
+<span class="s interesting-str">&amp;remove non-working</span>
+<span class="s interesting-str">&amp;load servers</span>
+<span class="s interesting-str">&amp;save servers</span>
+<span class="s interesting-str">- preferences</span>
+<span class="s interesting-str">gather filters</span>
+<span class="s interesting-str">ig&amp;nore lcases</span>
+<span class="s interesting-str">won&#x27;t add lcases when gathering</span>
+<span class="s interesting-str">&amp;use filter list</span>
+<span class="s interesting-str">will *not* add sn if any of the list items on the left are found in the sn</span>
+<span class="s interesting-str">&amp;ignore indents</span>
+<span class="s interesting-str">won&#x27;t add indents when gathering</span>
+<span class="s interesting-str">type prefix/string here (enter to add)</span>
+<span class="s interesting-str">list of prefixes/strings you do *not* want to add to the spam list [dbl click to remove]</span>
+<span class="s interesting-str">close / save preferences</span>
+<span class="s interesting-str">program preferences</span>
+<span class="s interesting-str">reconnect to isp [aol/dun] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">toggles reconnect to aol or dial-up networking while spamming.</span>
+<span class="s interesting-str">&amp;kill advertise [spamming]</span>
+<span class="s interesting-str">won&#x27;t send to chat every min while you&#x27;re spamming</span>
+<span class="s interesting-str">u&amp;se transparent cursor</span>
+<span class="s interesting-str">useless option -- accidentally made -- use if you&#x27;re bored</span>
+<span class="s interesting-str">minimi&amp;ze to systray</span>
+<span class="s interesting-str">moves spamsock into the systray (next to clock) when &#x27;minimize&#x27; is clicked</span>
+<span class="s interesting-str">a&amp;uto save/load spam list</span>
+<span class="s interesting-str">automatically saves spam list when you exit; automatically loads spam list when you load spamsock</span>
+<span class="s interesting-str">set progress bar color</span>
+<span class="s interesting-str">s&amp;ave main window position</span>
+<span class="s interesting-str">saves main window&#x27;s dimensions for when you next use spamsock</span>
+<span class="s interesting-str">s&amp;how intro art on load</span>
+<span class="s interesting-str">toggle to show/hide *elite* splash screen when spamsock loads</span>
+<span class="s interesting-str">color of progress bar</span>
+<span class="s interesting-str">progress bar color:</span>
+<span class="s interesting-str">gathering pref&#x27;s</span>
+<span class="s interesting-str">mem dir gather:</span>
+<span class="s interesting-str">this will gather any random 3 characters when you&#x27;re gathering using member directory</span>
+<span class="s interesting-str">this will gather any random 2 characters when you&#x27;re gathering using member directory</span>
+<span class="s interesting-str">&amp;when rated, stop spamming</span>
+<span class="s interesting-str">when the rate limit is reached, -- intead of pausing -- stop spamming entirely</span>
+<span class="s interesting-str">amount of time to give this program to connect/wait for data</span>
+<span class="s interesting-str">amount of time to wait between member directory searches</span>
+<span class="s interesting-str">amount of time to wait when rate limit is reached while gathering &#x27;who&#x27;s chatting&#x27;</span>
+<span class="s interesting-str">amount of time to wait between opening &#x27;who&#x27;s chatting&#x27; windows</span>
+<span class="s interesting-str">co&amp;nnection timeout period:</span>
+<span class="s interesting-str">&amp;member directory pause:</span>
+<span class="s interesting-str">w.&amp;c. over limit pause:</span>
+<span class="s interesting-str">wh&amp;o&#x27;s chatting pause:</span>
+<span class="s interesting-str">pause current activity</span>
+<span class="s interesting-str">add current aol chatroom members</span>
+<span class="s interesting-str">gather options</span>
+<span class="s interesting-str">spam options</span>
+<span class="s interesting-str">screen names to spam</span>
+<span class="s interesting-str">mail.server.com <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">server to connect/send with</span>
+<span class="s interesting-str">enter sn to spam here (enter to add)</span>
+<span class="s interesting-str">name@domain.com</span>
+<span class="s interesting-str">name to pretend you&#x27;re mailing from</span>
+<span class="s interesting-str">message of e-mail</span>
+<span class="s interesting-str">subject of e-mail</span>
+<span class="s interesting-str">begin spamming</span>
+<span class="s interesting-str">MS Sans Serif</span>
+<span class="s interesting-str">upchat &amp;stats</span>
+<span class="s interesting-str">&amp;gen. phrase</span>
+<span class="s interesting-str">&amp;reconnect: 0</span>
+<span class="s interesting-str">r&amp;mv after spam</span>
+<span class="s interesting-str">ed&amp;it servers</span>
+<span class="s interesting-str">add open &amp;w.c.</span>
+<span class="s interesting-str">add open &amp;m.d.</span>
+<span class="s interesting-str">&amp;generate 3chr&#x27;s</span>
+<span class="s interesting-str">letters &amp;only</span>
+<span class="s interesting-str">&amp;letters and #&#x27;s</span>
+<span class="s interesting-str">&amp;other methods</span>
+<span class="s interesting-str">add &amp;buddylist</span>
+<span class="s interesting-str">add &amp;chattext</span>
+<span class="s interesting-str">&amp;mem dir. string</span>
+<span class="s interesting-str">&amp;start gather</span>
+<span class="s interesting-str">&amp;who&#x27;s chatting <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&amp;member dir. <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&amp;all night spam</span>
+<span class="s interesting-str">&amp;random 3chr&#x27;s</span>
+<span class="s interesting-str">m&amp;ail pref&#x27;s</span>
+<span class="s interesting-str">wo&amp;rd list gen.</span>
+<span class="s interesting-str">&amp;trim spaces</span>
+<span class="s interesting-str">winsock spammer to be used with aol 4.0</span>
+<span class="s interesting-str">@ msadc addrsbk sampleem sql  samples msadc msadc11 adctest asp  samples msadc msadc11 addrsbk  samples msadc msadc11 addrsbk addrbook asp  samples msadc msadc11 addrsbk arcadia gif  samples msadc msadc11 addr</span>
+<span class="s interesting-str">@k sampleem sql  samples msadc selector asp gif  samples ms</span>
+<span class="s interesting-str">@lector client  samples msadc selector mid tier  samples msadc selector sampstar asp  samples msadc s</span>
+<span class="s interesting-str">[connecting]</span>
+<span class="s interesting-str">connecting to server... (</span>
+<span class="s interesting-str">pause wc over</span>
+<span class="s interesting-str">unable to connect.</span>
+<span class="s interesting-str">[connecting to server]</span>
+<span class="s interesting-str">HELO aol.com</span>
+<span class="s interesting-str">[entering sender]</span>
+<span class="s interesting-str">entering sender... (</span>
+<span class="s interesting-str">unable to enter sender.</span>
+<span class="s interesting-str">adding address... (</span>
+<span class="s interesting-str">unable to add address</span>
+<span class="s interesting-str">[server not accepting]</span>
+<span class="s interesting-str">sending data...</span>
+<span class="s interesting-str">invalid data received</span>
+<span class="s interesting-str">[entering message]</span>
+<span class="s interesting-str">&lt;font color=#fffeff&gt;&lt;xmp&gt;</span>
+<span class="s interesting-str">entering message...</span>
+<span class="s interesting-str">invalid message error</span>
+<span class="s interesting-str">[mail sent]</span>
+<span class="s interesting-str">sending mail...</span>
+<span class="s interesting-str">mail could not be sent.</span>
+<span class="s interesting-str">who&#x27;s chatting</span>
+<span class="s interesting-str">signed back on:</span>
+<span class="s interesting-str">connection error: timeout.</span>
+<span class="s interesting-str">possible reasons:</span>
+<span class="s interesting-str">1) invalid mail server.</span>
+<span class="s interesting-str">2) current connection too slow.</span>
+<span class="s interesting-str">smtp service error</span>
+<span class="s interesting-str">smtp service error: improper response code</span>
+<span class="s interesting-str">code expected:</span>
+<span class="s interesting-str">code received:</span>
+<span class="s interesting-str">[auto-loading list]</span>
+<span class="s interesting-str">[getting file data]</span>
+<span class="s interesting-str">you have no email addresses to spam.</span>
+<span class="s interesting-str">\spamdata.ini</span>
+<span class="s interesting-str">from@domain.com</span>
+<span class="s interesting-str">save position</span>
+<span class="s interesting-str">load. spammed:</span>
+<span class="s interesting-str">&amp;reconnect: [never]</span>
+<span class="s interesting-str">&amp;reconnect: [</span>
+<span class="s interesting-str">\servers.lst</span>
+<span class="s interesting-str">mail.terrorfx.com</span>
+<span class="s interesting-str">argus.traffic.com</span>
+<span class="s interesting-str">mail.earthlink.net</span>
+<span class="s interesting-str">\spamlist.lst</span>
+<span class="s interesting-str">unload. spammed:</span>
+<span class="s interesting-str">Member Directory Search Results</span>
+<span class="s interesting-str">&#x27;Member Directory Search Results&#x27; window not found.</span>
+<span class="s interesting-str">Who&#x27;s Chatting</span>
+<span class="s interesting-str">&#x27;Who&#x27;s Chatting&#x27; window not found.</span>
+<span class="s interesting-str">you currently have preferences set to select a random phrase for every mail sent, are you sure you want to continue?</span>
+<span class="s interesting-str">started: random 3chr.</span>
+<span class="s interesting-str">spam complete, total:</span>
+<span class="s interesting-str">option not available offline.</span>
+<span class="s interesting-str">do you want to only gather online screenname&#x27;s?</span>
+<span class="s interesting-str">started: member dir.</span>
+<span class="s interesting-str">ok, this next window might look confusing, but it isn&#x27;t [really]. if you click the checkbox at the bottom of this window, then the scams in the listbox on the left will be randomly used when using the all-night spam option.</span>
+<span class="s interesting-str">for example:</span>
+<span class="s interesting-str">say you want to spam for cc&#x27;s and &lt;&gt;&lt;.  you would first add a cc scam and a &lt;&gt;&lt; scam to the list on the left,</span>
+<span class="s interesting-str">then you would check the &#x27;use random subj/body for..&#x27; checkbox</span>
+<span class="s interesting-str">then just start any all-night spam method.</span>
+<span class="s interesting-str">[dupe killed:</span>
+<span class="s interesting-str">when all-night spam is clicked, spamsock3 will randomly choose a scam from the list for every mail sent.</span>
+<span class="s interesting-str">if you don&#x27;t get this, then don&#x27;t play with it.</span>
+<span class="s interesting-str">started: who&#x27;s chatting.</span>
+<span class="s interesting-str">spam complete. total:</span>
+<span class="s interesting-str">aol chatroom not found.</span>
+<span class="s interesting-str">enter amount of 3chr&#x27;s (letters only) to generate:</span>
+<span class="s interesting-str">random 3chr&#x27;s (letters only) were generated.</span>
+<span class="s interesting-str">enter amount of 3chr&#x27;s (letters &amp; numbers) to generate:</span>
+<span class="s interesting-str">random 3chr&#x27;s (letters and numbers) were generated.</span>
+<span class="s interesting-str">enter amount of 3chr&#x27;s (vowels) to generate:</span>
+<span class="s interesting-str">random 3chr&#x27;s (char-vowel-char) were generated.</span>
+<span class="s interesting-str">enter amount of sn&#x27;s you want to gather (member directory):</span>
+<span class="s interesting-str">enter amount of sn&#x27;s you want to gather (who&#x27;s chatting):</span>
+<span class="s interesting-str">[adding chat text]</span>
+<span class="s interesting-str">enter string to search/gather from the member directory:</span>
+<span class="s interesting-str">load words from file</span>
+<span class="s interesting-str">text files (*.txt)|*.txt|list files (*.lst)|*.lst|all files (*.*)|*.*</span>
+<span class="s interesting-str">[loading file]</span>
+<span class="s interesting-str">[extracting words]</span>
+<span class="s interesting-str">[words extracted:</span>
+<span class="s interesting-str">[dupe killing]</span>
+<span class="s interesting-str">enter all of or part of the screenname you want to find:</span>
+<span class="s interesting-str">[scanning list]</span>
+<span class="s interesting-str">) matches were found, try narrowing your search.</span>
+<span class="s interesting-str">matches were found:</span>
+<span class="s interesting-str">no screenname&#x27;s were found in this search.</span>
+<span class="s interesting-str">[lcasing list]</span>
+<span class="s interesting-str">[lcased list]</span>
+<span class="s interesting-str">[mass aliving]</span>
+<span class="s interesting-str">[trimming list]</span>
+<span class="s interesting-str">[trimmed list]</span>
+<span class="s interesting-str">[validating list]</span>
+<span class="s interesting-str">[updating list]</span>
+<span class="s interesting-str">enter string to be required in all screenname&#x27;s gathered:</span>
+<span class="s interesting-str">| string entry</span>
+<span class="s interesting-str">advertise. spammed:</span>
+<span class="s interesting-str">&amp;chat [none]</span>
+<span class="s interesting-str">&amp;welcome [none]</span>
+<span class="s interesting-str">enter the private room you want to enter:</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">&#x27; is still full after 20 tries, do you want to keep trying?</span>
+<span class="s interesting-str">idle started.</span>
+<span class="s interesting-str">idle stopped.</span>
+<span class="s interesting-str">start an upload first.</span>
+<span class="s interesting-str">Now Uploading</span>
+<span class="s interesting-str">do you want to scroll your stats in the chat?</span>
+<span class="s interesting-str">upload percent:</span>
+<span class="s interesting-str">uploading file:</span>
+<span class="s interesting-str">upload time:</span>
+<span class="s interesting-str">min(s) Left.</span>
+<span class="s interesting-str">this debug window is just to read what the server sends back to spam sock3. this isn&#x27;t a necessary option, but it can be helpful for advanced users.</span>
+<span class="s interesting-str">enter url of your non-cc scam site:</span>
+<span class="s interesting-str">this memo window was made for the user [you] to store random shit in it. you can store scam sites, phrases, servers, &lt;&gt;&lt;, etc.. it&#x27;s not a necessary option, it&#x27;s just there to help.</span>
+<span class="s interesting-str">enter url of your cc scam site:</span>
+<span class="s interesting-str">http://www.aoi-billing.net</span>
+<span class="s interesting-str">spam sock files (*.spk)|*.spk|all files (*.*)|*.*</span>
+<span class="s interesting-str">spam sock files (*.spk)|*.spk|</span>
+<span class="s interesting-str">spamming stats.</span>
+<span class="s interesting-str">enter the amount of sn&#x27;s you want spamsock to send to before reconnecting to the server:</span>
+<span class="s interesting-str">total spammed:</span>
+<span class="s interesting-str">rooms spammed:</span>
+<span class="s interesting-str">mem dir&#x27;s spammed:</span>
+<span class="s interesting-str">total servers: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">do you want to scroll</span>
+<span class="s interesting-str">your stats in the chat?</span>
+<span class="s interesting-str">coded in visual basic 6 (32 bit)</span>
+<span class="s interesting-str">compiled .exe size: 228kb</span>
+<span class="s interesting-str">for windows95+/winsock1.1+</span>
+<span class="s interesting-str">this is probably the last spam sock in the series.</span>
+<span class="s interesting-str">the main reason for v3 was because i didn&#x27;t</span>
+<span class="s interesting-str">spend much time on spamsock2, yet it was</span>
+<span class="s interesting-str">still very popular.</span>
+<span class="s interesting-str">i hope most of the bugs in this version were fixed.</span>
+<span class="s interesting-str">thanks for using spamsock3.</span>
+<span class="s interesting-str">about spam sock</span>
+<span class="s interesting-str">Buddy List Window</span>
+<span class="s interesting-str">Invalid character</span>
+<span class="s interesting-str">&amp;What&#x27;s New in AOL 5.0</span>
+<span class="s interesting-str">not a known member</span>
+<span class="s interesting-str">Welcome to People Connection</span>
+<span class="s interesting-str">incoming text</span>
+<span class="s interesting-str">Guest Sign-On</span>
+<span class="s interesting-str">Compose Mail</span>
+<span class="s interesting-str">File Transfer</span>
+<span class="s interesting-str">\mailpref.ini</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">send an instant message</span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">Member Directory</span>
+<span class="s interesting-str">c:\aol4.0</span>
+<span class="s interesting-str">requests too quickly.</span>
+<span class="s interesting-str">yesno msgbox</span>
+<span class="s interesting-str">Good evening,</span>
+<span class="s interesting-str">c:\america online 4</span>
+<span class="s interesting-str">Hello from America Online,</span>
+<span class="s interesting-str">Dear AOL Member,</span>
+<span class="s interesting-str">Dear AOL Customer,</span>
+<span class="s interesting-str">Hi and Welcome to America Online,</span>
+<span class="s interesting-str">We regret to inform you, but</span>
+<span class="s interesting-str">We apologize for the inconvenience, but</span>
+<span class="s interesting-str">due to technical difficulties</span>
+<span class="s interesting-str">c:\aol 4.0</span>
+<span class="s interesting-str">due to a recent system flush</span>
+<span class="s interesting-str">due to a central server meltdown</span>
+<span class="s interesting-str">your billing information was lost.</span>
+<span class="s interesting-str">c:\america online 4.0</span>
+<span class="s interesting-str">To re-enter your account information and keep your account active, please &lt;a href=</span>
+<span class="s interesting-str">&gt;click here.&lt;/a&gt;</span>
+<span class="s interesting-str">Our Regards,</span>
+<span class="s interesting-str">America Online Billing Department</span>
+<span class="s interesting-str">command.com /c del c:\tempip.txt</span>
+<span class="s interesting-str">c:\windows\winipcfg.exe /batch c:\tempip.txt</span>
+<span class="s interesting-str">c:\tempip.txt</span>
+<span class="s interesting-str">Reestablish Connection</span>
+<span class="s interesting-str">connecting to</span>
+<span class="s interesting-str">Goodbye from America Online!</span>
+<span class="s interesting-str">&amp;Sign on Screen</span>
+<span class="s interesting-str">The Connection Failed</span>
+<span class="s interesting-str">c:\america online 5.0</span>
+<span class="s interesting-str">c:\america online 5</span>
+<span class="s interesting-str">c:\aol 5.0</span>
+<span class="s interesting-str">c:\aol5.0</span>
+<span class="s interesting-str">\waol.exe</span>
+<span class="s interesting-str">enter aol screenname:</span>
+<span class="s interesting-str">enter password for &#x27;</span>
+<span class="s interesting-str">\filter.lst</span>
+<span class="s interesting-str">from@aol.com</span>
+<span class="s interesting-str">[connecting to</span>
+<span class="s interesting-str">[adding test address]</span>
+<span class="s interesting-str">try@aol.com</span>
+<span class="s interesting-str">[not accepting @aol.com]</span>
+<span class="s interesting-str">[valid server]</span>
+<span class="s interesting-str">maximum amount of servers: 15</span>
+<span class="s interesting-str">[invalid server]</span>
+<span class="s interesting-str">is a *valid* working mail server.</span>
+<span class="s interesting-str">is an *invalid* mail server.</span>
+<span class="s interesting-str">enter new item data:</span>
+<span class="s interesting-str">load servers</span>
+<span class="s interesting-str">enter the name of this mail phrase:</span>
+<span class="s interesting-str">invalid name: &#x27;data&#x27;</span>
+<span class="s interesting-str">&#x27; is already in use.</span>
+<span class="s interesting-str">pre-saved mail [</span>
+<span class="s interesting-str">are you sure you want to clear that list?</span>
+<span class="s interesting-str">are you sure you want to remove &#x27;</span>
+<span class="s interesting-str">&#x27; not found in ini, removing anyway...</span>
+<span class="s interesting-str">&#x27; was successfully removed.</span>
+<span class="s interesting-str">enter the name to save this mail phrase as:</span>
+<span class="s interesting-str">no data was found for &#x27;</span>
+<span class="s interesting-str">\memo.txt</span>
+<span class="s interesting-str">kai industries</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (286)</summary>
+<span class="s plain-str">000204spamsock3</span>
+<span class="s plain-str">read fast</span>
+<span class="s plain-str">spam sock <span style="color:#30363d;font-size:0.75em">×15</span></span>
+<span class="s plain-str">MSComDlg.CommonDialog <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CommonDialog</span>
+<span class="s plain-str">OVxXQh@</span>
+<span class="s plain-str">MSWinsockLib.Winsock <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Winsock</span>
+<span class="s plain-str">mnuOptionsAdv <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuTrayAbout <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLHideMDI <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLHideAOL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLHideChat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLHideWelcome <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherOtherChattext <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherNumMD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGather <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptions <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLOtherIdle <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLShowAOL <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAddLcase <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAdd3chr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAddString <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsReconnect <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLShowChat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLShowWelcome <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuTray <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsMemo <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsDebug <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListRemove <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuListClear <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuListDupekill <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuListLcase <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListTrim <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListMassalive <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListFind <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListLoad <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuListSave <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuListValidate <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuList <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">OVxXQhsckMail</span>
+<span class="s plain-str">MSWinsockLib</span>
+<span class="s plain-str">mnuGatherStartWC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseSave <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListDash5 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherGenerateLetters <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsStats <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherOtherBuddylist <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherOtherDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAnsWC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLUpchatOff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseLoad <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLKillModal <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLHide <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuTrayDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLOtherEnterpr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherNum <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsRemove <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherOther <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLShow <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAnsPrefs <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAddmd <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherDash2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLOther <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherDash3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherGenerateVowels <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAnsDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLUpchatOn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseGenPW <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAnsMD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAns <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseGenDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsUtilServeredit <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPrefs <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuTrayRestore <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherGenerateLettersnumbers <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseGenCC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLIMs <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherGenerate <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhrase <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseGen <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsDash4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuTrayExit <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLKill <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherNumWC <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsDash3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsDash2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLIMsOff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherWordlistgen <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherStartMD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAdd <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsPhraseGenNoncc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListDash3 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuOptionsAOLKillWait <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListDash1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuGatherStart <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLUpchatStats <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListDash4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLIMsOn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListDash2 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mnuGatherAddwc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherOtherMD <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLUpchat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLShowMDI <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuOptionsAOLUpchatDash1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuGatherAns3chr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">SetCapture</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetForegroundWindow</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">frameChr <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">framePause <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">frameProgram <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">frameFilter <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">frameMail <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">|JtxtMemo</span>
+<span class="s plain-str">;cmdCancel</span>
+<span class="s plain-str">mnuListCheckSelected <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListCheckAll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListEdit <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">mnuListCheck <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">- memo</span>
+<span class="s plain-str">- debug</span>
+<span class="s plain-str">&amp;save as</span>
+<span class="s plain-str">subject:</span>
+<span class="s plain-str">- servers</span>
+<span class="s plain-str">&amp;cancel</span>
+<span class="s plain-str">o&amp;ptions</span>
+<span class="s plain-str">sckMail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;remove <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;dupe kill <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">3 char</span>
+<span class="s plain-str">2 char</span>
+<span class="s plain-str">&amp;add room</span>
+<span class="s plain-str">&amp;gather</span>
+<span class="s plain-str">&amp;options</span>
+<span class="s plain-str">stop action</span>
+<span class="s plain-str">kill &amp;modal</span>
+<span class="s plain-str">kill &amp;wait</span>
+<span class="s plain-str">&amp;upchat</span>
+<span class="s plain-str">upchat o&amp;n</span>
+<span class="s plain-str">upchat o&amp;ff</span>
+<span class="s plain-str">&amp;welcome <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;enter pr</span>
+<span class="s plain-str">&amp;idle bot</span>
+<span class="s plain-str">&amp;add only</span>
+<span class="s plain-str">&amp;phrase</span>
+<span class="s plain-str">pr&amp;eferences</span>
+<span class="s plain-str">ad&amp;vertise</span>
+<span class="s plain-str">&amp;chr,vowel,chr</span>
+<span class="s plain-str">ga&amp;ther #</span>
+<span class="s plain-str">&amp;make lcase</span>
+<span class="s plain-str">m&amp;ass alive</span>
+<span class="s plain-str">&amp;validate</span>
+<span class="s plain-str">&amp;load list</span>
+<span class="s plain-str">&amp;save list</span>
+<span class="s plain-str">&amp;restore</span>
+<span class="s plain-str">28C4C820-401A-101B-A3C9-08002B2F49FB</span>
+<span class="s plain-str">2c49f800-c2dd-11cf-9ad6-0080c7e7b78d</span>
+<span class="s plain-str">@ A4ADA|A</span>
+<span class="s plain-str">dd Mmm YYYY</span>
+<span class="s plain-str">mail from:</span>
+<span class="s plain-str">Subject:</span>
+<span class="s plain-str">pause wc</span>
+<span class="s plain-str">[adding:</span>
+<span class="s plain-str">rcpt to:</span>
+<span class="s plain-str">mail sent.</span>
+<span class="s plain-str">&amp;resume</span>
+<span class="s plain-str">member dir</span>
+<span class="s plain-str">list only</span>
+<span class="s plain-str">random_allnight</span>
+<span class="s plain-str">[loading:</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">text_select</span>
+<span class="s plain-str">add lcase</span>
+<span class="s plain-str">add string</span>
+<span class="s plain-str">pause md</span>
+<span class="s plain-str">intro art</span>
+<span class="s plain-str">save list</span>
+<span class="s plain-str">rate stop</span>
+<span class="s plain-str">bar color</span>
+<span class="s plain-str">last dir</span>
+<span class="s plain-str">kill_adv</span>
+<span class="s plain-str">memo_info</span>
+<span class="s plain-str">mail_info</span>
+<span class="s plain-str">debug_info</span>
+<span class="s plain-str">memo_width</span>
+<span class="s plain-str">memo_height</span>
+<span class="s plain-str">debug_x</span>
+<span class="s plain-str">debug_y</span>
+<span class="s plain-str">debug_width</span>
+<span class="s plain-str">debug_height</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">spamsock3 -</span>
+<span class="s plain-str">random 3chr</span>
+<span class="s plain-str">(yes=online/no=offline)</span>
+<span class="s plain-str">[generating:</span>
+<span class="s plain-str">too many (</span>
+<span class="s plain-str">load list</span>
+<span class="s plain-str">[remaining:</span>
+<span class="s plain-str">&amp;aol [none]</span>
+<span class="s plain-str">&amp;welcome [</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">idle bot</span>
+<span class="s plain-str">less than</span>
+<span class="s plain-str">percent:</span>
+<span class="s plain-str">mins left.</span>
+<span class="s plain-str">load phrase</span>
+<span class="s plain-str">server=</span>
+<span class="s plain-str">subject=</span>
+<span class="s plain-str">save phrase</span>
+<span class="s plain-str">file saved!</span>
+<span class="s plain-str">spammed:</span>
+<span class="s plain-str">room&#x27;s:</span>
+<span class="s plain-str">mem dir&#x27;s:</span>
+<span class="s plain-str">build v</span>
+<span class="s plain-str">idle time:</span>
+<span class="s plain-str">minute/s.</span>
+<span class="s plain-str">hour/s,</span>
+<span class="s plain-str">wndclass_desked_gsk</span>
+<span class="s plain-str">VbaWindow</span>
+<span class="s plain-str">ComboBox</span>
+<span class="s plain-str">already in</span>
+<span class="s plain-str">too short</span>
+<span class="s plain-str">not given</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">&amp;LOGGING...</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">check alive</span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">Find a Chat</span>
+<span class="s plain-str">&#x27;s Buddy L</span>
+<span class="s plain-str">Edit List</span>
+<span class="s plain-str">AOL Hotline</span>
+<span class="s plain-str">1234567890abcdefghijklmnopqrstuvwxyz</span>
+<span class="s plain-str">abcdefghijklmnopqrstuvwxyz</span>
+<span class="s plain-str">Welcome,</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Available?</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">mass alive</span>
+<span class="s plain-str">aol://4950:0000010000|all:</span>
+<span class="s plain-str">|online:</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">Sincerely,</span>
+<span class="s plain-str">Sandy Page</span>
+<span class="s plain-str">127.0.0.1</span>
+<span class="s plain-str">Matt Glazer</span>
+<span class="s plain-str">Reconnect...</span>
+<span class="s plain-str">Sign On</span>
+<span class="s plain-str">&amp;Sign Off</span>
+<span class="s plain-str">abcdefghijklmnopqrstuvwxyz0123456789</span>
+<span class="s plain-str">open dialog</span>
+<span class="s plain-str">save dialog</span>
+<span class="s plain-str">save server</span>
+<span class="s plain-str">*DISCLAIMER*</span>
+<span class="s plain-str">the name &#x27;</span>
+<span class="s plain-str">3.02.0023 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+</details>
+<div class="stats">Total unique strings: 972 · Interesting: 327 · Noise filtered: 327</div>
+</div></body></html>

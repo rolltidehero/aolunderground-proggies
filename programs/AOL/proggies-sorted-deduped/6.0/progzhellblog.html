@@ -1,0 +1,552 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>progzhellblog.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/6.0/progzhellblog.zip">&#x2b07; Download progzhellblog.zip</a>
+</div>
+<div class="hero">
+<div><h1>Progzhell Toolz Version Blog</h1><span class="author">by <b>Progzhell</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 6.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Progzhell Toolz Version Blog.exe</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (2)</h2>
+<span class="s author-str">&#x27;File written by Adobe Photoshop</span>
+<span class="s author-str">By: Kel</span>
+<h2>&#x1f4e6; Dependencies (4)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (227)</h2>
+<span class="s interesting-str">Progzhell Toolz VBlog</span>
+<span class="s interesting-str">Photoshop 3.0</span>
+<span class="s interesting-str">GYev4[j</span>
+<span class="s interesting-str">Progzhell Toolz Version Blog</span>
+<span class="s interesting-str">Progzhell Toolz 2.0</span>
+<span class="s interesting-str">Persons Name Here <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Press The Button <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Ant&#x27;s In Pants Bot <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Kick My Dog Bot <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Put Persons Name Here That Kick Your Dog</span>
+<span class="s interesting-str">Beta Testers <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Drug Dealer Bot <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Persons Name <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Progzhell Software 2001-2003</span>
+<span class="s interesting-str">All Music Copy Righted By Tool ToolBand.com</span>
+<span class="s interesting-str">Progzhell Copy Right 2001-2003</span>
+<span class="s interesting-str">Send to Chat</span>
+<span class="s interesting-str">Put Screen Name Of Person Here <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">3 Members Of Gang Bang Below Max</span>
+<span class="s interesting-str">Lenshell Status</span>
+<span class="s interesting-str">Progzhell Toolz 1.0 got on lenshell.com top programs about 1 month after its actuale release it made it to number 10 then after a week went to number 8 for about 4-5 weeks about 1,341 people downloaded it in its whole time on te top list im hopeing this version will do the same.</span>
+<span class="s interesting-str">Final Words Forever</span>
+<span class="s interesting-str">Well its finshed it was finshed ealry so im gonna</span>
+<span class="s interesting-str">release it a day ealry. This is my last time ver</span>
+<span class="s interesting-str">makeing a aol prog in visual basics and proplably</span>
+<span class="s interesting-str">the last time makeing a prog all together. I&#x27;m</span>
+<span class="s interesting-str">moveing to C, and C++. I would like just say yall</span>
+<span class="s interesting-str">have a happy new year 2003. I thank you all and</span>
+<span class="s interesting-str">bid you farewell</span>
+<span class="s interesting-str">Tgknuckles.com</span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×13</span></span>
+<span class="s interesting-str">Negative3k.net</span>
+<span class="s interesting-str">Tribulation2k.com</span>
+<span class="s interesting-str">To0zworld.com</span>
+<span class="s interesting-str">Mrsimms.cjb.net</span>
+<span class="s interesting-str">Lenshell.com</span>
+<span class="s interesting-str">List Of Captions</span>
+<span class="s interesting-str">Progzhell Owns</span>
+<span class="s interesting-str">Really Internet?</span>
+<span class="s interesting-str">Aol is Client</span>
+<span class="s interesting-str">Aol bites my dog</span>
+<span class="s interesting-str">Aol is on crack</span>
+<span class="s interesting-str">Aol is full of it</span>
+<span class="s interesting-str">Do i smell fart</span>
+<span class="s interesting-str">Welcome to Afl</span>
+<span class="s interesting-str">Do you know the Pw to the secret area?</span>
+<span class="s interesting-str">Humm the pw do you actually know it if not then try again at a diffrent time moron. Its been right in front of  your eyes if you dont know it then download Progzhell Idle 2.0 from lenshell.com theres a trick in it with a picture and a arrow pointing down  click on it you will see something on the interface as the samething think about it.</span>
+<span class="s interesting-str">Macro Kill 2</span>
+<span class="s interesting-str">Macro Kill 3</span>
+<span class="s interesting-str">Change AOl Caption</span>
+<span class="s interesting-str">New Aol Caption In Text Box Below</span>
+<span class="s interesting-str">Put Caption Here</span>
+<span class="s interesting-str">Tip of the Day</span>
+<span class="s interesting-str">&amp;Show Tips at Startup</span>
+<span class="s interesting-str">Did you know...</span>
+<span class="s interesting-str">Progzhell Past And Future</span>
+<span class="s interesting-str">Progzhell start out as a actual Web Design site not</span>
+<span class="s interesting-str">anywhere near programming. But it did have aol and</span>
+<span class="s interesting-str">aim progson there and some other software. Soon</span>
+<span class="s interesting-str">the server would get kille and my 1,000 hits a day</span>
+<span class="s interesting-str">were no more. After that i didt do anything for awhile.</span>
+<span class="s interesting-str">I did happen to release a prog called Aol Easy Chat</span>
+<span class="s interesting-str">yes i made that shiitty thing. Awhile after that i helped</span>
+<span class="s interesting-str">a boy with a site called Sacrafcial i made himt he</span>
+<span class="s interesting-str">layout and art then left. Soon afterwards i was doing</span>
+<span class="s interesting-str">nothing but playing Counter Strike and nothing more.</span>
+<span class="s interesting-str">After that got old i reopened progzhell in 2002 at the</span>
+<span class="s interesting-str">bigining of the year soon when the site was fully</span>
+<span class="s interesting-str">opened it got shut right back down due to server</span>
+<span class="s interesting-str">proplems. I never opened progzhell agaiin and dont</span>
+<span class="s interesting-str">plan on web designing anymore. Then i met</span>
+<span class="s interesting-str">programming harder than usuale. Got interested in it</span>
+<span class="s interesting-str">made a couple things then made progzhell toolz 1.0.</span>
+<span class="s interesting-str">Now here is the final version and my final time</span>
+<span class="s interesting-str">messing with Visual Basics im going to C, C++ for</span>
+<span class="s interesting-str">Screen Name Of Person Here</span>
+<span class="s interesting-str">Attintion Bot <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Send Text To Chat</span>
+<span class="s interesting-str">Put Your Text Here</span>
+<span class="s interesting-str">Macro Kill 5</span>
+<span class="s interesting-str">Im Manipulator Verion</span>
+<span class="s interesting-str">Im Manipulator Version</span>
+<span class="s interesting-str">Persons Sn Your sending it to here</span>
+<span class="s interesting-str">Text to send in here</span>
+<span class="s interesting-str">Screen Name To Manipulate here</span>
+<span class="s interesting-str">Send Link To Chat</span>
+<span class="s interesting-str">Name Of Site Here</span>
+<span class="s interesting-str">Url To Site Here</span>
+<span class="s interesting-str">Room Freezer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Room Freezer 0.0.0.1 Stop</span>
+<span class="s interesting-str">Room Freezer 0.0.0.1 Start</span>
+<span class="s interesting-str">Put The Screen Name Below</span>
+<span class="s interesting-str">Screen Name Here</span>
+<span class="s interesting-str">If it is me then a box will come up saying this is gate keeper if not then it is by no means me</span>
+<span class="s interesting-str">Make sure to have the Screen Name correctly writting with all lower case and upper case the same way as the screen name cause this is case sensitive</span>
+<span class="s interesting-str">Sound Hell Can Be A Bitch And Annoying To Others</span>
+<span class="s interesting-str">Finshing touches are being added 8:46pm  might stay up all night working on this thing im watching the mummy might get some ideas on what to add from it hehe just finshed watching jumanji now watching ghost buster its 1:54am now. Woke up Fell Asleep 2 minutes after i said the last time im up now been working for awhile its 10:21am now . Gonna finish up on my main  options then finish the secret area.Well its 12:28pm im finshed with most of it now it will go therw beta testing like mad i will get some errors out my self then let the beta testers take hold of it. Added some picture of my self i took at a friends house on a break    8:33pm. Well im almost finshed 8:52pm watching monster garage there makeing a golf cart out of a car a pourch that is his gonna pick the balls up and shoot up the golfers. Well im therw guess im gonna go ahead and release it a day before time its 9:25pm the 30th of the 12(december) 2002 happy new year tommorrow at 12:01 it will be 2003.                                                                                                                                                                                                         Peace Kel</span>
+<span class="s interesting-str">This was started 3 days Before the actuale release.</span>
+<span class="s interesting-str">Progzhell Idler</span>
+<span class="s interesting-str">Reason For Idle</span>
+<span class="s interesting-str">About Progzhell Toolz Version Blog</span>
+<span class="s interesting-str">Progzhell Toolz V Blog is the last version of the</span>
+<span class="s interesting-str">progzhell toolz and my last time programming in</span>
+<span class="s interesting-str">vb and just for windows platforms from now on</span>
+<span class="s interesting-str">im learning C and C++ no more windows based</span>
+<span class="s interesting-str">Send To Chat</span>
+<span class="s interesting-str">Your Handle Here</span>
+<span class="s interesting-str">Loading...,loading.., loaded</span>
+<span class="s interesting-str">Your Prog Name Here</span>
+<span class="s interesting-str">Well im 15 now when i realeased</span>
+<span class="s interesting-str">progzhell toolz 1.0 i was 14 and still</span>
+<span class="s interesting-str">wanting to program in vb i released</span>
+<span class="s interesting-str">this prog just to fi all the errors in</span>
+<span class="s interesting-str">progzhell toolz 1.0 this will be my last</span>
+<span class="s interesting-str">time programming in VB this is one of</span>
+<span class="s interesting-str">my last projects in it from now on i am</span>
+<span class="s interesting-str">studying C and C++ no more vb yes i</span>
+<span class="s interesting-str">could have learned C Sharp and still</span>
+<span class="s interesting-str">could have had some of my vb skills</span>
+<span class="s interesting-str">but no i dont want to program only for</span>
+<span class="s interesting-str">windows anymore so for now im out</span>
+<span class="s interesting-str">Sick Sayings Bot <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">My grandma loves to take out her teeth and gum my dick all night untill i bust all in her mouth</span>
+<span class="s interesting-str">Just Click in the Circle To Make a saying appear in the text box</span>
+<span class="s interesting-str">Over Violations</span>
+<span class="s interesting-str">Lost activity</span>
+<span class="s interesting-str">3rd Violation</span>
+<span class="s interesting-str">Text Placed Below</span>
+<span class="s interesting-str">Persons Screen Name Here</span>
+<span class="s interesting-str">Dear Aol meber, We have</span>
+<span class="s interesting-str">gottin numo. emails on your</span>
+<span class="s interesting-str">behavior on aol how you are</span>
+<span class="s interesting-str">harrasing users and such</span>
+<span class="s interesting-str">your account will soon be</span>
+<span class="s interesting-str">terminated if this continus</span>
+<span class="s interesting-str">THIS IS VERY BUGGY AFTER HITTING THE COMMAND BUTTON GO TOO AOL AND HIT WRITE MAIL AND EVERYTHING WILL BE THERE READY TO SEND ALL YOU HAVE TO DO IS HIT SEND</span>
+<span class="s interesting-str">This will be the final version of progzhell toolz i</span>
+<span class="s interesting-str">hate to say. the other day i was thinking and</span>
+<span class="s interesting-str">relizeing its about to be a new year and actually</span>
+<span class="s interesting-str">wondered have i learned anything in my days</span>
+<span class="s interesting-str">online. I have to say i have but only the basics of</span>
+<span class="s interesting-str">things and how they work and i have became</span>
+<span class="s interesting-str">wiser. But Visual Basic Programming i relized i do</span>
+<span class="s interesting-str">not want to follow. I will only be able to program</span>
+<span class="s interesting-str">in a windows enviroment. Im going to c. Yes</span>
+<span class="s interesting-str">thats right the C programming language. I have to</span>
+<span class="s interesting-str">say Without Visual Basics i dont think i would</span>
+<span class="s interesting-str">actually be into programming. But i dont want to</span>
+<span class="s interesting-str">be stuck with it all my life so i decided that i</span>
+<span class="s interesting-str">would move on after i make this finaly version of</span>
+<span class="s interesting-str">progzhell toolz yes i promised a 2.0 of this prog i</span>
+<span class="s interesting-str">know but thats something i cant give right now i</span>
+<span class="s interesting-str">apoligize to all my fans for this its just that i relized</span>
+<span class="s interesting-str">its actually time to stop liveing in the past and</span>
+<span class="s interesting-str">move on to the future i would like to give props to</span>
+<span class="s interesting-str">all the people who have always been there for</span>
+<span class="s interesting-str">me and helped me out no matter what Bea</span>
+<span class="s interesting-str">v, Vari0us, InsaneKlown, Prynce, Knuckles,</span>
+<span class="s interesting-str">Kaos, its not like im leaving i will still be around</span>
+<span class="s interesting-str">but not on the aol front like i thought i wanted to</span>
+<span class="s interesting-str">be with Visual Basics now ill start as a biginner</span>
+<span class="s interesting-str">like we all do i big you farewell and good luck to</span>
+<span class="s interesting-str">all no matter what</span>
+<span class="s interesting-str">Macro Kill 4</span>
+<span class="s interesting-str">Choose One Of My Sns Below To Im Me With</span>
+<span class="s interesting-str">Choose One Of The Screen Name Below To Instant Message Me With</span>
+<span class="s interesting-str">Macro Kill 1</span>
+<span class="s interesting-str">Beav, Tribulation,  Knuckles, Kaos, Vari0us, InsaneKlown, Caloric the maker of the bas i used, Morbid_Hack, The Pyrnce,  And who ever else i might have forgot</span>
+<span class="s interesting-str">Punt Code Version 1.0.0.0</span>
+<span class="s interesting-str">Press the Button</span>
+<span class="s interesting-str">Click Here to Place Punt Code In Im Box</span>
+<span class="s interesting-str">This code is by no means promised to work</span>
+<span class="s interesting-str">This project was started October 13, 2002</span>
+<span class="s interesting-str">and ended Deccember 30, 2002</span>
+<span class="s interesting-str">This program was made in Visual Basics</span>
+<span class="s interesting-str">with a mixed bas that i mixed my self gayol,</span>
+<span class="s interesting-str">dos, and another bas i would like to give</span>
+<span class="s interesting-str">special thankz to Caloric, Dos, Alan Aka</span>
+<span class="s interesting-str">In this version of progzhell toolz version</span>
+<span class="s interesting-str">bloged all errors are fixed from progzhell</span>
+<span class="s interesting-str">toolz 1.0 and a new iface and intro are</span>
+<span class="s interesting-str">added plus there are some few more new</span>
+<span class="s interesting-str">options added  And also i would like to say</span>
+<span class="s interesting-str">this will be the last program i ever make in</span>
+<span class="s interesting-str">the language Visual Basics and this wille nd</span>
+<span class="s interesting-str">up being the final version of progzhell toolz</span>
+<span class="s interesting-str">Chage Aol Caption</span>
+<span class="s interesting-str">Tip of the day</span>
+<span class="s interesting-str">Final Words ForEver</span>
+<span class="s interesting-str">Advertise My Proggy</span>
+<span class="s interesting-str">Im Color Bomb</span>
+<span class="s interesting-str">Im Manipulator</span>
+<span class="s interesting-str">Smily Lagg 1</span>
+<span class="s interesting-str">Smily Lagg 2</span>
+<span class="s interesting-str">Smily Lagg 3</span>
+<span class="s interesting-str">Smily Lagg 4</span>
+<span class="s interesting-str">Mail Freezer <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Unknown Command</span>
+<span class="s interesting-str">Unknown Command 2</span>
+<span class="s interesting-str">Symbol Of Life</span>
+<span class="s interesting-str">You Got Pictures</span>
+<span class="s interesting-str">Gang Bang Bot</span>
+<span class="s interesting-str">Fake Cancell Chat</span>
+<span class="s interesting-str">Screen Saver</span>
+<span class="s interesting-str">Screen Saver 1</span>
+<span class="s interesting-str">Screen Saver 2</span>
+<span class="s interesting-str">Screen Saver 3</span>
+<span class="s interesting-str">About/Words From Kel</span>
+<span class="s interesting-str">About Progzhell Toolz</span>
+<span class="s interesting-str">Lenshell Satus</span>
+<span class="s interesting-str">Progzhell Past,Future</span>
+<span class="s interesting-str">More Pictures Of Me</span>
+<span class="s interesting-str">Friend Fuks My Pic Up</span>
+<span class="s interesting-str">Click Here For Links</span>
+<span class="s interesting-str">Host Guide Toolz</span>
+<span class="s interesting-str">No Harraseing</span>
+<span class="s interesting-str">Persons Sn Here</span>
+<span class="s interesting-str">I am not responsible for what aol might do to your account for useing any part of my program this part of the program could get you a TOS for acting as a Guide but if you should want to proceed by all means do but im not responsible for anything plus if this is too hard for you to understand then delete my program off your hard drive and never go download it again untill you grow up a little and be able to understand what all this mean thankz for your time later</span>
+<span class="s interesting-str">Wo0t Welcome To The Secret Area Guy Your So Cool</span>
+<span class="s interesting-str">Aol Commands</span>
+<span class="s interesting-str">Download Source</span>
+<span class="s interesting-str">Well the navagation is at the side so use it to change whats in this label</span>
+<span class="s interesting-str">Welcome to the secret area. You got a little so dont be mad im a lazy fuck. But this is the final and last version of progzhell toolz.</span>
+<span class="s interesting-str">I cannot be held responsible in anyway with your actions useing this program. Everything that you do with this program is of your own blame not mine. For example if you go out and go into a chat and get a tos for doing so then thats on you. Plus if this programs in anyway harms other Computer&#x27;s or Your Computer then im not in anyway held responsible for this. If it does happen to harm in anyway your computer (i sirously doubt it will but just being careful) Please Email me at playboy102476917@aol.com and tell me what you were doing at the time when it harmed or did something wrong.  All this is just to protect me im postitive my program want harm your pc but just to be on the safe side</span>
+<span class="s interesting-str">Enter The Room Below For Help from Other Users</span>
+<span class="s interesting-str">Report any proplems at Playboy102476917@aol.com</span>
+<span class="s interesting-str">Start Screen Saver</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (211)</summary>
+<span class="s plain-str">[QsrKPsn</span>
+<span class="s plain-str">EDssADs</span>
+<span class="s plain-str">]Ds0XQsaUQs?</span>
+<span class="s plain-str">OsFUDs]TDs</span>
+<span class="s plain-str">UPstEDs</span>
+<span class="s plain-str">UQsPOQs</span>
+<span class="s plain-str">DTsEF7Gc(UVW</span>
+<span class="s plain-str">u*9:HIJXYZghijvwxyz</span>
+<span class="s plain-str">TesTrIF <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">TRTOO$r</span>
+<span class="s plain-str">zun{gwoe}</span>
+<span class="s plain-str">&lt;uvSgSvv</span>
+<span class="s plain-str">3PPRdj1</span>
+<span class="s plain-str">c=?&#x27;bvGE|</span>
+<span class="s plain-str">UIIKAKMCCMOECEO</span>
+<span class="s plain-str">3-SGMYSUYQ5vV</span>
+<span class="s plain-str">7fvfwuw</span>
+<span class="s plain-str">w/Y5UmmT</span>
+<span class="s plain-str">7OxQllf</span>
+<span class="s plain-str">fW!N)^*|^&amp;</span>
+<span class="s plain-str">sy`cL-U%v</span>
+<span class="s plain-str">]ISMWC=</span>
+<span class="s plain-str">v%^JlmeE</span>
+<span class="s plain-str">wYdh2}yII#</span>
+<span class="s plain-str">wOKllE&amp;</span>
+<span class="s plain-str">7oRbr	UD?</span>
+<span class="s plain-str">2xzLUdu</span>
+<span class="s plain-str">SWD2yIbF</span>
+<span class="s plain-str">grc7WqPul;</span>
+<span class="s plain-str">bkUEN;+AOWN</span>
+<span class="s plain-str">EV/qauQO</span>
+<span class="s plain-str">Nu?_fv.;og</span>
+<span class="s plain-str">ef{tOUY</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">clickhereforlinks <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">morepicturesofme <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">finalwordsforever <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Disclaimer <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">a2_Click</span>
+<span class="s plain-str">oCommand2</span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">MpCommand8</span>
+<span class="s plain-str">LoadTips</span>
+<span class="s plain-str">DisplayCurrentTip</span>
+<span class="s plain-str">i$Command10</span>
+<span class="s plain-str">Bomb Bot <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Tobacco Bot <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Wavy Lagg <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Bite Me Bot <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Perons Name</span>
+<span class="s plain-str">Drunk Bot <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Badinfluence1888</span>
+<span class="s plain-str">Copy Right <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Peace Kel <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">Aol is gay</span>
+<span class="s plain-str">Default</span>
+<span class="s plain-str">&amp;Next Tip</span>
+<span class="s plain-str">now im out</span>
+<span class="s plain-str">Start Bot</span>
+<span class="s plain-str">ptDDDDO <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;font color=&quot;#0000cc&quot;&gt;&lt;b&gt;</span>
+<span class="s plain-str">Make Im</span>
+<span class="s plain-str">Chat Linker <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Is It Kel? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Is It Me?</span>
+<span class="s plain-str">Sound Hell</span>
+<span class="s plain-str">Work Noted <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Stop Idle</span>
+<span class="s plain-str">Start Idle</span>
+<span class="s plain-str">Idle Off</span>
+<span class="s plain-str">programming.</span>
+<span class="s plain-str">Fake Prog <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">About Kel</span>
+<span class="s plain-str">Sick Saying        6</span>
+<span class="s plain-str">Sick Saying        5</span>
+<span class="s plain-str">Sick Saying        4</span>
+<span class="s plain-str">Sick Saying        3</span>
+<span class="s plain-str">Sick Saying        2</span>
+<span class="s plain-str">Sick Saying        1</span>
+<span class="s plain-str">Fake Tos</span>
+<span class="s plain-str">Num. Emails</span>
+<span class="s plain-str">Num. Vio&#x27;s</span>
+<span class="s plain-str">Violation</span>
+<span class="s plain-str">Attitude</span>
+<span class="s plain-str">Whats Next? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Scroller 1c <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Stop Lag <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Start Lag <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Advertise <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Advertise 2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Screen Name</span>
+<span class="s plain-str">Kel Hackon</span>
+<span class="s plain-str">Playboy102476917</span>
+<span class="s plain-str">Dice Hell <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4&amp;&amp;&amp;***))</span>
+<span class="s plain-str">*0SJ)BeAA@dc</span>
+<span class="s plain-str">3u2&quot;t1sMrqLK</span>
+<span class="s plain-str">3TSxRwQPOONv</span>
+<span class="s plain-str">V~4}U|{z#y</span>
+<span class="s plain-str">Scroller 4c <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">db``bejp</span>
+<span class="s plain-str">ZWLLLabk</span>
+<span class="s plain-str">}NHFFHKWdj</span>
+<span class="s plain-str">z5348FJac</span>
+<span class="s plain-str">{CHF&gt;7027@IKR</span>
+<span class="s plain-str">$16=E&gt;&gt;8=%</span>
+<span class="s plain-str">p&lt;AQ5//6DFFEM</span>
+<span class="s plain-str">V:&lt;C@IKLLC</span>
+<span class="s plain-str">U9Bddbb`Ztusx|</span>
+<span class="s plain-str">U9BkkeekOyy|</span>
+<span class="s plain-str">\9Bllll</span>
+<span class="s plain-str">Pic Of Me</span>
+<span class="s plain-str">Intro Music</span>
+<span class="s plain-str">Minimize</span>
+<span class="s plain-str">Advertise 1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Advertise 3 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Freezer</span>
+<span class="s plain-str">Reload Punt <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Link Punt 1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Link Punt 2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Link Punt 3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Fake Toser</span>
+<span class="s plain-str">Mail Bomb</span>
+<span class="s plain-str">Email me</span>
+<span class="s plain-str">Mail Punts</span>
+<span class="s plain-str">Guide Toolz</span>
+<span class="s plain-str">Scoller</span>
+<span class="s plain-str">Scroller 2c <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Scroller 3c <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Macro Kills</span>
+<span class="s plain-str">Macro 1</span>
+<span class="s plain-str">Macro 2</span>
+<span class="s plain-str">Macro 3</span>
+<span class="s plain-str">Macro 4</span>
+<span class="s plain-str">Macro 5</span>
+<span class="s plain-str">Bong 2</span>
+<span class="s plain-str">Sword 2</span>
+<span class="s plain-str">Sword 1</span>
+<span class="s plain-str">Sound hell</span>
+<span class="s plain-str">Buddy In</span>
+<span class="s plain-str">Buddy Out</span>
+<span class="s plain-str">Inactive</span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">Rape Bot</span>
+<span class="s plain-str">Roll Dice</span>
+<span class="s plain-str">Fake Viruse</span>
+<span class="s plain-str">Fake Hack</span>
+<span class="s plain-str">Progzhell <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Smoke Hash</span>
+<span class="s plain-str">Lettuce??</span>
+<span class="s plain-str">Blazed Up</span>
+<span class="s plain-str">Hick Slang</span>
+<span class="s plain-str">Shot Bot 2</span>
+<span class="s plain-str">Im High Bot</span>
+<span class="s plain-str">Scroll Owns</span>
+<span class="s plain-str">Navagation</span>
+<span class="s plain-str">Kels Bio</span>
+<span class="s plain-str">MAIN................God Bless You :)</span>
+<span class="s plain-str">XAEJmTl</span>
+<span class="s plain-str">POOPNNNJOPP</span>
+<span class="s plain-str">PNNPNJJF</span>
+<span class="s plain-str">PNNPNJFF</span>
+<span class="s plain-str">POOPONJJO</span>
+<span class="s plain-str">PPPPONJO</span>
+<span class="s plain-str">QPOMMMP</span>
+<span class="s plain-str">QQQQPMMMMLP</span>
+<span class="s plain-str">OMMMPMMMLLLLPQQQ</span>
+<span class="s plain-str">OLLLPMMLLLHHP</span>
+<span class="s plain-str">OIIIPMHHHHFFP</span>
+<span class="s plain-str">OGGGPFFFFFFFP</span>
+<span class="s plain-str">OIIIPLIIHHFFP</span>
+<span class="s plain-str">OMLLPMLLIIHHP</span>
+<span class="s plain-str">ONMMPMMLLIIIPQ</span>
+<span class="s plain-str">ONNNPMMLLLLP</span>
+<span class="s plain-str">OOOONMMMLLP</span>
+<span class="s plain-str">ONMMMLP</span>
+<span class="s plain-str">ONMMMNP</span>
+<span class="s plain-str">Room buster</span>
+<span class="s plain-str">h2|spid</span>
+<span class="s plain-str">xR&lt;MMMRx</span>
+<span class="s plain-str">5oSdSSS</span>
+<span class="s plain-str">=dSdSnn</span>
+<span class="s plain-str">2233//#]]_aa</span>
+<span class="s plain-str">Room Buster</span>
+<span class="s plain-str">Kels Room</span>
+<span class="s plain-str">(7),01444</span>
+<span class="s plain-str">&#x27;9=82&lt;.342</span>
+<span class="s plain-str">Gglc,ri</span>
+<span class="s plain-str">ZFFd?AS</span>
+<span class="s plain-str">B}*JlclJ=</span>
+</details>
+<div class="stats">Total unique strings: 2441 · Interesting: 227 · Noise filtered: 1992</div>
+</div></body></html>

@@ -1,0 +1,754 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>velocity15.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/velocity15.zip">&#x2b07; Download velocity15.zip</a>
+</div>
+<div class="hero">
+<div><h1>velocity 1.5</h1><span class="author">by <b>platinum with visual basic 6.0</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">velocity 1.5.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-07-06</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">this is version 1.5 made by platinum with visual basic 6.0</span>
+<h2>&#x1f4e6; Dependencies (3)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">WinMM.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (35)</h2>
+<span class="s interesting-str">velocity bust 1.5</span>
+<span class="s interesting-str">{aOY=+`@.S2</span>
+<span class="s interesting-str">W7%_B.uYD</span>
+<span class="s interesting-str">uoyjco^Zyg_`PF_NDM&lt;0;, &quot;</span>
+<span class="s interesting-str">fD~eBkT2`M,UD&#x27;F6 ;,</span>
+<span class="s interesting-str">zv~xs}vn{rixkbseYn[NcM=V=-P4 H&amp;</span>
+<span class="s interesting-str">nXaB-V2</span>
+<span class="s interesting-str">vSy1-y5-v9-</span>
+<span class="s interesting-str">velocity 1.5 <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">velocity 1.5 by platinum</span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">C*\AC:\WINDOWS\Desktop\Adams folder\Project1.vbp</span>
+<span class="s interesting-str">) velocity 1.5 buster by platinum</span>
+<span class="s interesting-str">intro.wav</span>
+<span class="s interesting-str">click.wav</span>
+<span class="s interesting-str">please exit the chat your in before you start</span>
+<span class="s interesting-str">) unloaded by</span>
+<span class="s interesting-str">ok this is for a private room that is full it helps you get into it insert a private rooms name in the text box then press start</span>
+<span class="s interesting-str">) busted dis room in</span>
+<span class="s interesting-str">Incoming/Saved Mail</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">Hustlasoft Platinum Co.</span>
+<span class="s interesting-str">velocity 1.5.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (584)</summary>
+<span class="s plain-str">WDESTao <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">WDESTao:O <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">8( C3*:)!8&amp;</span>
+<span class="s plain-str">G- M4)M7-A.&amp;6%</span>
+<span class="s plain-str">A-(I8/E5+=/#2&quot;</span>
+<span class="s plain-str">C.&amp;=( @,%A,%+</span>
+<span class="s plain-str">{hQFZC6H0$C+</span>
+<span class="s plain-str">W=/P5&#x27;J- B%</span>
+<span class="s plain-str">P. M. K.!J- I, M0$P5(L1%H/#8!</span>
+<span class="s plain-str">E, J0#H-!K.&quot;K.&quot;Z&lt;/N0$N1%&gt;&quot;</span>
+<span class="s plain-str">8( &gt;.&amp;D5,0&quot;</span>
+<span class="s plain-str">4(!3(!1&#x27; 2(&quot;3)#0&amp; +!</span>
+<span class="s plain-str">O:/M7,J4)B-&quot;&lt;&#x27;</span>
+<span class="s plain-str">K7-G4*A,&quot;B-&quot;C,&quot;8!</span>
+<span class="s plain-str">T?4P;/K6*D.&quot;J0#Q3$U3#W2&quot;V4%R3&#x27;F,&quot;&lt;%</span>
+<span class="s plain-str">G,#M4(K5&#x27;I5%I4&amp;I3&amp;F/$F,#M5+R;/XA3@+</span>
+<span class="s plain-str">H3&#x27;K7+O&lt;/8&amp;</span>
+<span class="s plain-str">P1$M/#W;/I.&quot;H/&quot;G/!I2%E.&quot;E-#8</span>
+<span class="s plain-str">G0%I2%L5&amp;K2#I.</span>
+<span class="s plain-str">K. O/&quot;Q0!Q/ R/ Q/</span>
+<span class="s plain-str">86110)+.$$)</span>
+<span class="s plain-str">0)&quot;3&#x27; 7(!9&#x27;</span>
+<span class="s plain-str">I- P5&amp;X=/D+</span>
+<span class="s plain-str">C- G2%WC7:&#x27;</span>
+<span class="s plain-str">X&lt;/^A3P1#L+</span>
+<span class="s plain-str">W3$V3#V6&amp;fI;E,</span>
+<span class="s plain-str">6) 0( ,&amp; $</span>
+<span class="s plain-str">1# 4&amp;#5&amp;&quot;6(#&lt;.)@4-0$</span>
+<span class="s plain-str">V1 `4!a4!^2 \2 Y2!V0</span>
+<span class="s plain-str">V0 _:*fC3pO@bD6F*</span>
+<span class="s plain-str">Q0 [7(W2!tL&lt;Z2!U.</span>
+<span class="s plain-str">K5+A+&quot;I4+B-$5!</span>
+<span class="s plain-str">VB8N:0F3)8&amp;</span>
+<span class="s plain-str">8) 8*!6) 2&amp;</span>
+<span class="s plain-str">G&lt;3@2*B2(8&amp;</span>
+<span class="s plain-str">L0&quot;S4&amp;X8*U5&#x27;?</span>
+<span class="s plain-str">L0&quot;Q6*H/$I2&#x27;E0&amp;8$</span>
+<span class="s plain-str">H1$F. L3&amp;N3&amp;Q5(F)</span>
+<span class="s plain-str">O/!]8)i?/g9&#x27;b2</span>
+<span class="s plain-str">b6$a9)U2%J*</span>
+<span class="s plain-str">R3%Q/ W2![4 _7&quot;b8&quot;b8 `6</span>
+<span class="s plain-str">W2%[:*U8$P4</span>
+<span class="s plain-str">V:(]?/V7*N,&quot;J*</span>
+<span class="s plain-str">U9&#x27;R8$P8%I2!H4%3</span>
+<span class="s plain-str">R8(U&lt;,P8(J2#B+</span>
+<span class="s plain-str">G2%G4&#x27;O=11</span>
+<span class="s plain-str">B2*I80PA87( @0(.</span>
+<span class="s plain-str">R0&quot;kL=P2#U9*N2#L0&quot;C%</span>
+<span class="s plain-str">L+!eE7pP&gt;dD0];&#x27;V2</span>
+<span class="s plain-str">W2 [4$\4#\4!\4&quot;[4#R0&quot;F, 8&amp;</span>
+<span class="s plain-str">D5.B0(&gt;+#;*&quot;7*&quot;0&#x27; +$</span>
+<span class="s plain-str">&lt;93?&gt;69&lt;116(+1%&#x27;,$$*##&#x27;&quot; !</span>
+<span class="s plain-str">0(!4)!8*!:( F1(B+!bI&gt;O6+O5(P5(B&amp;</span>
+<span class="s plain-str">N1&quot;^B3Z&gt;0H.</span>
+<span class="s plain-str">F, mPD_@3M,</span>
+<span class="s plain-str">7&amp;&quot;:&amp;#;(%=)%=*%=+%D3,G80&lt;.%1&quot;</span>
+<span class="s plain-str">b6&quot;o;$o9&quot;k7 j6!h7&quot;d4 d6!sF3|R?~WEX4#E%</span>
+<span class="s plain-str">rG3n@,uD/e3</span>
+<span class="s plain-str">qA-e9&amp;uM;L&#x27;</span>
+<span class="s plain-str">I2&#x27;G/$YB5D, E.&quot;D.#D/#B-#A.#B/%?-#;*</span>
+<span class="s plain-str">eJ:dC3\9&#x27;R,</span>
+<span class="s plain-str">W4$W7(L/&quot;`H;P:/C0%L8-G4&#x27;T@3N8*?*</span>
+<span class="s plain-str">G1 eM=aG7_B1X8(W4$Y4%W1!X.</span>
+<span class="s plain-str">P;}E1h5#^2 W0 c;)a5&quot;g:$m=%rA&amp;vC&#x27;vC%uA#q&gt;&quot;k8!o=)b0 `2 b7&quot;oH0wS9fA*R,</span>
+<span class="s plain-str">X1![6$\9$_?(eH2eL9gQ@F4%6&#x27;</span>
+<span class="s plain-str">;0$4+ @9/IA7?3)G8-B/#P9+_E6I-</span>
+<span class="s plain-str">Z;(cD2fI7D&#x27;</span>
+<span class="s plain-str">yM;c8&#x27;h?/X1 iD3b@.hH6J+</span>
+<span class="s plain-str">XC|R:sG/d7 d7!g:%g9$f8$h:%f:&amp;\5%M/&quot;=&#x27;</span>
+<span class="s plain-str">85.JJ@GJ&lt;&gt;C47&lt;/.4*&amp;,%#&#x27;&quot;./+7602.&#x27;,&amp;</span>
+<span class="s plain-str">cK?H.&quot;[@2E*</span>
+<span class="s plain-str">^B1qTDN1!I-</span>
+<span class="s plain-str">ic`B&lt;V8*mL&gt;\9)]8(V0</span>
+<span class="s plain-str">^8$nL;_B3B,</span>
+<span class="s plain-str">.2(6;/;@3&gt;C4&gt;B3@A3&gt;=13/#,$</span>
+<span class="s plain-str">Y4 j:#x@&#x27;{B({B*zC+zE.}I2</span>
+<span class="s plain-str">YCmA,P&#x27;</span>
+<span class="s plain-str">bM`3 rJ8b@/H*</span>
+<span class="s plain-str">W&lt;0E-!iRF=&#x27;</span>
+<span class="s plain-str">L4&#x27;U&lt;/ZA4F,</span>
+<span class="s plain-str">U:,M3%H.!H0#F0#E0$G1%@+ &gt;*</span>
+<span class="s plain-str">A-!O;/C0&quot;aO@N;,J7(O;+D/</span>
+<span class="s plain-str">\8%uO;`9%F</span>
+<span class="s plain-str">xUC`?.O/ E(</span>
+<span class="s plain-str">pYH`H7aH5Y?+[=)O.</span>
+<span class="s plain-str">YEsI7]2 Z-</span>
+<span class="s plain-str">j4!w;&amp;};#</span>
+<span class="s plain-str">o6 o:!p&lt;!o=!o=$m&lt;&#x27;e3#],</span>
+<span class="s plain-str">L0 U&lt;,M6&#x27;O9*_L=B. O;-C. A,</span>
+<span class="s plain-str">H2$G/&quot;E.!E/&quot;C-&quot;G3&#x27;L:/&lt;+ P@5K:0C1&#x27;;&#x27;</span>
+<span class="s plain-str">nSEO. b=.S+</span>
+<span class="s plain-str">f&lt;,]2$].!k=-W&#x27;</span>
+<span class="s plain-str">N4|J1yG/yD-xC*xB)t&gt;(h9%X3&quot;J/!=)</span>
+<span class="s plain-str">G4)O;0L7+G1#D0$B1%?0%:.%5+#0( *#</span>
+<span class="s plain-str">0,$=&lt;2?B3?C4?C5;?5491,1+#% !</span>
+<span class="s plain-str">WA5dLAS:,A&amp;</span>
+<span class="s plain-str">X8&amp;[:(pO=];*L*</span>
+<span class="s plain-str">0-%44-&amp;( -0&#x27;690?B9CF&lt;AD:;&gt;322&#x27;*&#x27;</span>
+<span class="s plain-str">{O9sF0h9&quot;sB+f4</span>
+<span class="s plain-str">rE/pG3gC0O-</span>
+<span class="s plain-str">rWHN3$U:+L1&quot;^C4Z&gt;.U9)\?/M0</span>
+<span class="s plain-str">M1!M2#M3$K2$I1#H/&quot;C-</span>
+<span class="s plain-str">E.!F. [B3`F6K/</span>
+<span class="s plain-str">dQcB.fE1S3!Z:(lL9Q1</span>
+<span class="s plain-str">p]xXF\?-O4&quot;H+</span>
+<span class="s plain-str">gH3nK5kE.c:#]/</span>
+<span class="s plain-str">I4x&lt;+i/&quot;j1#k5$m:%Z(</span>
+<span class="s plain-str">f:$nC0pI6lG6O,</span>
+<span class="s plain-str">lL:]&lt;*W4!iF1eB+</span>
+<span class="s plain-str">^E6\C4I0!J1&quot;H/</span>
+<span class="s plain-str">K1&quot;K1&quot;L1&quot;K1$K1$H0&quot;F/&quot;T&gt;1N8+T&gt;1[D7K1$V;,R4$yXFO*</span>
+<span class="s plain-str">lA,rE/qB-X*</span>
+<span class="s plain-str">[ErE/c7 c7 uK3^4</span>
+<span class="s plain-str">oC,f8$uE3</span>
+<span class="s plain-str">E*v=&#x27;f7#Y4$M3$N6(Q:+L6&#x27;H3&quot;G3$F4&amp;E3&amp;@1&amp;:-$3)!-$</span>
+<span class="s plain-str">14%&lt;@0BF8DG==A9583..*(&#x27; 84,5-$.$</span>
+<span class="s plain-str">WC6O9+V=/O4$</span>
+<span class="s plain-str">R=d6&quot;n@,g&lt;&amp;Z.</span>
+<span class="s plain-str">\M&gt;;1$SNB0.#</span>
+<span class="s plain-str">68046/45.561561&amp;&amp;!</span>
+<span class="s plain-str">U=zF-}H0t&gt;$v@&amp;t&lt;&quot;t=&quot;i2</span>
+<span class="s plain-str">P2 nP&gt;P2 T7%X8&#x27;T5&quot;J,</span>
+<span class="s plain-str">P3!R4$O4&quot;M2#J0 L2$F*</span>
+<span class="s plain-str">hJ;R3&quot;Z7$^8$X0</span>
+<span class="s plain-str">w^nH/hF/M.</span>
+<span class="s plain-str">tWD_F5V@.F/</span>
+<span class="s plain-str">bLlA)f9 \1</span>
+<span class="s plain-str">q9!p:#t@*</span>
+<span class="s plain-str">@4z9,v8(Z</span>
+<span class="s plain-str">V8&amp;V9&#x27;R6$kN&lt;L/</span>
+<span class="s plain-str">S6%P2&quot;Q4#Q4#R4%N2&quot;J.</span>
+<span class="s plain-str">Q5&amp;V:+U:(S6%qSBT4&quot;N*</span>
+<span class="s plain-str">l&gt;&quot;l&lt; p&gt;$o&lt;$yE.xB-</span>
+<span class="s plain-str">J/|D,b4 ^&lt;*S6#P6&quot;L5 H4 H6#J6&amp;J6(I5(D2(:.$2(</span>
+<span class="s plain-str">68/681450650960&quot;</span>
+<span class="s plain-str">2+!UJ@:,&quot;ZH&lt;?,</span>
+<span class="s plain-str">J3$L2&quot;dH6Z:&#x27;O+</span>
+<span class="s plain-str">d&lt;&amp;k@*b6 j&gt;(kC/O+</span>
+<span class="s plain-str">nF1b&gt;)Z;&#x27;H-</span>
+<span class="s plain-str">7,&quot;&gt;1#C4#H6%M9&amp;Q:&amp;U;&#x27;W;&#x27;U8&quot;U6 [;%jF0W.</span>
+<span class="s plain-str">bGoC*lA(pG0\6</span>
+<span class="s plain-str">W7%W9%O0 F(</span>
+<span class="s plain-str">}V?e&lt;%f9&quot;qA&amp;f0</span>
+<span class="s plain-str">S3 Z9&#x27;W7%Q0</span>
+<span class="s plain-str">W5&quot;Z6#]9%Y3</span>
+<span class="s plain-str">h@(a9 g&gt;$</span>
+<span class="s plain-str">J7 L8#O8&#x27;Q7(I5(A1%6, +(</span>
+<span class="s plain-str">m;#j&lt;&amp;i@,S/</span>
+<span class="s plain-str">C4 K9&quot;N9!P8 T: X;!_&gt;$d@$</span>
+<span class="s plain-str">TA,S=&#x27;W&lt;#P/</span>
+<span class="s plain-str">X9$\:(a=,P,</span>
+<span class="s plain-str">~T&lt;c8&quot;lA+vL5</span>
+<span class="s plain-str">|S8zZ=X?!M:</span>
+<span class="s plain-str">T7&quot;X7&amp;M2$&gt;, 6,</span>
+<span class="s plain-str">hRvH:lA-X-</span>
+<span class="s plain-str">wVfO+UD</span>
+<span class="s plain-str">s\W7!oVA*</span>
+<span class="s plain-str">gMk: n=#V$	\+</span>
+<span class="s plain-str">_Lg@:c@-[&lt;&#x27;X?+.</span>
+<span class="s plain-str">a&lt; wU:V7!G+</span>
+<span class="s plain-str">XG&quot;j^4ukAq_6hJ&#x27;f:</span>
+<span class="s plain-str">hSqXD9&amp;</span>
+<span class="s plain-str">_J)jP0aA&quot;O+</span>
+<span class="s plain-str">WE(oS7pK1g:$J(</span>
+<span class="s plain-str">Z8&quot;|ZB[;&quot;Y;&amp;^B2C)</span>
+<span class="s plain-str">q[^D.YB-8&amp;</span>
+<span class="s plain-str">kT|UAX2 I$</span>
+<span class="s plain-str">y|^QpRFz^HN5-P;&amp;0</span>
+<span class="s plain-str">E&gt;)NE/\R9</span>
+<span class="s plain-str">qAuV%N(</span>
+<span class="s plain-str">nQ&lt;U6$T8(`F:2</span>
+<span class="s plain-str">qkQ&lt;_I5=*</span>
+<span class="s plain-str">86 MH3[U&gt;ZQ;MB,</span>
+<span class="s plain-str">d&gt;&quot;xT8yT:gB(9</span>
+<span class="s plain-str">_G#r[/wZ-hB</span>
+<span class="s plain-str">FA&amp;NO3RS7GJ/79!&amp;&#x27;</span>
+<span class="s plain-str">P3!N1#Q7+7</span>
+<span class="s plain-str">jVfO;E1-iXD(</span>
+<span class="s plain-str">JF/^ZCc]FZQ;6*</span>
+<span class="s plain-str">rR~Z&lt;jG+eC+b@(F$</span>
+<span class="s plain-str">_G#gI$mI%</span>
+<span class="s plain-str">PM:[YFZXEEF200</span>
+<span class="s plain-str">JD9eaTRQC79(8:(9?*.4</span>
+<span class="s plain-str">QL&gt;H:+hSCG-</span>
+<span class="s plain-str">M1!K/ P6)D-&quot;4&quot;</span>
+<span class="s plain-str">m[kXGTA:zjXD5#SG4</span>
+<span class="s plain-str">42 ;:$@@(GF,FF*64</span>
+<span class="s plain-str">D4#K&gt;*F;%=1</span>
+<span class="s plain-str">P;!SA(F8 7,</span>
+<span class="s plain-str">zjr_PM&lt;:YH8A4#/$</span>
+<span class="s plain-str">1- 73&amp;?;.</span>
+<span class="s plain-str">&gt;4&amp;WE7]F8C*</span>
+<span class="s plain-str">tf}k\fTQbPF</span>
+<span class="s plain-str">yhVG6m`N4)</span>
+<span class="s plain-str">RP9PJ3LB);/</span>
+<span class="s plain-str">JO@+. ZWI0$</span>
+<span class="s plain-str">C- G/&quot;F.!M6*8$</span>
+<span class="s plain-str">{m[JFYJ;F6-C5&amp;</span>
+<span class="s plain-str">LM1cdHIJ.</span>
+<span class="s plain-str">PO5okNZT5JA!2)	+&quot;</span>
+<span class="s plain-str">XF9H4(R&lt;0A+</span>
+<span class="s plain-str">{op_ZdRQm\OSD:ufY\M@A4&#x27;$</span>
+<span class="s plain-str">GJ(WZ8vyX&lt;@&quot;</span>
+<span class="s plain-str">t\DcQ6\B$L&#x27;</span>
+<span class="s plain-str">_fb&gt;XS,@9</span>
+<span class="s plain-str">tjscXjYMK;:K=/=.!6)</span>
+<span class="s plain-str">:8!AC%HK)UX7XZ&lt;TU9&quot;$</span>
+<span class="s plain-str">oN~fBpO*oD</span>
+<span class="s plain-str">?1$C1%L:/VC9I7-8&#x27;</span>
+<span class="s plain-str">rkzjcsbZlZQdTJcSG^OCF7+)</span>
+<span class="s plain-str">&gt;8&#x27;NL5VV:WZ9Y[=QT9-+</span>
+<span class="s plain-str">lK*qQ(wU&amp;</span>
+<span class="s plain-str">D9,C4&amp;&lt;, &lt;*</span>
+<span class="s plain-str">&lt;2&amp;HB1MK4EE)68</span>
+<span class="s plain-str">OF+UI5N&gt;3&gt;,&#x27;*</span>
+<span class="s plain-str">wrvgcr`[</span>
+<span class="s plain-str">og[JF`PEG6-7(</span>
+<span class="s plain-str">C9-KE4HD-**</span>
+<span class="s plain-str">lK)xX/z[/]&gt;</span>
+<span class="s plain-str">M@0P?8H301</span>
+<span class="s plain-str">zt{nj|mejZZqaX</span>
+<span class="s plain-str">lXEI7%eTDE4&#x27;2&quot;</span>
+<span class="s plain-str">dS.pR-{L,C</span>
+<span class="s plain-str">vM,pP1fP3M8</span>
+<span class="s plain-str">pXjZDG6$4%</span>
+<span class="s plain-str">5) 5+$4+&amp;</span>
+<span class="s plain-str">xlreczn^</span>
+<span class="s plain-str">DG,GG/B=(</span>
+<span class="s plain-str">gR+mW3bA W(</span>
+<span class="s plain-str">dC&quot;nV8eO2P9</span>
+<span class="s plain-str">bT7rcITE/XI8D5)0#</span>
+<span class="s plain-str">ylrfcpeZ{p]</span>
+<span class="s plain-str">HN1SV;RR:)&#x27;</span>
+<span class="s plain-str">eM%~f@iO,L(</span>
+<span class="s plain-str">kQ/~gFdK/U&lt;&quot;A)</span>
+<span class="s plain-str">YR/[V5OK.54</span>
+<span class="s plain-str">xjMtdNM?-:+</span>
+<span class="s plain-str">yxhWJ9-:&#x27;</span>
+<span class="s plain-str">59!7;#;?&#x27;VZBimUNR;,-</span>
+<span class="s plain-str">yU7sQ/lL&#x27;yZ3I*</span>
+<span class="s plain-str">wZ9iM0oS7uXAM2</span>
+<span class="s plain-str">YP4qiPYT?&lt;8&#x27;73#72%1+ ,&amp;</span>
+<span class="s plain-str">XI0pbNTE67(</span>
+<span class="s plain-str">PB8&lt;0(1&#x27; +&quot;</span>
+<span class="s plain-str">xp~pjxkc</span>
+<span class="s plain-str">~rVC:O9-6</span>
+<span class="s plain-str">14 7:&amp;&gt;A-FH6QSAVXFIK957&amp;</span>
+<span class="s plain-str">^CcC+_&gt;)O-</span>
+<span class="s plain-str">A5#PG8ZSFRLAF@5?7,80%5.!0)</span>
+<span class="s plain-str">gVH^MBO@55&#x27;</span>
+<span class="s plain-str">qhvbZcNFP::N6-@&#x27;</span>
+<span class="s plain-str">B0&#x27;G7/&lt;.%8,#3)!4-%#</span>
+<span class="s plain-str">tmxe_s]VjTL^E=M3-F,$A%</span>
+<span class="s plain-str">SO+a^&gt;ggK##</span>
+<span class="s plain-str">skzf^p[RfOF_G&lt;U&lt;0K/$&gt;&quot;</span>
+<span class="s plain-str">OD$VO*b]&lt;c^COJ5</span>
+<span class="s plain-str">PM,a`:^]1PL!HB</span>
+<span class="s plain-str">qh|i_s_TjTFcL&lt;\E3M4!;!</span>
+<span class="s plain-str">ZP-f^;jaE`WB2(</span>
+<span class="s plain-str">\Z6fc&lt;b^4UM*F9</span>
+<span class="s plain-str">uk{j^vcUoZJcO:XB-T=%O8</span>
+<span class="s plain-str">UJ*\L4K5%7</span>
+<span class="s plain-str">F1&quot;D/&quot;@-&quot;@/&#x27;&lt;,&amp;G:6&amp;</span>
+<span class="s plain-str">pc}m^|jXvcPfR;XC-^H+dN/N7</span>
+<span class="s plain-str">P8&amp;K6%C1&quot;:(</span>
+<span class="s plain-str">mZ{hRtaHr]BqZ?lT8L3</span>
+<span class="s plain-str">dF1cH.]C(W&gt;#S=$L9&quot;G4&quot;A0#:+&quot;-</span>
+<span class="s plain-str">qU~fLmS;G,</span>
+<span class="s plain-str">iH/qS7qU7cK+XB%R?&quot;L:#D4&quot;?0$3%</span>
+<span class="s plain-str">Y&quot;	mF2^C4</span>
+<span class="s plain-str">~eaJ4P5#A&quot;</span>
+<span class="s plain-str">rY3v_;o[8_M/H9 7)</span>
+<span class="s plain-str">{d\G:iQ=J/</span>
+<span class="s plain-str">fO0kW9jY=[K5H;*6*</span>
+<span class="s plain-str">xi`LFcM&lt;R9-@%</span>
+<span class="s plain-str">ZF-p^GdUBSF8G;27-&#x27;.&amp;&quot;</span>
+<span class="s plain-str">zpvcY^JF[E:U&lt;.H,</span>
+<span class="s plain-str">H4!TB1WG8QC8C7/1&#x27;&quot;(</span>
+<span class="s plain-str">}y}tpujjpccn]ZiVQcMF\E;Y&gt;4R5)L,</span>
+<span class="s plain-str">\HxM8vF.a.</span>
+<span class="s plain-str">yu{rptjjqdcm]ZgVQaMF[C:V=1R6&#x27;M-</span>
+<span class="s plain-str">M( P+!_:,B</span>
+<span class="s plain-str">W&lt;.G,#B)!9!</span>
+<span class="s plain-str">{y}xu}vq{smyohuibo`WeSI^J&lt;YA1U9&amp;P/</span>
+<span class="s plain-str">}y~zv~xr|un{qiwlbrdYjZLcOA]D3V:&amp;P/</span>
+<span class="s plain-str">dC!uT2nJ.a:&amp;*</span>
+<span class="s plain-str">@0%@1*?0+9-(3&#x27;$+&quot;</span>
+<span class="s plain-str">?0&amp;?1(&lt;0)9-&#x27;2($+&quot;</span>
+<span class="s plain-str">yr~vn{qiwk`ufZp^OcL&lt;T9-K,</span>
+<span class="s plain-str">@2(?1(:/&amp;7-%2(#+#</span>
+<span class="s plain-str">zt~vo|qhwj_xg[xdVlUFeI8F%</span>
+<span class="s plain-str">c: f=#pE*tJ+lB!_3</span>
+<span class="s plain-str">vZGyL6W</span>
+<span class="s plain-str">{J*sB&amp;j8 f6</span>
+<span class="s plain-str">B0$B3&#x27;F9,?4&#x27;8-!5,&quot;2*&quot;,$</span>
+<span class="s plain-str">wo}qhxj^}l^</span>
+<span class="s plain-str">l^zcRuXFC&quot;</span>
+<span class="s plain-str">g;&quot;l@&#x27;pC-rE/yN3zN1Y,</span>
+<span class="s plain-str">W9y?!|C&quot;T</span>
+<span class="s plain-str">L0tB*qA)nA(g&gt;#_9</span>
+<span class="s plain-str">Q@3OA3PC5C8)8/ 5- 3+&quot;.&amp; &amp;</span>
+<span class="s plain-str">yhmP=O.</span>
+<span class="s plain-str">G5(eWG]Q@NE2=5&quot;80 4,!/&#x27;</span>
+<span class="s plain-str">reRj_J[R&lt;E&gt;&#x27;&lt;5#5. 0)</span>
+<span class="s plain-str">WI6qfOe]CSL2F@*&lt;5%5/#,&amp;</span>
+<span class="s plain-str">|lQ:aA-S.</span>
+<span class="s plain-str">thNj`DZR5KD-&gt;8&amp;91%/)!&quot;</span>
+<span class="s plain-str">savZF[&lt;:gD-]7</span>
+<span class="s plain-str">dCz&gt; {= b$</span>
+<span class="s plain-str">RE+^R:SH4F&lt;,B8-80(&amp;</span>
+<span class="s plain-str">wp~mjzecw^Zy]QyZHtP=iA-c8#Z-</span>
+<span class="s plain-str">\LwO&gt;f:-`2</span>
+<span class="s plain-str">Q+ R2$K0!B+</span>
+<span class="s plain-str">hZ|Q@c6-\,</span>
+<span class="s plain-str">^S+_O,V&gt; J(</span>
+<span class="s plain-str">G?.SP=WU?2+</span>
+<span class="s plain-str">rU&lt;J5!Z:#l9</span>
+<span class="s plain-str">e3%k@3`9.R1&#x27;L.&amp;D*$9$</span>
+<span class="s plain-str">]HyI2i8&quot;W$</span>
+<span class="s plain-str">p;(qB2c:-V1&amp;O.%H+$&gt;&amp;</span>
+<span class="s plain-str">z@${F-zH4j?/\5)T1&amp;L.$C)!7!</span>
+<span class="s plain-str">M6rC1c9+Z5(Q0&amp;G,&quot;:$</span>
+<span class="s plain-str">J.vC.i&lt;,]7)R2&amp;H-&quot;:$</span>
+<span class="s plain-str">Z;|L6`4#R</span>
+<span class="s plain-str">F&amp;zB*l?+`8(S2%H,#:$</span>
+<span class="s plain-str">C!{A%n&gt;(_8&amp;R2$G,&quot;9$</span>
+<span class="s plain-str">C |@&quot;n?%_9%R2$F,&quot;8$</span>
+<span class="s plain-str">M.tI/c?+S5&amp;F-#7$</span>
+<span class="s plain-str">V8xR7gF0U9*G/$8$</span>
+<span class="s plain-str">sTuH-Y,</span>
+<span class="s plain-str">eL#vX)tT%6</span>
+<span class="s plain-str">~O/}W3hH)G,</span>
+<span class="s plain-str">nR~X;i?-X-</span>
+<span class="s plain-str">eccPONzxx</span>
+<span class="s plain-str">eddOONyyx</span>
+<span class="s plain-str">iBuR2K-</span>
+<span class="s plain-str">jD(iH*dH+_E.X?.L5)&lt;)!-</span>
+<span class="s plain-str">VFvJ:l&lt;-e2</span>
+<span class="s plain-str">}vo,*)&lt;84</span>
+<span class="s plain-str">a9$O&lt;0VNI</span>
+<span class="s plain-str">vdmC c5</span>
+<span class="s plain-str">lL{XBT9+6</span>
+<span class="s plain-str">mA$)&amp;$LHG</span>
+<span class="s plain-str">L)	iB&quot;~T3c2</span>
+<span class="s plain-str">I&amp;}C$m&lt; b7 W2</span>
+<span class="s plain-str">E&amp;s=#f8&quot;Z2 M-</span>
+<span class="s plain-str">F(z?%l:$]4&quot;O. @&amp;</span>
+<span class="s plain-str">D,r&gt;)b7%R0&quot;B&#x27;</span>
+<span class="s plain-str">~W5qS@930</span>
+<span class="s plain-str">I1xB-f9(U2#D)</span>
+<span class="s plain-str">G,xA*h9&amp;Y3#H*</span>
+<span class="s plain-str">D(x@&#x27;j:&amp;]4$L,</span>
+<span class="s plain-str">G&#x27;y@&amp;j9$^4#M+</span>
+<span class="s plain-str">L,zC(l:%^4#N*</span>
+<span class="s plain-str">yV:O&#x27;	|O/wC!</span>
+<span class="s plain-str">X;~M5nB/^8(L- :&quot;</span>
+<span class="s plain-str">XEpJ:]&lt;.I.#8$</span>
+<span class="s plain-str">RFyD:l5-_(</span>
+<span class="s plain-str">tJvX3M:</span>
+<span class="s plain-str">YF}P;uE1g7#X&#x27;</span>
+<span class="s plain-str">gG1F4&#x27;5*#</span>
+<span class="s plain-str">]0&quot;\4&#x27;X5)P2&amp;G-!&lt;%</span>
+<span class="s plain-str">R;|G0y@)p6</span>
+<span class="s plain-str">g1&quot;^0&quot;U/!N- F*</span>
+<span class="s plain-str">6 y9$k4$]1#U0&quot;N.&quot;E,!:&amp;</span>
+<span class="s plain-str">p9#e7&amp;Z4&amp;L-$;$</span>
+<span class="s plain-str">b/	yT.K0	:</span>
+<span class="s plain-str">l9!c7&amp;Y4&#x27;J,#:&quot;</span>
+<span class="s plain-str">k9 c7%Z4(J+#9!</span>
+<span class="s plain-str">f7!^6&amp;P.&quot;@$</span>
+<span class="s plain-str">G&#x27;zB&amp;n&gt;&#x27;`8$M.</span>
+<span class="s plain-str">H+p@&amp;b:$P0</span>
+<span class="s plain-str">L1{J1nF0V5#&gt;%</span>
+<span class="s plain-str">pf&lt;:e&lt;-Y(</span>
+<span class="s plain-str">T&lt;uE/_7#J+</span>
+<span class="s plain-str">bZ{WQiHFiM=K1-N,</span>
+<span class="s plain-str">i[|aRoWKUB:TC;Q5*W)</span>
+<span class="s plain-str">dccPONzyx</span>
+<span class="s plain-str">J,!N-!M. B+ 6( -&amp; &quot;</span>
+<span class="s plain-str">dUt[NU@:YE:X7&#x27;`,</span>
+<span class="s plain-str">wA+S;1TJG</span>
+<span class="s plain-str">;3}7,Y3&#x27;.</span>
+<span class="s plain-str">P0&quot;S1&quot;R1&quot;D-!6( ,% &quot;</span>
+<span class="s plain-str">kY[@:dH6c9&quot;p1</span>
+<span class="s plain-str">g&gt;.d&lt;+]9(K1$:) .%</span>
+<span class="s plain-str">p[mK:jD-r&gt;</span>
+<span class="s plain-str">sA/n@+b;&#x27;O2&quot;&gt;*</span>
+<span class="s plain-str">{8-}:-			AAA</span>
+<span class="s plain-str">}F/uC,g&lt;%S2 B+</span>
+<span class="s plain-str">L5vH-e&lt;#T4 E,</span>
+<span class="s plain-str">T:vL1d?#W7&quot;K/ =&amp;</span>
+<span class="s plain-str">Z@}W:mJ/fE/\&gt;.K1&amp;9$</span>
+<span class="s plain-str">tf_mfclVL\A6(</span>
+<span class="s plain-str">\B|X&lt;pN2mM6fG7V:.B*#0</span>
+<span class="s plain-str">sB*rH,rK.mJ0mM7iJ:]B7K3,3!</span>
+<span class="s plain-str">O:{&gt;-x; p5 c*</span>
+<span class="s plain-str">M. H.$&gt;(!/</span>
+<span class="s plain-str">j:&quot;d&lt;&amp;X6$K- ?%</span>
+<span class="s plain-str">H&#x27;|@%l;$_6$T1#I-!=&amp;</span>
+<span class="s plain-str">E&amp;u=$h8$\4#R0&quot;D(</span>
+<span class="s plain-str">D)s=&#x27;e6$W0!G(</span>
+<span class="s plain-str">J,}A(l8$\1 J&#x27;</span>
+<span class="s plain-str">H&#x27;}@%o9&quot;a2 O)</span>
+<span class="s plain-str">G }? p9 d4 R+</span>
+<span class="s plain-str">F!t&lt; h6 U+</span>
+<span class="s plain-str">P-zH+k=&#x27;W0 @&quot;</span>
+<span class="s plain-str">R4!bJ8N9)3&quot;</span>
+<span class="s plain-str">T2zN2kC-W5%A&#x27;</span>
+<span class="s plain-str">xD.~N3xL-lC#a;</span>
+<span class="s plain-str">P6{I,tD$g9</span>
+<span class="s plain-str">gClH$j9</span>
+<span class="s plain-str">I/#O4%T8&amp;*</span>
+<span class="s plain-str">H#w@%h9&amp;V0$D%</span>
+<span class="s plain-str">J5&amp;^B/fH1</span>
+<span class="s plain-str">qI2gD.Q8$4$</span>
+<span class="s plain-str">I)p@)\5&#x27;G)!5</span>
+<span class="s plain-str">J%rA&amp;]7%H+ 5</span>
+<span class="s plain-str">J&quot;sB$]8#H,</span>
+<span class="s plain-str">61(A3&#x27;N2 P&amp;</span>
+<span class="s plain-str">R(vH(_;$H-</span>
+<span class="s plain-str">Z1{N.b?%I/</span>
+<span class="s plain-str">U4hF+P7&quot;9&amp;</span>
+<span class="s plain-str">]DhA0f7%j,</span>
+<span class="s plain-str">f@}U4iI-T;&amp;&lt;*</span>
+<span class="s plain-str">ZF}P&lt;oB3n9(v2</span>
+<span class="s plain-str">N.uM1dD-O8%3!</span>
+<span class="s plain-str">U;#YB.P&lt;)]N:</span>
+<span class="s plain-str">`K7M;(NA-G:&amp;&gt;(</span>
+<span class="s plain-str">H+~B)i7!R*</span>
+<span class="s plain-str">F.u&lt;(]0&quot;K)</span>
+<span class="s plain-str">J-{=&amp;b1 P*</span>
+<span class="s plain-str">G&amp;r;!\3 ?#</span>
+<span class="s plain-str">I&amp;v@&amp;]7$G. 1</span>
+<span class="s plain-str">Q)}@ e:#B&#x27;</span>
+<span class="s plain-str">O-zF*rM8R:+8)</span>
+<span class="s plain-str">U&lt;yM6t&gt;&quot;z1</span>
+<span class="s plain-str">x8%~&gt;(|:#v1</span>
+<span class="s plain-str">bQ}SFnE:|Q=zB+</span>
+<span class="s plain-str">XF|RByM=</span>
+<span class="s plain-str">^NyPBuG9</span>
+<span class="s plain-str">bT|OBuD5</span>
+<span class="s plain-str">L4|G2n?-c;*R.</span>
+<span class="s plain-str">xE0e8%b:)W4%L- =$</span>
+<span class="s plain-str">U&gt;p?*h&lt;*\7&#x27;K+</span>
+<span class="s plain-str">L3yG1k?,_:(M.</span>
+<span class="s plain-str">]Aq;&quot;vH2wP&lt;a@.I-</span>
+<span class="s plain-str">]F]5 sR?T8)ZD76$</span>
+<span class="s plain-str">Z9%w\JK6&amp;B1$0$</span>
+<span class="s plain-str">a&gt;(Z?,N9(RA40$</span>
+<span class="s plain-str">fKh=%gC0X&lt;+=)</span>
+<span class="s plain-str">s;!f8&quot;]8&#x27;R5&#x27;C.#6&amp;</span>
+<span class="s plain-str">x&gt;#h8&quot;\4$N0$A+&quot;4$</span>
+<span class="s plain-str">Q0{F)j?$W4</span>
+<span class="s plain-str">F${=#i5 Z0!K,!A*#6&#x27;#)</span>
+<span class="s plain-str">Z&lt;qI+iI,N2</span>
+<span class="s plain-str">eFsO1vX;1</span>
+<span class="s plain-str">F,n9$\3&quot;L.&quot;&gt;*!1&amp; %</span>
+<span class="s plain-str">o:&amp;`6&amp;M0#&gt;+!1&amp;</span>
+<span class="s plain-str">d9~\3lL&#x27;,</span>
+<span class="s plain-str">E-#S8*X;,/</span>
+<span class="s plain-str">I0k7&quot;\5%M2$&gt;-&quot;0&#x27;</span>
+<span class="s plain-str">qB/Z7&#x27;H0#:+ /&#x27;</span>
+<span class="s plain-str">xt}sm}og}i^</span>
+<span class="s plain-str">zC/^4#Q3$C/&quot;8+ .&amp;</span>
+<span class="s plain-str">{y~xs{rlymdwg]~eX</span>
+<span class="s plain-str">{x~xszrlvlcte[zeX</span>
+<span class="s plain-str">i2!_2%c&lt;/zF,</span>
+<span class="s plain-str">_EqK3xWD]B2fP@ZH:P@2RD59*</span>
+<span class="s plain-str">~M4zJ6vE3w?,~=&amp;t+</span>
+<span class="s plain-str">XC)O?&quot;VH+^P2TF%q\;mS2</span>
+<span class="s plain-str">l6%_7(T7)C0&quot;6*</span>
+<span class="s plain-str">{w}xszsmxoguj_saVtXK|TG</span>
+<span class="s plain-str">\k;-qE-wM2nD-d9-zP9sI0</span>
+<span class="s plain-str">mO`7-Y5-Y7-R4-M0-P6-U&lt;-</span>
+<span class="s plain-str">l]nUHr\Mw`NYA/</span>
+<span class="s plain-str">dHt@-y=-|7-</span>
+<span class="s plain-str">K-y?-w&lt;-q5-</span>
+<span class="s plain-str">|ab2-d8-e=-</span>
+<span class="s plain-str">iRVA-t_En\AiV;</span>
+<span class="s plain-str">oTUA-R=-O8-R:-U;-R6-Q5-</span>
+<span class="s plain-str">N9qC5Q/#C, :-</span>
+<span class="s plain-str">5-!1* /&amp; ,#</span>
+<span class="s plain-str">zw}xszunxrjumbm^TfNFqNB</span>
+<span class="s plain-str">dG}P:yN:}R&lt;sM:pM:|]F</span>
+<span class="s plain-str">ZoD:]::U::S=:TB:]PEI=:VI&lt;M&lt;:aM?</span>
+<span class="s plain-str">bMpL:vVApP;iM:w]GqXB</span>
+<span class="s plain-str">v_cP:SA:`O&lt;SC:dUFTE:M?:J;:Q&lt;:aG:</span>
+<span class="s plain-str">WE|XNV&lt;33#</span>
+<span class="s plain-str">41$2-#0&#x27;!-#</span>
+<span class="s plain-str">zv}wrytmuqhqk`maUiTJtUM</span>
+<span class="s plain-str">djIFrXH^HFTFFSHHZVTLMHxzsKHF\RHeTH</span>
+<span class="s plain-str">hUkVFfUHZLF</span>
+<span class="s plain-str">~tXQL^YVNJJJFFQJFh[M\JF</span>
+<span class="s plain-str">bTuZSfTNH?40-!//&quot;/,&quot;/&#x27; .#</span>
+<span class="s plain-str">yu}wpytlroelh]mcYue]x`Y|[U</span>
+<span class="s plain-str">ueufWxl`rbTr[Q|]Q</span>
+<span class="s plain-str">oXq[QdRQdVQaVU^W\XVZQTUW``QUQ^b][WQi\Ru^Q~^Q</span>
+<span class="s plain-str">mZuUQ|WQ</span>
+<span class="s plain-str">yv[Qx^Qv`Rq^SfXQnd^^XTeccVVXVY^WZ`XYY[ZRZTQi_Q</span>
+<span class="s plain-str">eZr]Yl`[jd]GH=(+</span>
+<span class="s plain-str">~x}tp~wouqglh^pi`wjczf`~e^</span>
+<span class="s plain-str">vpcZveZ~gZ</span>
+<span class="s plain-str">o]rbZobZpeZd[Ze^\c]_`^c\^bZ^_]ed\e`chbdd[me\uf[</span>
+<span class="s plain-str">qd|l_tg\qf]ld^mhdigdggg_`b^`c^`d^``ab]^]ZlgZndZvdZ</span>
+<span class="s plain-str">lcuebpgbnjcgh_GI=0,!5+#/</span>
+<span class="s plain-str">zqxritphuohzoi~oi</span>
+<span class="s plain-str">yizlcvkcvndvogtpipmjjihgfheeidfieiihljjpjjohnogrqhysi</span>
+<span class="s plain-str">ui|qgyrivrjrqjpoinojppllmkjjihhhgfghhfjkenogrrguqexncykc</span>
+<span class="s plain-str">sj|pkvnjroioofopeVPF:.%.</span>
+<span class="s plain-str">wozvnzuo~vp</span>
+<span class="s plain-str">sjskjqkjqnjrpnrspstsqssnoqklnlnnoqoprnsunsvntwovxpxzp</span>
+<span class="s plain-str">~vz{ttxrrvqrvpquprvqrsorrnqolqmjrpmttntunrtmprkpnjqkjtjj</span>
+<span class="s plain-str">xs|vrxuovunvul~xnaRI6$</span>
+<span class="s plain-str">xp}spwppupptqpttstutsvuwyyy{{uwxrsttuswxtxysyzsy{tz}uy}uy</span>
+<span class="s plain-str">|u|xu|wu|wv{vvytwxsywsyupytp{xs}|vxzttwrrurstsqqrqppvpp}sq</span>
+<span class="s plain-str">|w}zt{yt|zs</span>
+<span class="s plain-str">xu}xu|wu|xu}zx~|z}|y||y</span>
+<span class="s plain-str">z|~y}|w|{v~zv}zu</span>
+<span class="s plain-str">zz|wz|x{|zzzzzyy{xw~xv</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">WDESTaoText1</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">WDESTaoLabel3</span>
+<span class="s plain-str">WDESTao*O</span>
+<span class="s plain-str">sjjj___ujQ</span>
+<span class="s plain-str">}yyysssnljzq_</span>
+<span class="s plain-str">j___QQQwe@---</span>
+<span class="s plain-str">j___lcQPK@</span>
+<span class="s plain-str">QTN@---:/</span>
+<span class="s plain-str">sztj___QQQ@@@---</span>
+<span class="s plain-str">sjjj___QQQ@@@---</span>
+<span class="s plain-str">jcb_a\QTN@UI-</span>
+<span class="s plain-str">s{vj___ZWQ</span>
+<span class="s plain-str">-nY-------oZ-_O-mY-SG-</span>
+<span class="s plain-str">-95-------E=-</span>
+<span class="s plain-str">sjjj___QQQ</span>
+<span class="s plain-str">@ve@KG@@@@@@@</span>
+<span class="s plain-str">@eY@UN@@@@</span>
+<span class="s plain-str">QQQQQQQb]QxkQ</span>
+<span class="s plain-str">Q{mQQQQxlQ</span>
+<span class="s plain-str">QQQQRRQe_Q</span>
+<span class="s plain-str">qQQQQQQQTRQiaQ</span>
+<span class="s plain-str">_un____yp_</span>
+<span class="s plain-str">j~xjjjjjjjwsj</span>
+<span class="s plain-str">ssssFFF;.</span>
+<span class="s plain-str">}y|{yyyyyyy</span>
+<span class="s plain-str">) loaded by</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">Send Now</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">MDICLIENT</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://9293:</span>
+<span class="s plain-str">Welcome,</span>
+</details>
+<div class="stats">Total unique strings: 4436 · Interesting: 35 · Noise filtered: 3791</div>
+</div></body></html>

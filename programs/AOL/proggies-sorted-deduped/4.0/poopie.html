@@ -1,0 +1,1201 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>poopie.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/poopie.zip">&#x2b07; Download poopie.zip</a>
+</div>
+<div class="hero">
+<div><h1>Poopie Coms</h1><span class="author">by <b>Alpha</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Poopie Coms.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-11-10</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (3)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSDXM.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">VB5CHAT2.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (66)</h2>
+<span class="s phishing-str">Hi, I&#x27;m with AOL&#x27;s Online Security. We have found hackers trying to get into your MailBox. Please verify your password immediately to avoid account termination.     Thank you.                                    AOL Staff</span>
+<span class="s phishing-str">Hello. I am with AOL&#x27;s billing department. Due to some invalid information, we need you to verify your log-on password to avoid account cancellation. Thank you, and continue to enjoy America Online.</span>
+<span class="s phishing-str">Hello, I am the Head Of AOL&#x27;s XPI Link Department. Due to a configuration error in your version of AOL, I need you to verify your log-on password to me, to prevent account suspension and possible termination.  Thank You.</span>
+<span class="s phishing-str">Good evening, I am with the America Online User Department, and due to a system crash, we have lost your information, for out records please click &#x27;respond&#x27; and state your Screen Name, and logon Password.  Thank you, and enjoy your time on AOL.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error in your log on we failed to recieve your logon password, for our records, please click &#x27;respond&#x27; then state your Screen Name and Password.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Hi, I am with the America Online Hacker enforcement group, we have detected hackers using your account, we need to verify your identity, so we can catch the illicit users of your account, to prove your identity, please click &#x27;respond&#x27; then state your Screen Name, Personal Password, Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Hi, I&#x27;m Alex Troph of America Online Sevice Department. Your online account, #3560028, is displaying a billing error. We need you to respond back with your name, address, card number, expiration date, and daytime phone number. Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error caused by SprintNet, we failed to receive your log on password, for our records. Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Please click &#x27;respond&#x27; then state your Screen Name and Password. Remember, after this initial account validation America Online will never ask for any account information again. Thank you.  :-)</span>
+<span class="s phishing-str">Hello I am a represenative of the Visa Corp. emp# C8205183W. Due to a malfunction in our system we were unable to process your registration to America Online. In order to correct this mistake, we ask that you hit the &#x27;Respond&#x27; key, and reply with the following information: Name, Address, Telephone#, Visa Card#, and Expiration date. If this information is not processed promptly your account will be terminated. For any further questions please contact us at 1-800-336-8427. Thank You.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation Department.  I am happy to inform you that your validation process is almost complete.  To complete your validation process I need you to please hit the `Respond` key and reply with the following information: Name, Address, Phone Number, City, State, Zip Code,  Credit Card Number, Expiration Date, and Bank Name.  Thank you for your time and cooperation and we hope that you enjoy America Online. :-)</span>
+<span class="s phishing-str">Hello, I am an America Online Administrator.  Due to a problem we&#x27;re experiencing with the Sprint Network, we need you to verify your log-in password to me so that you can continue this log-in session with America Online.  We apologize for this inconvenience, and thank you for cooperation.</span>
+<span class="s phishing-str">Hello, this is the America Online Billing Department.  Due to a System Crash, we have lost your billing information.  Please hit respond, then enter your Credit Card Number, and experation date.  Thank You, and sorry for the inconvience.</span>
+<span class="s phishing-str">ATTENTION:  This is the America Online billing department.  Due to an error that occured in your Membership Enrollment process we did not receieve your billing information.  We need you to reply back with your Full name, Credit card number with Expiration date, and your telephone number.  We are very sorry for this inconvenience and hope that you continue to enjoy America Online in the future.</span>
+<span class="s phishing-str">Sorry, there seems to be a problem with your bill. Please reply with your password to verify that you are the account holder.  Thank you.</span>
+<span class="s phishing-str">Sorry  the credit card you entered is invalid. Perhaps you mistyped it?  Please reply with your credit card number, expiration date, name on card, billing address, and phone number, and we will fix it. Thank you and enjoy AOL.</span>
+<span class="s phishing-str">Sorry, your credit card failed authorization. Please reply with your credit card number, expiration date, name on card, billing address, and phone number, and we will fix it.  Thank you and enjoy AOL.</span>
+<span class="s phishing-str">Due to the numerous use of identical passwords of AOL members, we are now generating new passwords with our computers.  Your new password is &#x27;Stryf331&#x27;, You have the choice of the new or old password.  Click respond and try in your preferred password.  Thank you</span>
+<span class="s phishing-str">I work for AOL&#x27;s Credit Card department. My job is to check EVERY AOL account for credit accuracy.  When I got to your account, I am sorry to say, that the Credit information is now invalid. We DID have a sysem crash, which my have lost the information, please click respond and type your VALID credit card info.  Card number, names, exp date, etc, Thank you!</span>
+<span class="s phishing-str">Hello member, and our accounts say that you have either enter an incorrect age, or none at all.  This is needed to verify you are at a legal age to hold an AOL account.  We will also have to ask for your log on password to further verify this fact. Respond in next 30 seconds to keep account active, thank you.</span>
+<span class="s phishing-str">Dear member, I am Greg Toranis and I werk for AOL online security. We were informed that someone with that account was trading sexually explecit material. That is completely illegal, although I presonally do not care =).  Since this is the first time this has happened, we must assume you are NOT the actual account holder, since he has never done this before. So I must request that you reply with your password and first and last name, thank you.</span>
+<span class="s phishing-str">Dear AOL member.  I am Guide zZz, and I am currently employed by AOL.  Due to a new AOL rate, the $10 for 20 hours deal, we must ask that you reply with your log on password so we can verify the account and allow you the better monthly rate. Thank you.</span>
+<span class="s phishing-str">Hello I am CATWatch01. I witnessed you verbally assaulting an AOL member.  The account holder has never done this, so I assume you are not him.  Please reply with your log on password as proof.  Reply in next minute to keep account active.</span>
+<span class="s phishing-str">Dear AOL Customer, despite our rigorous efforts in our battle against &#x27;hackers&#x27;, they have found ways around our system, logging onto unsuspecting users accounts WITHOUT thier passwords. To ensure you are the responsible, paying customer -and not a &#x27;hacker&#x27;- we need you to click on the RESPOND button and enter your password for verification. We are very sorry for this trouble. --AOL Security/B.A.H. Team</span>
+<span class="s phishing-str">Dear member, I am a Service Representitive with the America Online Corporation,and I am sorry to inform you that we have encountered an error in our Main-Frame computer system and lost the billing information to some of our users.  Unfortunatley your account was in that group. We need you to reply back with your billing information including: Name (as appears on card), address, and C.C. Number w/EXP Date. Failure in correcting this problem will result in account termination. Thank you for your cooperation-for your assistance with this problem your account will be credited w/2 free hours of online time.  --AOL Cust. Service</span>
+<span class="s phishing-str">Good evening AOL User, our billing department is having computer trouble -the terminal containing your billing information- and we are positive that our computers have been fully restored, but to verify this information and to cause the least amount of complications as possible, we only need you to click RESPOND and enter your Credit Card number including EXP. Date...we are very sorry for any trouble.   --AOL Billing Department</span>
+<span class="s phishing-str">Hello I am with America Online Billing department and we have you down to get billed in 2weeks $300 dollars if you disagree please respond with your full name Creidt card number with experation date address area code city state and phone number.</span>
+<span class="s phishing-str">Hello i am With America  Online billing Dep. we are missing your sign up file from our user data base please click respond and send us your full name address city state zipcode areacode phone number Creidt card with experation date and personal log on password.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative and I am very sorry to inform you that we have accidentally deleted your billing records from our main computer.  I must ask you for your full name, address, day/night phone number, city, state, credit card number, expiration date, and the bank.  I am very sorry for the invonvenience.  Thank you for your understanding and cooperation!  Brad Kingsly, (CAT ID#13)  Vienna, VA.</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Security Agency (AOSA), and we have identified a scam in your billing.  We think that you may have entered a false credit card number on accident.  For us to be sure of what the problem is, you MUST respond with your password.  Thank you for your cooperation!  (REP Chris)  ID#4322.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative. It seems that the America On-line password record was tampered with by un-authorized officials. Some, but very few passwords were changed. This slight situation occured not less then five minutes ago.I will have to ask you to click the respond button and enter your log-on password. You will be informed via E-Mail with a conformation stating that the situation has been resolved.Thank you for your cooperation. Please keep note that you will be recieving E-Mail from us at AOLBilling. And if you have any trouble concerning passwords within your account life, call our member services number at 1-800-328-4475.</span>
+<span class="s phishing-str">Dear AOL member, We are sorry to inform you that your account information was accidentely deleted from our account database. This VERY unexpected error occured not less than five minutes ago.Your screen name (not account) and passwords were completely erased. Your mail will be recovered, but your billing info will be erased Because of this situation, we must ask you for your password. I realize that we aren&#x27;t supposed to ask your password, but this is a worst case scenario that MUST be corrected promptly, Thank you for your cooperation.</span>
+<span class="s phishing-str">AOL User: We are very sorry to inform you that a mistake was made while correcting people&#x27;s account info. Your screen name was (accidentely) selected by AOL to be deleted. Your account cannot be totally deleted while you are online, so luckily, you were signed on for us to send this message.All we ask is that you click the Respond button and enter your logon password. I can also asure you that this scenario will never occur again. Thank you for your coop</span>
+<span class="s phishing-str">Hello, I am with the America Online Billing Department, due to a failure in our data carrier, we did not recieve your information when you made your account, for our records, please click &#x27;respond&#x27; then state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Please click on &#x27;respond&#x27; and send me your personal logon password immediately so we may validate your account.  Failure to cooperate may result in permanent account termination.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online.  Please click on &#x27;respond&#x27; and send me this information immediately or face account termination!  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello current user,we had a virus in are system today around 8:30 this morning,Random memory loses followed!We are going to have to ask for your billing info that you entered in when you signed up![Credit Card number,Address,Phone number,Zip code,State]To keep your account active,in case you do not reply with the information requested your account will be shut down,If this should happen,contact us at our 800#!Thank you for your cooperation! :-)   :AOL Billing</span>
+<span class="s phishing-str">During your sign on period your Credit Card number did not cycle,please respond with the credit card number used during sign-up!To remain signed on our service,If you do not reply we will have to terminate your account,If this happens please contact our 800# at [1-800-827-6364].Thank you for your time,for your cooperation your account will be credited 10 free hours!  :-)      :AOL Billing</span>
+<span class="s phishing-str">Hello current member,This is the AOL billing department,We are going have to ask you for your credit card information you have used to make the account you are currently on!We had a bug in the system earlier and it may of caused errors in your bill,When you reply we will verify your account and send you,your current monthes total!If there should be errors,please contact us at [1-800-827-3891].Thank you for your time.          :AOL Billing</span>
+<span class="s phishing-str">Sorry to disturb you, but are records indicate the the credit card number you gave us has expired.  Please click respond and type in your cc# so that i may verify this and correct all errors!</span>
+<span class="s phishing-str">I work for Intel, I have a great new catalouge! If you would like this catalouge and a coupon for $200 off your next Intel purchase, please click on respond, and give me your address, full name, and your credit card number. Thanks! |=-)</span>
+<span class="s phishing-str">Hello, I am TOS ADVISOR and seeing that I made a mistake  we seem to have failed to recieve your logon password. Please click respond and enter your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Pardon me, I am with AOL&#x27;s Staff and due to a transmission error we have had problems verifying some things Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with America Online and due to technical problems we have had problems verifying some things Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Dear User,     Upon sign up you have entered incorrect credit information. Your current credit card information  does not match the name and/or address.  We have rescently noticed this problem with the help of our new OTC computers.  If you would like to maintain an account on AOL, please respond with your Credit Card# with it&#x27;s exp.date,and your Full name and address as appear on the card.  And in doing so you will be given 15 free hours.  Reply within 5 minutes to keep this accocunt active.</span>
+<span class="s phishing-str">Hello I am a represenative of the Visa Corp. emp# C8205183W. Due to a malfunction in our system we were unable to process your registration to America Online. In order to correct this mistake, we ask that you hit the &#x27;Respond&#x27; key, and reply with the following information: Name, Address, Tele#, Visa Card#, and Exp. Date. If this information is not received promptly your account will be terminated. For any further questions please contact us at 1-800-336-8427. Thank You.</span>
+<span class="s phishing-str">Hello and welcome to America online.  We know that we have told you not to reveal your billing information to anyone, but due to an unexpected crash in our systems, we must ask you for the following information to verify your America online account: Name, Address, Telephone#, Credit Card#, Bank Name, and Expiration Date. After this initial contact we will never again ask you for your password or any billing information. Thank you for your time and cooperation.  :-)</span>
+<span class="s phishing-str">Hello, I am a represenative of the AOL User Resource Dept.  Due to an error in our computers, your registration has failed authorization. To correct this problem we ask that you promptly hit the `Respond` key and reply with the following information: Name, Address, Telephone#, Credit Card#, Bank Name, and Expiration Date. We hope that you enjoy are services here at America Online. Thank You.  For any further questions please call 1-800-827-2612. :-)</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Billing Department.  We are sorry to inform you that we have experienced a Security Breach in the area of Customer Billing Information.  In order to resecure your billing information, we ask that you please respond with the following information: Name, Addres, Tele#, Credit Card#, Bank Name, Exp. Date, Screen Name, and Log-on Password. Failure to do so will result in immediate account termination. Thank you and enjoy America Online.  :-)</span>
+<span class="s phishing-str">Hello , I am with the Hacker Enforcement Team(HET).  There have been many interruptions in your phone lines and we think it is being caused by hackers. Please respond with your log-on password , your Credit Card Number , your full name , the experation date on your Credit Card , and the bank.  We are asking you this so that we can verify you.  Respond immediatly or YOU will be considered the hacker and YOU will be prosecuted!</span>
+<span class="s phishing-str">Hello AOL Member , I am with the OnLine Technical Consultants(OTC).  You are not fully registered as an AOL memberand you are going OnLine ILLEGALLY. Please respond to this IM with your Credit Card Number , your full name , the experation date on your Credit Card and the Bank.  Please respond immediatly so that the OTC can fix your problem! Thank you and have a nice day!  : )</span>
+<span class="s phishing-str">Hello AOL Memeber.  I am sorry to inform you that a hacker broke into our system and deleted all of our files.  Please respond to this IM with you log-on password password so that we can verify billing , thank you and have a nice day! : )</span>
+<span class="s phishing-str">Hello User.  I am with the AOL Billing Department.  This morning their was a glitch in our phone lines.  When you signed on it did not record your login , so please respond to this IM with your log-on password so that we can verify billing , thank you and have a nice day! : )</span>
+<span class="s phishing-str">Dear AOL Member.  There has been hackers using your account.  Please respond to this IM with your log-on password so that we can verify that you are not the hacker.  Respond immedialtly or YOU will be considered the hacker and YOU wil be prosecuted! Thank you and have a nice day.  : )</span>
+<span class="s phishing-str">AOL Member , I am sorry to bother you but your account information has been deleted by hackers.  AOL has searched every bank but has found no record of you.  Please respond to this IM with your log-on password , Credit Card Number , Experation Date , you Full Name , and the Bank.  Please respond immediatly so that we can get this fixed.  Thank you and have a nice day.   :)</span>
+<span class="s phishing-str">Dear Member , I am sorry to inform you that you have 5 TOS Violation Reports..the maximum you can have is five.  Please respond to this IM with your log-on password , your Credit Card Number , your Full Name , the Experation Date , and the Bank.  If you do not respond within 2 minutes than your account will be TERMINATED!! Thank you and have a nice day.  : )</span>
+<span class="s phishing-str">Hello,Im with OTC(Online Technical Consultants).Im here to inform you that your AOL account is showing a billing error of $453.26.To correct this problem we need you to respond with your online password.If you do not comply,you will be forced to pay this bill under federal law.</span>
+<span class="s phishing-str">Hello,Im here to inform you that you just won a online contest which consisted of a $3000 dollar prize.We seem to have lost all of your account info.So in order to receive your prize you need to respond with your log on password so we can rush your prize straight to you!  Thank you.</span>
+<span class="s phishing-str">Remember AOL will never ask for your password or billing information online, but due to a problem with all Sprint and TymeNet Local Access telephone numbers I must report all system errors within 24 hours. You cannot stay Online unless you respond with your VALID password.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error caused by SprintNet, we failed to receive your log on password, for our records.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Please click &#x27;respond&#x27; then state your Screen Name and Password. Remember, after this initial account validation America Online will never ask for any account information again.  Thank you.  :-)</span>
+<span class="s phishing-str">Attention:The message at the bottom of the screen is void when speaking to AOL employess.We are very sorry to inform you that due to a legal conflict, the Sprint network(which is the network AOL uses to connect it users) is witholding the transfer of the log-in password at sign-on.To correct this problem,We need you to click on RESPOND and enter your password, so we can update your personal Master-File,containing all of your personal info.  We are very sorry for this inconvience --AOL Customer Service Dept.</span>
+<span class="s phishing-str">Remember AOL will never ask for your password or billing information online, but due to a problem with all Sprint and TymeNet Local Access telephone numbers I must report all system errors within 24 hours. You cannot stay Online unless you respond with your VALID password.  Thank you for your cooperation</span>
+<span class="s phishing-str">Dear America Online user, due to the recent America Online crash, your password has been lost from the main computer systems&#x27;.  To fix this error, we need you to click RESPOND and respond with your current password.  Please respond within 2 minutes to keep active.  We are sorry for this inconvinience, this is a ONE time emergency.  Thank you and continue to enjoy America Online!</span>
+<span class="s phishing-str">Dear User, I am sorry to report that your account has been traced and has shown that you are signed on from another location.  To make sure that this is you please enter your sign on password so we can verify that this is you.  Thank You! AOL.</span>
+<span class="s phishing-str">Hello, I am sorry to inturrupt but I am from the America Online Service Departement. We have been having major problems with your account information. Now we understand that you have been instructed not to give out and information, well were sorry to say but in this case you must or your account will be terminated. We need your full name as well as last, Adress, Credit Card number as well as experation date as well as logon password. We our really sorry for this inconveniance and grant you 10 free hours. Thank you and enjoy AOL.</span>
+<span class="s phishing-str">break-in&#x27;s into our system, we have experienced problems. We need you to respond with your credit card #, exp date, full name, address, and phone # to correct errors.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation Department.  I am happy to inform you that the validation process is almost complete.  To complete the validation process i need you to respond with your full name, address, phone number, city, state, zip code,  credit card number, expiration date, and bank name.  Thank you and enjoy AOL.</span>
+
+<h2>&#x2699; API References (24)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Palette</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (459)</h2>
+<span class="s interesting-str">jPgtG&lt;sD6j&lt;+b2&amp;V, K$</span>
+<span class="s interesting-str">?A ;J&#x27;AV/Ha7Nn@VxK\</span>
+<span class="s interesting-str">G&lt; KD#HK)NV0T_8XkB^vLe</span>
+<span class="s interesting-str">MS Sans Serif</span>
+<span class="s interesting-str">VB5Chat2.Chat <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Send Note To chat</span>
+<span class="s interesting-str">Clear All Notes</span>
+<span class="s interesting-str">adv - Advertizes Poopie Coms</span>
+<span class="s interesting-str">adv2 - advertizes poopie coms</span>
+<span class="s interesting-str">adv3 - Advertizes Poopie Coms</span>
+<span class="s interesting-str">aim + AIM SN - Sets Your Aim S/n$</span>
+<span class="s interesting-str">aim? - tells your current set AIM SN(</span>
+<span class="s interesting-str">aimm + [SN], + [msg] - aims sn, with msg+</span>
+<span class="s interesting-str">alive? + [SN] - tells u if that sn is alive</span>
+<span class="s interesting-str">alpha - scrolls alpha macro*</span>
+<span class="s interesting-str">aolcap + Aol CAption - Changes Aol Caption+</span>
+<span class="s interesting-str">aotime - tells u how long u been online -=P</span>
+<span class="s interesting-str">boot - does the com/con/ thing</span>
+<span class="s interesting-str">clear - clears chat room text</span>
+<span class="s interesting-str">closeims - closes all open ims</span>
+<span class="s interesting-str">clxed - clears SN List Of X&#x27;ed</span>
+<span class="s interesting-str">cmds - views command list1</span>
+<span class="s interesting-str">coms? - tells u how many commands poopie coms has</span>
+<span class="s interesting-str">date? - Tell You Todays Date(</span>
+<span class="s interesting-str">dir + * - changes your mp3 dirctory to *$</span>
+<span class="s interesting-str">dir? - tells u current mp3 Directory</span>
+<span class="s interesting-str">eat - eats chat text</span>
+<span class="s interesting-str">exit - unloads Poopie coms&amp;</span>
+<span class="s interesting-str">fade1 + text - send faded text to chat&amp;</span>
+<span class="s interesting-str">fade2 + text - send faded text to chat&amp;</span>
+<span class="s interesting-str">fade3 + text - send faded text to chat</span>
+<span class="s interesting-str">hacker + text - sends your text in HaCKeR!</span>
+<span class="s interesting-str">handle + new Handle - sets handle</span>
+<span class="s interesting-str">handle? - returns current handle</span>
+<span class="s interesting-str">idle0 - resets idle time to 0</span>
+<span class="s interesting-str">idleoff - turns the idle off&quot;</span>
+<span class="s interesting-str">idleon + reason - turns the idleon%</span>
+<span class="s interesting-str">ieet + text - send Text To chat Elite8</span>
+<span class="s interesting-str">im Who, Message - Instant Messages Who With The Messgae</span>
+<span class="s interesting-str">imsoff - turns ims off</span>
+<span class="s interesting-str">imson - turns ims on&quot;</span>
+<span class="s interesting-str">imunx + s/n - Im Uningores the s/n</span>
+<span class="s interesting-str">imx + s/n - Im ingores the s/n</span>
+<span class="s interesting-str">killglyph - kills glyph&amp;</span>
+<span class="s interesting-str">kw + keyword - goes to key word at top/</span>
+<span class="s interesting-str">kw2 + keyword - goes to keyword in that lil box.</span>
+<span class="s interesting-str">lag + text - sends text to chat lagging (lame)&#x27;</span>
+<span class="s interesting-str">lb + text - makes the first letter bold&quot;</span>
+<span class="s interesting-str">link + where - sends link to chat +</span>
+<span class="s interesting-str">lk + url, + message - links url and message/</span>
+<span class="s interesting-str">lmao - tells the chat u are laffin your ass off</span>
+<span class="s interesting-str">lnotes - loads notes4</span>
+<span class="s interesting-str">loads? - tells u how many times u loaded Poopie Coms*</span>
+<span class="s interesting-str">lol - tells the chat u are laffin out loud</span>
+<span class="s interesting-str">loop - loops mp3</span>
+<span class="s interesting-str">lupchat - loades up-chat&#x27;</span>
+<span class="s interesting-str">mins? - tells u how long you where idle</span>
+<span class="s interesting-str">mkill1 - macro killa 1</span>
+<span class="s interesting-str">mkill2 - macro killa 2</span>
+<span class="s interesting-str">mp3off - turns mp3 player off</span>
+<span class="s interesting-str">mp3on - turns  the mp3 player#</span>
+<span class="s interesting-str">mp3s? - tells u how many mp3s u got!</span>
+<span class="s interesting-str">n + * - sends the Note * as index</span>
+<span class="s interesting-str">new - read new mail</span>
+<span class="s interesting-str">note + note - saves note(</span>
+<span class="s interesting-str">notes - Tells u how many notes are saved</span>
+<span class="s interesting-str">off - turns coms off</span>
+<span class="s interesting-str">old - read old mail</span>
+<span class="s interesting-str">on - turns coms back on(</span>
+<span class="s interesting-str">online + s/n - checks the ims of the s/n</span>
+<span class="s interesting-str">pause - pauses playing mp3</span>
+<span class="s interesting-str">pb + room - gots to public Room ,</span>
+<span class="s interesting-str">phish? - tells u how many Phish u have saved</span>
+<span class="s interesting-str">pimp + who - pimp your hoe,</span>
+<span class="s interesting-str">pl + 0 - 9 - only when mutli Strings happens</span>
+<span class="s interesting-str">play + * - plays the mp3 string</span>
+<span class="s interesting-str">pr + room - enters Pr Room!</span>
+<span class="s interesting-str">pro + sn - views the sn&#x27;s profile</span>
+<span class="s interesting-str">punch + who - punched who</span>
+<span class="s interesting-str">rand - plays random mp3</span>
+<span class="s interesting-str">rape + who - rapes who</span>
+<span class="s interesting-str">rc - does the room count</span>
+<span class="s interesting-str">refresh - refreshes mp3 folder!</span>
+<span class="s interesting-str">scramble + text - scrambles text</span>
+<span class="s interesting-str">scroll + what - scrolls what</span>
+<span class="s interesting-str">sent - read sent mail</span>
+<span class="s interesting-str">slap + who - slaps em-</span>
+<span class="s interesting-str">stats - send your current stats for this prog</span>
+<span class="s interesting-str">stop - stops playing mp3</span>
+<span class="s interesting-str">sup + who - sup nigga ??&#x27;</span>
+<span class="s interesting-str">sxed - Scrolls the names of peeps x&#x27;ed</span>
+<span class="s interesting-str">tank - loads the phish tank!</span>
+<span class="s interesting-str">time? - Tells you What Time It is</span>
+<span class="s interesting-str">trig + trigger - set the trigger%</span>
+<span class="s interesting-str">trig? - tells you the current trigger</span>
+<span class="s interesting-str">trign - sets tirgger to none</span>
+<span class="s interesting-str">unpause - unpaues mp3#</span>
+<span class="s interesting-str">unx + Handle - Uningores the handle&quot;</span>
+<span class="s interesting-str">vmp3s - view your mp3s in your dir$</span>
+<span class="s interesting-str">wavy + text - sends text to cat wavy</span>
+<span class="s interesting-str">x + handle - Ingores The Handle</span>
+<span class="s interesting-str">xcmds - hides command list</span>
+<span class="s interesting-str">xed? - sends how many total x&#x27;ed&quot;</span>
+<span class="s interesting-str">xed0 - resets your x&#x27;ed total to 0</span>
+<span class="s interesting-str">xloop - unloop mp3</span>
+<span class="s interesting-str">xmp3s - hides mp3 list</span>
+<span class="s interesting-str">xtank - unloads the tank</span>
+<span class="s interesting-str">xupchat - unloads up-chat</span>
+<span class="s interesting-str">xwelcome - Hides Welcome window!g</span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">Create Shor&amp;tcut <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&amp;Chat Room Info... <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">&amp;Close IM Image Connection</span>
+<span class="s interesting-str">C:\Program Files\AIM95\AIM.exe</span>
+<span class="s interesting-str">set CDAudio door open</span>
+<span class="s interesting-str">set CDAudio door closed</span>
+<span class="s interesting-str">&lt;font color=#FEFEFE&gt;{&lt;xmp&gt;s /con/con}</span>
+<span class="s interesting-str">B&amp;lock Buddy</span>
+<span class="s interesting-str">Send &amp;File...</span>
+<span class="s interesting-str">&amp;News Ticker...</span>
+<span class="s interesting-str">&amp;New User Wizard...</span>
+<span class="s interesting-str">&amp;Load Buddy List...</span>
+<span class="s interesting-str">&amp;Save Buddy List...</span>
+<span class="s interesting-str">Connect to &amp;Talk...</span>
+<span class="s interesting-str">\Sublime.wav</span>
+<span class="s interesting-str">S&amp;witch Screen Name...</span>
+<span class="s interesting-str">&lt;font color=#FFFFFE&gt;</span>
+<span class="s interesting-str">Mail Al&amp;ert Window...</span>
+<span class="s interesting-str">&amp;Add to Buddy List...</span>
+<span class="s interesting-str">Find a Buddy &amp;Wizard...</span>
+<span class="s interesting-str">&lt;font face=&quot;tahoma&quot;&gt;</span>
+<span class="s interesting-str">Connect to Send IM I&amp;mage</span>
+<span class="s interesting-str">Stock &amp;Ticker Detail Window...</span>
+<span class="s interesting-str">\notes.txt <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Would you like to visit my homepage? <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font ptsize=</span>
+<span class="s interesting-str">&lt;font color=#FFFFFE&gt;&lt;&lt;a</span>
+<span class="s interesting-str">\PoopiePhish.txt <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&#x27;s Buddy List Window</span>
+<span class="s interesting-str">Scrolling Name [</span>
+<span class="s interesting-str">Are you sure you wanna exit Windows?</span>
+<span class="s interesting-str">Password not Accepted</span>
+<span class="s interesting-str">Theres no text!</span>
+<span class="s interesting-str">Are you sure you want to restart Windows?</span>
+<span class="s interesting-str">&lt;B&gt;Free ScreenName <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">are you sure you wanna exit</span>
+<span class="s interesting-str">- Version:</span>
+<span class="s interesting-str">Instant Message <span style="color:#484f58;font-size:0.75em">×12</span></span>
+<span class="s interesting-str">&lt;Font Color=# <span style="color:#484f58;font-size:0.75em">×74</span></span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×21</span></span>
+<span class="s interesting-str">Your listbox is empty</span>
+<span class="s interesting-str">You didnt even put a room</span>
+<span class="s interesting-str">Your going to my site wether you like it or not.</span>
+<span class="s interesting-str">Performing fast load...</span>
+<span class="s interesting-str">This is line <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&amp;Edit Chat Preferences... <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">An Unexpected Error Occured!</span>
+<span class="s interesting-str">Send &amp;Instant Message...</span>
+<span class="s interesting-str">Can&#x27;t find version</span>
+<span class="s interesting-str">I am an offical at america online. Please IM me with your password and screenname so I can reregister it for you. We&#x27;ve recently had a virus in our systems and your name could of been terminated. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot;&gt;&lt;font color=&quot;#004080&quot;&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">[ ATTENTION ] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Get Member Inf&amp;o... <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Performing slow load...</span>
+<span class="s interesting-str">assasins Room Busta v1 By-Alpha-</span>
+<span class="s interesting-str">- Busted In [&lt;b&gt;</span>
+<span class="s interesting-str">You need to set a message before I can let you send your Mass IM</span>
+<span class="s interesting-str">You need people on your list before I can let you send the Mass IM</span>
+<span class="s interesting-str">Don&#x27;t Waste Time on a Server</span>
+<span class="s interesting-str">&lt;font color=#fefefe&gt; &lt;Pre <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">*Chat Info by Maul32* <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;B&gt;Language: &lt;/B&gt;English <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;B&gt;Exchange: &lt;/B&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;B&gt;Instance: &lt;/B&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;B&gt;MaxMessage: &lt;/B&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Instant Message From</span>
+<span class="s interesting-str">&amp;Invite a Buddy...</span>
+<span class="s interesting-str">Profile couldn&#x27;t be traced</span>
+<span class="s interesting-str">&lt;BR&gt;&lt;font color=</span>
+<span class="s interesting-str">times new roman</span>
+<span class="s interesting-str">: &lt;font color=</span>
+<span class="s interesting-str">\Poopie.ini <span style="color:#484f58;font-size:0.75em">×43</span></span>
+<span class="s interesting-str">Ask Again Later</span>
+<span class="s interesting-str">You suck, you dont get a fortune</span>
+<span class="s interesting-str">Too hazy, try back later</span>
+<span class="s interesting-str">Definately Not</span>
+<span class="s interesting-str">Don&#x27;t ask the same question twice</span>
+<span class="s interesting-str">&lt;B&gt;The 8 Ball Says:&lt;/B&gt;</span>
+<span class="s interesting-str">Send &amp;Buddy Chat Invitation...</span>
+<span class="s interesting-str">Looks doubtful.</span>
+<span class="s interesting-str">Definately YES!</span>
+<span class="s interesting-str">Definately No!</span>
+<span class="s interesting-str">Not a FuKin chance</span>
+<span class="s interesting-str">HEEELLLLLLLLLLLL nO</span>
+<span class="s interesting-str">Response Hazy, try again.</span>
+<span class="s interesting-str">I&#x27;m not sure</span>
+<span class="s interesting-str">AbsolootLee yes!</span>
+<span class="s interesting-str">Pepsi - Fuck that drink coke!</span>
+<span class="s interesting-str">&lt;B&gt;Drink Bot - Your Drink is: &lt;/B&gt;</span>
+<span class="s interesting-str">Member Directory Search Results</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie C <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Reason[ <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Loaded Poopie coms</span>
+<span class="s interesting-str">\Jimmi Hendrix.wav</span>
+<span class="s interesting-str">\Bob Marley.wav</span>
+<span class="s interesting-str">\Poopie X&#x27;ed.txt <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By-Alpha <span style="color:#484f58;font-size:0.75em">×11</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Un-Loaded &lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;By-</span>
+<span class="s interesting-str">&lt;FONT COLOR= <span style="color:#484f58;font-size:0.75em">×41</span></span>
+<span class="s interesting-str">Potato Chips</span>
+<span class="s interesting-str">White Castle</span>
+<span class="s interesting-str">&lt;B&gt;Food Bot - Your Food is: &lt;/B&gt;</span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Nike Toolz for AOL4</span>
+<span class="s interesting-str">by VB4 &amp; Nike</span>
+<span class="s interesting-str">$AOLame4$ ATTENTION $AOLame4$ <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot;&gt;  ,</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot;&gt; ,;</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot;&gt; <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">RiP&#x27;s Mail Searcher <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">No more matches</span>
+<span class="s interesting-str">Blue Fire 3.0 by AndyMaul <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">187 Final by DarkClown and Upset</span>
+<span class="s interesting-str">Empyrie by L0hr</span>
+<span class="s interesting-str">Lightning After Shock by UnSaKreD</span>
+<span class="s interesting-str">Infinity 2.0 by 1xb</span>
+<span class="s interesting-str">CloneTron by Elac</span>
+<span class="s interesting-str">Blue Eclipse by Hades</span>
+<span class="s interesting-str">Error Booter 6 by Nash</span>
+<span class="s interesting-str">Gothic Nightmares by Masta</span>
+<span class="s interesting-str">Nirvana Final by 540</span>
+<span class="s interesting-str">Taps AIM Punter by Tap</span>
+<span class="s interesting-str">Hallucination 2.0 by Tap</span>
+<span class="s interesting-str">Protozoa by L0hr</span>
+<span class="s interesting-str">Abbot 1.1 by Abbot3000</span>
+<span class="s interesting-str">Hell Lagger by Kane</span>
+<span class="s interesting-str">&lt;B&gt;AIM Prog Bot - Your favorite AIM Prog is: &lt;/B&gt;</span>
+<span class="s interesting-str">\idb\main.idx <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Are you dead or alive?</span>
+<span class="s interesting-str">Checking if you&#x27;re alive. . .</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; <span style="color:#484f58;font-size:0.75em">×20</span></span>
+<span class="s interesting-str">Is Not Alive <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please open mail with list.</span>
+<span class="s interesting-str">&#x27;s Online Mailbox <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Mail Dupe Killer</span>
+<span class="s interesting-str">You have no Mail.</span>
+<span class="s interesting-str">Quick Lagger 4 AOL4</span>
+<span class="s interesting-str">AndyMaul.com</span>
+<span class="s interesting-str">AOL is already reset to NewUser! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">The Screen Name will not work unless it is at least 7 characters, including spaces <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Adam Sandler</span>
+<span class="s interesting-str">Beastie Boys</span>
+<span class="s interesting-str">Metallica (Napster sueing fags!)</span>
+<span class="s interesting-str">Rage Against the Machine</span>
+<span class="s interesting-str">Red Hot Chilli Peppers</span>
+<span class="s interesting-str">Stone Temple Pilots</span>
+<span class="s interesting-str">Insane Clown Posse</span>
+<span class="s interesting-str">2 Pac Shakur</span>
+<span class="s interesting-str">Alice in Chains</span>
+<span class="s interesting-str">Smashing Pumpkins</span>
+<span class="s interesting-str">BloodHound Gang</span>
+<span class="s interesting-str">Dave Mathews Band</span>
+<span class="s interesting-str">Jimi Hendrix</span>
+<span class="s interesting-str">Marilyn Manson</span>
+<span class="s interesting-str">&lt;B&gt;Music Bot - Your favorite Band is: &lt;/B&gt;</span>
+<span class="s interesting-str">Send &amp;Instant Message</span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;random - <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;not found</span>
+<span class="s interesting-str">&lt;Font face=&quot;Arial&quot;&gt;,,,,;; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;Font face=&quot;Arial&quot;&gt;:;; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;Font face=&quot;Arial&quot;&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Invalid room name <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">The room you requested is full <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">We are sorry.  You are not allowed to create a chat with that name. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms <span style="color:#484f58;font-size:0.75em">×17</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; Poopie Coms <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;arail  narrow&quot;&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;arial narrow&quot;&gt;&lt;font color=&quot;000be0&quot;&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">assasins Toolz v2 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">RiP&#x27;s Virus Scan <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">File is a Virus!  Remove file from computer? <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">File trys to rename another file!  Remove file from computer?</span>
+<span class="s interesting-str">File has no virus!</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; <span style="color:#484f58;font-size:0.75em">×17</span></span>
+<span class="s interesting-str">No Strings Found</span>
+<span class="s interesting-str">mp3&#x27;s found, narrow your choice</span>
+<span class="s interesting-str">matches were found...</span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">Chat Preferences</span>
+<span class="s interesting-str">You need some possible passwords to crack!</span>
+<span class="s interesting-str">Open AOL first</span>
+<span class="s interesting-str">Crack Complete: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font color=# <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">&lt;font Face=&quot;Arial Narrow&quot;&gt;&lt;font color=# <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Lamerizer Bot: Todays lamer is...</span>
+<span class="s interesting-str">a-is for the animals your momma fucks</span>
+<span class="s interesting-str">b-is for all the boys you love</span>
+<span class="s interesting-str">c-is for the cunt you are</span>
+<span class="s interesting-str">d-is for all the times your dissed</span>
+<span class="s interesting-str">e-is for that egghead of yours</span>
+<span class="s interesting-str">f-is for the friday nights you stay home</span>
+<span class="s interesting-str">g-is for the girls who hate you</span>
+<span class="s interesting-str">h-is for the ho your momma is</span>
+<span class="s interesting-str">i-is for the idiotic dumbass you are</span>
+<span class="s interesting-str">j-is for all the times you jerkoff to your dog</span>
+<span class="s interesting-str">k-is for you self esteem that the cool kids killed</span>
+<span class="s interesting-str">l-is for the lame ass you are</span>
+<span class="s interesting-str">m-is for the many men you sucked</span>
+<span class="s interesting-str">n-is for the nights you spent alone</span>
+<span class="s interesting-str">o-is for the sex operation you had</span>
+<span class="s interesting-str">p-is for the times people p on you</span>
+<span class="s interesting-str">q-is for the queer you are</span>
+<span class="s interesting-str">r-is for all the times i raped your sister</span>
+<span class="s interesting-str">s-is for your lover Steve Case</span>
+<span class="s interesting-str">t-is for the tits youll never see</span>
+<span class="s interesting-str">u-is for your underwear hangin on the flagpole</span>
+<span class="s interesting-str">v-is for the victories you&#x27;ll never have</span>
+<span class="s interesting-str">w-is for the 400 pounds you wiegh</span>
+<span class="s interesting-str">x-is for all the lamers who</span>
+<span class="s interesting-str">y-is for the question of, y your even alive?</span>
+<span class="s interesting-str">z-is for zero which is what you are</span>
+<span class="s interesting-str">1-is for how many inches your dick is</span>
+<span class="s interesting-str">2-is for the 2 dollars you make an hour</span>
+<span class="s interesting-str">3-is for the amount of men your girl takes at once</span>
+<span class="s interesting-str">4-is for your mom bein a whore</span>
+<span class="s interesting-str">5-is for 5 times an hour you whack off</span>
+<span class="s interesting-str">6-is for the years you been single</span>
+<span class="s interesting-str">7-is for the times your girl cheated on you..with me</span>
+<span class="s interesting-str">8-is for how many people beat the hell outta you today</span>
+<span class="s interesting-str">9-is for how many boyfriends your momma has</span>
+<span class="s interesting-str">0-is for the amount of girls you get</span>
+<span class="s interesting-str">&lt;font ptsize=1&gt;&lt;/h2&gt;&lt;font ptsize=8&gt;&lt;font color=#0000FF&gt;&lt;b&gt; <span style="color:#484f58;font-size:0.75em">×11</span></span>
+<span class="s interesting-str">&lt;font color=#fefefe&gt;&lt;&lt;a <span style="color:#484f58;font-size:0.75em">×11</span></span>
+<span class="s interesting-str">What is your handle?</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By-Alpha <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Loaded <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Times &lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; By- <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Invalid Number</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Mp3 Folder Set To [</span>
+<span class="s interesting-str">Is Now Viewing Mp3s</span>
+<span class="s interesting-str">Has Changed His Mind No Mp3 For Him</span>
+<span class="s interesting-str">Stop Playing His Mp3 -=[</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Playing Random [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Playing mp3 Is Currently Paused</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Playing mp3 Is Currently UnPaused</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Mp3 Folder Refreshed [</span>
+<span class="s interesting-str">] Mp3s Found</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">looping now enabled</span>
+<span class="s interesting-str">looping now disabled</span>
+<span class="s interesting-str">Change the borderstyle to 0!</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Loaded <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; Aol Caption Set To</span>
+<span class="s interesting-str">Has Entered &lt;b&gt;&lt;u&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Handle Is Now Set To [</span>
+<span class="s interesting-str">Viewing Commands</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;DIE GLYPH DIE!!</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Welcome Window Is Now Hidden</span>
+<span class="s interesting-str">Marco Killa 1</span>
+<span class="s interesting-str">Marco Killa 2</span>
+<span class="s interesting-str">Commands Are Now Hidden</span>
+<span class="s interesting-str">Is Now Reading New Mail</span>
+<span class="s interesting-str">Is Now Reading Old Mail</span>
+<span class="s interesting-str">Is Now Reading Sent Mail</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Saved Note</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Viewing Saved Notes</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Now Ingoring Instant Messages From</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;No Longer Ingoring Instant Messages From</span>
+<span class="s interesting-str">&lt;font face=&quot;arial&quot;&gt;&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;</span>
+<span class="s interesting-str">Cleared The Chatroom Text</span>
+<span class="s interesting-str">Is A Fat Kid He/she Ate All The Text</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt; Poopie Coms&lt;font color=#FEFEFE&gt;{&lt;xmp&gt;s /con/con</span>
+<span class="s interesting-str">Scrolled Alpha Macro</span>
+<span class="s interesting-str">Now Has Instant Messages Off</span>
+<span class="s interesting-str">Now Has Instant Messages On</span>
+<span class="s interesting-str">Going To KeyWord <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Trigger Is Too Long -= \</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Trigger Set To</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Current Trigger Is Set To None -=D</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Current Trigger Set To</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Current Handle Set To</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Trigger Set To None =D</span>
+<span class="s interesting-str">Has X&#x27;ed [&lt;b&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Current Handle Set To [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Current Loads [</span>
+<span class="s interesting-str">] Mins Idle[</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Notes Saved [</span>
+<span class="s interesting-str">] Phish in Tank [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Aim Screen Name is Set To [ <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">] Saved Notes</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;There Are Currently [</span>
+<span class="s interesting-str">] People In [</span>
+<span class="s interesting-str">Commands Off</span>
+<span class="s interesting-str">Is Laffin Out Loud</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;hahahah....that was funny..</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Haha no that shit wasnt That funny</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;HAHAHAHAHA....OMG THAT WAS FUNNY</span>
+<span class="s interesting-str">Slaped The Shit Out of</span>
+<span class="s interesting-str">Got Bitch Slaped By</span>
+<span class="s interesting-str">Is laffin His Ass Off</span>
+<span class="s interesting-str">OMFG That is funny as a bitch lmao</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Im Laffin My Anus Off..Cant u tell ; ]</span>
+<span class="s interesting-str">Right In Da Mouth</span>
+<span class="s interesting-str">punched the shit out of</span>
+<span class="s interesting-str">got Stole on By</span>
+<span class="s interesting-str">Where is my Money Bish</span>
+<span class="s interesting-str">Whats To Rape You What A Fag</span>
+<span class="s interesting-str">Sup Nigga Rigga Da Jigga Hows it Hangin</span>
+<span class="s interesting-str">Has Loaded Poopie Coms [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;All Instant Messages Are Now Closed</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms Idle</span>
+<span class="s interesting-str">Phish Tank Loaded</span>
+<span class="s interesting-str">Phish Tank UnLoaded</span>
+<span class="s interesting-str">Currently Has [</span>
+<span class="s interesting-str">] Saved Phish</span>
+<span class="s interesting-str">Mp3 Player on</span>
+<span class="s interesting-str">Mp3 Player off</span>
+<span class="s interesting-str">Mp3 List Hidden</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Its Like A Dog Humping You It Dont Stop</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Mp3 Directory is Currently Set To [</span>
+<span class="s interesting-str">Has Currently Been Idle For [</span>
+<span class="s interesting-str">Has Cleared X&#x27;ed List</span>
+<span class="s interesting-str">Has Reset X&#x27;ed Total To 0</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Note # - [</span>
+<span class="s interesting-str">Has Been OnLine For [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;ToDays date Is [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;&lt;font color=&quot;#000080&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;The Time Is [</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;An Aoassasins Productions</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Aim Screen Name is Currently Set To [</span>
+<span class="s interesting-str">Up-Chat Loaded</span>
+<span class="s interesting-str">Up-Chat UnLoaded</span>
+<span class="s interesting-str">C:\America Online 5.0\im.wav</span>
+<span class="s interesting-str">Intro Music Stoped</span>
+<span class="s interesting-str">Good Evening. I am with AOL&#x27;s Virus Protection Group. Due to some evidence of virus uploading, I must validate your sign-on password. Please STOP what you&#x27;re doing and Tell me your password.       -- AOL VPG <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hi. You are speaking with AOL&#x27;s billing manager, Steve Case. Due to a virus in one of our servers, I am required to validate your password. You will be awarded an extra 10 FREE hours of air-time for the inconvenience. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I am a representative of the VISA Corp.  Due to a computer error, we are unable complete your membership to America Online. In order to correct this problem, we ask that you hit the `Respond` key, and reply with your full name and password, so that the proper changes can be made to avoid cancellation of your account. Thank you for your time and cooperation.  :-) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello I am with AOL Account Defense Department.  We have found that your account has been dialed from San Antonia,Texas. If you have not used it there, then someone has been using your account.  I must ask for your password so I can change it and catch him using the old one.  Thank you. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello member, I am with the TOS department of AOL.  Due to the ever changing TOS, it has dramatically changed.  One new addition is for me, and my staff, to ask where you dialed from and your password.  This allows us to check the REAL adress, and the password to see if you have hacked AOL.  Reply in the next 1 minute, or the account WILL be invalidated, thank you. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I am Steve Case.  You know me as the creator of America Online, the world&#x27;s most popular online service.  I am here today because we are under the impression that you have &#x27;HACKED&#x27; my service.  If you have, then that account has no password.  Which leads us to the conclusion that if you cannot tell us a valid password for that account you have broken an international computer privacy law and you will be traced and arrested.  Please reply with the password to avoind police action, thank you. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello I am with America Online New user Data base we have encounterd an error in your sign up process please respond and State your full name first and last and your personal log in password. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, how is one of our more privelaged OverHead Account Users doing today? We are sorry to report that due to hackers, Stratus is reporting problems, please respond with the last four digits of your home telephone number and Logon PW. Thanks -AOL Acc.Dept. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I am with the America Online Password Verification Commity. Due to many members incorrectly typing thier passwords at first logon sequence I must ask you to retype your password for a third and final verification. No AOL staff will ask you for your password after this process. Please respond within 2 minutes to keep this account active. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please disregard the message in red. Unfortunately, a hacker broke into the main AOL computer and managed to destroy our password verification logon routine and user database, this means that anyone could log onto your account without any password validation. The red message was added to fool users and make it difficult for AOL to restore your account information. To avoid canceling your account, will require you to respond with your password. After this, no AOL employee will ask you for your password again. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, My name is Dan Weltch from America Online. We have been having extreme difficulties with your records. Please give us your full log-on Scree Name(s) as well as the log-on PW(s), thank you :-) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I am the TOSAdvisor. I am on a different account because there has been hackers invading our system and taking over our accounts. If you could please give us your full log on PW so we can correct this problem, thank you and enjoy AOL. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hi, I&#x27;m with Anti-Hacker Dept of AOL. Due to Th <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Poopie Coms.exe</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By:Alpha <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By:Alpha-Imed &lt;u&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By:Alpha-Error Unabel To IM &lt;U&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By:Alpha-AIMed &lt;u&gt;</span>
+<span class="s interesting-str">&lt;font face=&quot;wingdings&quot;&gt;S&lt;font face=&quot;arial narrow&quot;&gt;Poopie Coms By:Alpha-Error Unabel To AIM &lt;U&gt;</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (539)</summary>
+<span class="s plain-str">45(8&lt;+@F9IYHVaWdwjz</span>
+<span class="s plain-str">c^{]XtVQlMJfFGgK@_E9Y?8O:2L4.D1*D/-;,)0()0$*$!#</span>
+<span class="s plain-str">$I&#x27;&#x27;U*-a56k=&lt;{HF</span>
+<span class="s plain-str">SKxKGjD@^;7Q21E++9&quot;&amp;/</span>
+<span class="s plain-str">#K#(V+.b43h;8vG?</span>
+<span class="s plain-str">SH{NCsE=lA8h=4b6/[1*V.)S-)N(&amp;I$&amp;E&quot;&amp;B &amp;&lt;</span>
+<span class="s plain-str">I!&quot;O(&amp;X/,i95uA:}LD</span>
+<span class="s plain-str">XK}PCwI&gt;qC8k=5f80_3,^2+X.&#x27;R*%P&#x27;$N&#x27;%L%#K#$H&quot;&quot;G</span>
+<span class="s plain-str">D  L&#x27;#Y.%_3,m=1sF9</span>
+<span class="s plain-str">RFzM@vI&lt;pC6i&lt;/e9,^4([0&#x27;X.&#x27;X.&#x27;V,&#x27;T)&amp;Q(%O&amp;#J#!G!</span>
+<span class="s plain-str">R) `3&amp;g:-qC8}K9</span>
+<span class="s plain-str">RDxI;tD8qB4k;/g7+f5+f5+d3)`2&#x27;]0%\.#W)!Q%</span>
+<span class="s plain-str">N&gt;~J:wD4rA3rA3o@2m&gt;0j:.g7+d6%^1#Y,</span>
+<span class="s plain-str">&lt;2]]1$i8*rA1uB2</span>
+<span class="s plain-str">K:|H7xF4tB0p=-k8(d3%]. U(</span>
+<span class="s plain-str">R)&amp;^/!k:*i8(wA6</span>
+<span class="s plain-str">N:~I4vC/n;&#x27;j7#b.</span>
+<span class="s plain-str">e4&amp;f3#n&lt;0}I&lt;</span>
+<span class="s plain-str">K&gt;tD2k=5d8&#x27;^2%N)!J#</span>
+<span class="s plain-str">`3%j9/sF9</span>
+<span class="s plain-str">q[~dQrgOqeJlZDgYAd@&lt;~=l</span>
+<span class="s plain-str">VIQDp6k</span>
+<span class="s plain-str">aTvH=f:3;U</span>
+<span class="s plain-str">i&lt;1i&lt;1m=9qC8rF5yF6|H8vG9</span>
+<span class="s plain-str">WIsB4g7+^86P</span>
+<span class="s plain-str">i&lt;.tB.h9+LDy</span>
+<span class="s plain-str">\OxK&gt;e8+\0#\/&quot;N4Lg</span>
+<span class="s plain-str">C2]a- ^1#_2%e4$d5&#x27;i8(h7&#x27;h:)h9+</span>
+<span class="s plain-str">J6yM@uMN%9</span>
+<span class="s plain-str">RBm&lt;2\.#O&#x27;</span>
+<span class="s plain-str">W- ]0&quot;^0%\/&quot;\0#</span>
+<span class="s plain-str">q?-i5(],&quot;P(#J&quot;</span>
+<span class="s plain-str">bQvK&lt;b6)O&#x27;</span>
+<span class="s plain-str">d3#_5.N9YM;XM&gt;^H;g6:</span>
+<span class="s plain-str">iESsKMG@</span>
+<span class="s plain-str">_QyE9d5&#x27;O%</span>
+<span class="s plain-str">e3!a3&quot;e6!c4&amp;c4&amp;`3&amp;e8*j&lt;*uB2uG6zL;</span>
+<span class="s plain-str">N&gt;xH6r?/f5&#x27;\/$U&#x27;</span>
+<span class="s plain-str">^OwE9^2%H!</span>
+<span class="s plain-str">j:&quot;t&gt;&#x27;uD.{I3</span>
+<span class="s plain-str">M=sD/k:,]1 S*</span>
+<span class="s plain-str">MH+YR9ebCp</span>
+<span class="s plain-str">]LrA3_/#H!</span>
+<span class="s plain-str">f7&quot;p;&#x27;r?+uF1</span>
+<span class="s plain-str">O&gt;{G7m&lt;&amp;d3%X,</span>
+<span class="s plain-str">j7#n;+pC.zG7</span>
+<span class="s plain-str">`PzZe0F</span>
+<span class="s plain-str">UCxJ8s@,g3&#x27;\+</span>
+<span class="s plain-str">_KvG9b0$K$</span>
+<span class="s plain-str">_2%f5%j&lt;1nB5nF:yIC~QF</span>
+<span class="s plain-str">L8tC5c4&amp;`.</span>
+<span class="s plain-str">_OzL;b1!M&amp;</span>
+<span class="s plain-str">Z- a2$i8*k&lt;.qA5yE8{J:|N=</span>
+<span class="s plain-str">YEyK9vD0a4&#x27;^0</span>
+<span class="s plain-str">fX{K?c7&amp;U&#x27;</span>
+<span class="s plain-str">N=ijB=sB2~K;</span>
+<span class="s plain-str">]O{I=sE4h7&#x27;a1</span>
+<span class="s plain-str">M@l;-K/C&lt;Q</span>
+<span class="s plain-str">c?Mc9&amp;_,&quot;V(</span>
+<span class="s plain-str">R(!^1&amp;c&lt;&gt;6B</span>
+<span class="s plain-str">TLqD7]0&quot;T&#x27;</span>
+<span class="s plain-str">]1*f&lt;0tE=UL~</span>
+<span class="s plain-str">]Q{K?j9+\/!Fe</span>
+<span class="s plain-str">`TzJ&gt;l&lt;*T}</span>
+<span class="s plain-str">`2 l:(zD3</span>
+<span class="s plain-str">i&lt;.b2&amp;Z- P*%%/</span>
+<span class="s plain-str">rdmMeRk</span>
+<span class="s plain-str">d2 j:(vE5</span>
+<span class="s plain-str">zK=q&gt;4e5)\/&quot;/;</span>
+<span class="s plain-str">`1#h;-wC7/C</span>
+<span class="s plain-str">OBwF8T&gt;[4c</span>
+<span class="s plain-str">sWu^CeKA}@F</span>
+<span class="s plain-str">R) Z0$V:Q</span>
+<span class="s plain-str">VD|I9VAaJ6SG4OE3R4F</span>
+<span class="s plain-str">O;zD3k&lt;&#x27;e2&quot;Z,</span>
+<span class="s plain-str">SB}E2o;+f6$_,</span>
+<span class="s plain-str">M8vD0j&lt;+e4$V*</span>
+<span class="s plain-str">*v.&#x27;Z@%!S)</span>
+<span class="s plain-str">K&gt;uB2m&gt;0d5&#x27;Y.</span>
+<span class="s plain-str">PBk&gt;1W- J</span>
+<span class="s plain-str">`3&amp;i8*j=0vE7</span>
+<span class="s plain-str">QCuD6q@2f7)\/&quot;Q&#x27;</span>
+<span class="s plain-str">SErA3[/&quot;J</span>
+<span class="s plain-str">Z- a2$e7&amp;k&gt;0xG9</span>
+<span class="s plain-str">TFxG9tB6h8,^1$S)</span>
+<span class="s plain-str">ZLwD4]3&amp;M&quot;</span>
+<span class="s plain-str">UIyJ&lt;uE9i&lt;/_3&amp;U+</span>
+<span class="s plain-str">^PyJ&lt;c8)Q(</span>
+<span class="s plain-str">^1$e:+rA3}I&lt;</span>
+<span class="s plain-str">XLzJ&gt;vE;j&lt;1`3(T, K$</span>
+<span class="s plain-str">U*!_2$k:2tG:~PE</span>
+<span class="s plain-str">ZO}LByH@m?4a6-W.%L(</span>
+<span class="s plain-str">R%![/(e70rA7{KE</span>
+<span class="s plain-str">PHyKCmB9b90X1)N*&quot;C#</span>
+<span class="s plain-str">cU~M7c7&amp;Q&#x27;</span>
+<span class="s plain-str">N%#X.)d6.p@&lt;~LF</span>
+<span class="s plain-str">SL{OHoE&gt;d=5Y5-P.(E(!:&quot;</span>
+<span class="s plain-str">aTyF6a5$N&#x27;</span>
+<span class="s plain-str">H !S&#x27;&amp;`1-l:4vB;</span>
+<span class="s plain-str">WP|OKpF?f?7[50T0*G*#?%</span>
+<span class="s plain-str">P*%h:2}PC</span>
+<span class="s plain-str">]LuD6^3$K%</span>
+<span class="s plain-str">(P&amp;-[/5h9;rBA~LL</span>
+<span class="s plain-str">TQsKFiC&gt;]:6T4.J.&#x27;?)#7$</span>
+<span class="s plain-str">A&quot;#T/+k?8</span>
+<span class="s plain-str">WIrC5[1$H%</span>
+<span class="s plain-str">2F!1N&#x27;7W/;b7Bm@IzKT</span>
+<span class="s plain-str">WUsNJfEB\?;S84K2.A.)9*&#x27;*%$!#$</span>
+<span class="s plain-str">)D%,W24lC@</span>
+<span class="s plain-str">i^~TGmA4W2$D%</span>
+<span class="s plain-str">dfxX]bKOJ?B95;(.5</span>
+<span class="s plain-str">/2!/C+3X9&lt;lIF</span>
+<span class="s plain-str">gZ{QDh@4U2(A&#x27; 1</span>
+<span class="s plain-str">:1$:C.=T9BjHI</span>
+<span class="s plain-str">dVwOCdA4R4)&gt;(&quot;/&quot; #</span>
+<span class="s plain-str">Y:![B#ZH)\U1__:biBhlGooMvrQ}hS</span>
+<span class="s plain-str">!G-(E=1EM:IaGMzXY</span>
+<span class="s plain-str">ZNkH&gt;]?4K4,9*&#x27;+%&amp;</span>
+<span class="s plain-str">+Q)1O69NEBQPJU^S[l_aqcdtban]ZkPL]JBR&lt;7K81?0-1+,%(-</span>
+<span class="s plain-str">DESTap]</span>
+<span class="s plain-str">DESTapU</span>
+<span class="s plain-str">DESTapQ</span>
+<span class="s plain-str">DESTapM</span>
+<span class="s plain-str">DESTapY</span>
+<span class="s plain-str">DESTapa</span>
+<span class="s plain-str">Poopie Coms <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DESTao@t</span>
+<span class="s plain-str">MediaPlayerCtl.MediaPlayer <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MediaPlayer</span>
+<span class="s plain-str">PassWord</span>
+<span class="s plain-str">Screen name</span>
+<span class="s plain-str">Delete Note</span>
+<span class="s plain-str">UpChat1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">min left: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">percent: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MediaPlayer1</span>
+<span class="s plain-str">Trigger <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">DESTapV</span>
+<span class="s plain-str">DESTap^</span>
+<span class="s plain-str">DESTapb</span>
+<span class="s plain-str">WritePrivateProfileStringA <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ReleaseCapture <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">sndPlaySoundA <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">SetWindowPos <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">SetCursorPos <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">ReadProcessMemory <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">PostMessageA <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">mciSendStringA <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">OpenProcess <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">IsWindowVisible <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">GetWindowThreadProcessId <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">GetWindowTextLengthA <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetWindowTextA <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetSubMenu <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetPrivateProfileStringA <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">GetMenuStringA <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetMenuItemID <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetMenuItemCount <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetMenu <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">GetCursorPos <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">EnableWindow <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">RtlMoveMemory <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">CloseHandle <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">SetParent <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SetWindowRgn <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">GetPixel <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DeleteObject <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CreateRectRgn <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">CombineRgn <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SetBkColor</span>
+<span class="s plain-str">ExitWindowsEx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">SystemParametersInfoA <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">GetClassNameA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetWindow <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">SetFocus <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">dwGetWndInstance <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dwXCopyDataFrom <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dwCopyData <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">dwGetAddressForObject <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dwGetStringFromLPSTR <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">GetWindowRect <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MoveWindow <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">SendMessegeA</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">WSACleanup</span>
+<span class="s plain-str">WSAStartup</span>
+<span class="s plain-str">WSAGetLastError</span>
+<span class="s plain-str">waveOutGetVolume</span>
+<span class="s plain-str">waveOutSetVolume</span>
+<span class="s plain-str">ShellExecuteA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">SHGetPathFromIDListA</span>
+<span class="s plain-str">mciGetErrorStringA</span>
+<span class="s plain-str">IcmpSendEcho</span>
+<span class="s plain-str">IcmpCloseHandle</span>
+<span class="s plain-str">IcmpCreateFile</span>
+<span class="s plain-str">GetClassName</span>
+<span class="s plain-str">GetFreeSystemResources</span>
+<span class="s plain-str">FindClose</span>
+<span class="s plain-str">FindNextFileA</span>
+<span class="s plain-str">FindFirstFileA</span>
+<span class="s plain-str">CreateEllipticRgn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">BringWindowToTop</span>
+<span class="s plain-str">CreatePolygonRgn</span>
+<span class="s plain-str">CreateRoundRectRgn</span>
+<span class="s plain-str">DESTapSLTG</span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">PlayRandomGrp</span>
+<span class="s plain-str">RndFile</span>
+<span class="s plain-str">sString</span>
+<span class="s plain-str">TYPELIB <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">1&quot;1(1.141:1A1L1P1T1X1\1`1d1h1l1p1t1x1</span>
+<span class="s plain-str">6 6H6p6x6</span>
+<span class="s plain-str">6|7,&gt;0&gt;P&gt;</span>
+<span class="s plain-str">7,7&lt;7@7L7</span>
+<span class="s plain-str">9P:p:t:x:|:</span>
+<span class="s plain-str">626&lt;6n6x6</span>
+<span class="s plain-str">6 6*6Z6p6z6</span>
+<span class="s plain-str">42474K4P4^4</span>
+<span class="s plain-str">:Z;_;s;x;</span>
+<span class="s plain-str">5:5V5d5x5</span>
+<span class="s plain-str">626@6T6z6</span>
+<span class="s plain-str">464D4X4v4~4</span>
+<span class="s plain-str">2&quot;262;2O2T2b2</span>
+<span class="s plain-str">3,343R3x3</span>
+<span class="s plain-str">585T5\5z5</span>
+<span class="s plain-str">4$5D5N5f5t5</span>
+<span class="s plain-str">1&quot;1N1V1x1</span>
+<span class="s plain-str">6(6:6R6~6</span>
+<span class="s plain-str">:2;F;X;j;</span>
+<span class="s plain-str">001b1f1j1r1~1</span>
+<span class="s plain-str">3*3&lt;3N3f3</span>
+<span class="s plain-str">3B4G4[4`4t4y4</span>
+<span class="s plain-str">5#5(5&lt;5A5U5Z5n5s5</span>
+<span class="s plain-str">:0:&gt;:V:d:</span>
+<span class="s plain-str">203F364J4x4</span>
+<span class="s plain-str">7(8&gt;8.9l9</span>
+<span class="s plain-str">3&gt;3X3^3t3z3</span>
+<span class="s plain-str">728H8b9~9</span>
+<span class="s plain-str">5&amp;6&lt;6V7r7</span>
+<span class="s plain-str">5*6B6L6h6</span>
+<span class="s plain-str">3$323Z3z3</span>
+<span class="s plain-str">0 101X1n1</span>
+<span class="s plain-str">8(868@8R8</span>
+<span class="s plain-str">:X:p:v:|:</span>
+<span class="s plain-str">6,7H7R7\7f7</span>
+<span class="s plain-str">;B&lt;^&lt;h&lt;r&lt;|&lt;</span>
+<span class="s plain-str">4$5H5X5|5</span>
+<span class="s plain-str">5*626P6h6~6</span>
+<span class="s plain-str">787@7^7v7</span>
+<span class="s plain-str">8$8H8X8h8|8</span>
+<span class="s plain-str">949J9f9v9</span>
+<span class="s plain-str">;2;B;X;n;</span>
+<span class="s plain-str">6R8F9T9^9</span>
+<span class="s plain-str">2&amp;2B2^2z2</span>
+<span class="s plain-str">3&quot;3&gt;3Z3v3</span>
+<span class="s plain-str">7:8P8d8z8</span>
+<span class="s plain-str">9&quot;969L9`9v9</span>
+<span class="s plain-str">:2:H:\:r:</span>
+<span class="s plain-str">0&amp;0B0^0z0</span>
+<span class="s plain-str">1&quot;1&gt;1Z1v1</span>
+<span class="s plain-str">181Z1f1p1</span>
+<span class="s plain-str">0&quot;1D1\1f1</span>
+<span class="s plain-str">5 5*545&gt;5H5~5</span>
+<span class="s plain-str">?2?L?T?v?~?</span>
+<span class="s plain-str">3&lt;3@3D3L3v3</span>
+<span class="s plain-str">3&quot;4&lt;4J4X4r4</span>
+<span class="s plain-str">8*8F8b8~8</span>
+<span class="s plain-str">9&amp;9B9^9z9</span>
+<span class="s plain-str">=F&gt;`&gt;&quot;?&lt;?</span>
+<span class="s plain-str">1:1H1X1z1</span>
+<span class="s plain-str">222@2T2t2</span>
+<span class="s plain-str">363&gt;3V3z3</span>
+<span class="s plain-str">444B4V4v4</span>
+<span class="s plain-str">5$545V5r5</span>
+<span class="s plain-str">5&amp;6B6^6z6</span>
+<span class="s plain-str">7&quot;7&gt;7Z7v7 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">343D3j3D7</span>
+<span class="s plain-str">6&amp;6B6N6T6</span>
+<span class="s plain-str">6&amp;636&gt;6K6V6c6n6{6</span>
+<span class="s plain-str">7#7.7;7F7S7^7k7v7</span>
+<span class="s plain-str">8+868C8N8[8f8s8~8</span>
+<span class="s plain-str">9&amp;939&gt;9K9V9c9n9{9</span>
+<span class="s plain-str">0*070B0O0Z0g0r0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">1&#x27;121?1J1W1b1o1z1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">2&quot;2/2:2G2R2_2j2w2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">3*373B3O3Z3g3r3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">5*5F5b5~5</span>
+<span class="s plain-str">6&amp;6B6^6z6</span>
+<span class="s plain-str">&lt;2&lt;H&lt;^&lt;t&lt;</span>
+<span class="s plain-str">0&quot;101B1P1t1V2d2x2</span>
+<span class="s plain-str">020H0^0t0</span>
+<span class="s plain-str">1$1:1P1f1|1</span>
+<span class="s plain-str">888^8n8|8 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">8 8$8,80888&lt;8D8H8P8T8\8`8h8l8t8x8</span>
+<span class="s plain-str">9 9(9,94989@9D9L9P9X9\9d9h9p9t9|9</span>
+<span class="s plain-str">; ;$;,;0;8;&lt;;D;H;P;T;\;`;h;l;t;x;</span>
+<span class="s plain-str">&lt; &lt;(&lt;,&lt;4&lt;8&lt;@&lt;D&lt;L&lt;P&lt;X&lt;\&lt;d&lt;h&lt;p&lt;t&lt;|&lt;</span>
+<span class="s plain-str">&gt; &gt;$&gt;,&gt;0&gt;8&gt;&lt;&gt;D&gt;H&gt;P&gt;T&gt;\&gt;`&gt;h&gt;l&gt;t&gt;x&gt;</span>
+<span class="s plain-str">? ?(?,?4?8?@?D?L?P?X?\?d?h?p?t?|?</span>
+<span class="s plain-str">0$0(00040&lt;0@0H0L0T0X0`0d0l0p0x0|0</span>
+<span class="s plain-str">1 1$1,10181&lt;1D1H1P1T1\1`1h1l1t1x1</span>
+<span class="s plain-str">2 2(2,24282@2D2L2P2X2\2n2</span>
+<span class="s plain-str">6$6J6X6j6x6</span>
+<span class="s plain-str">1(1L1B2P2d2</span>
+<span class="s plain-str">8&amp;838&gt;8K8V8c8n8{8</span>
+<span class="s plain-str">9#9.9;9F9S9^9k9v9 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0+060C0N0[0f0s0~0 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">1&amp;131&gt;1K1V1c1n1{1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">2#2.2;2F2S2^2k2v2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">8$888^8l8</span>
+<span class="s plain-str">3+363C3N3[3f3s3~3</span>
+<span class="s plain-str">4&amp;434&gt;4K4V4c4n4{4</span>
+<span class="s plain-str">1$2P2F3j3</span>
+<span class="s plain-str">080Z0n0z0</span>
+<span class="s plain-str">12282&gt;2X2^2t2</span>
+<span class="s plain-str">7D7P7V7x7~7</span>
+<span class="s plain-str">4D5L5f5~5</span>
+<span class="s plain-str">5 6V6j6r6</span>
+<span class="s plain-str">444N4@5f5z5</span>
+<span class="s plain-str">2&amp;3H3\3d3</span>
+<span class="s plain-str">9&quot;9/9:9G9R9_9j9w9</span>
+<span class="s plain-str">4&#x27;424?4J4W4b4o4z4</span>
+<span class="s plain-str">5&quot;5/5:5G5R5_5j5w5</span>
+<span class="s plain-str">6*676B6O6Z6g6r6</span>
+<span class="s plain-str">7&#x27;727?7J7W7b7o7z7</span>
+<span class="s plain-str">8&quot;8/8:8G8R8_8j8w8</span>
+<span class="s plain-str">9*979B9O9Z9g9r9</span>
+<span class="s plain-str">0&#x27;020?0J0W0b0o0z0</span>
+<span class="s plain-str">1&quot;1/1:1G1R1_1j1w1</span>
+<span class="s plain-str">2*272B2O2Z2g2r2</span>
+<span class="s plain-str">3&#x27;323?3J3W3b3o3z3</span>
+<span class="s plain-str">4&quot;4/4:4G4R4_4j4w4</span>
+<span class="s plain-str">5*575B5O5Z5g5r5</span>
+<span class="s plain-str">;0;&gt;;L;Z;h;v;</span>
+<span class="s plain-str">=T=b=p=~=</span>
+<span class="s plain-str">1(161D1R1`1n1|1</span>
+<span class="s plain-str">5$525@5N5\5j5x5</span>
+<span class="s plain-str">3&amp;343B3P3^3l3z3</span>
+<span class="s plain-str">7&gt;8x8:9`9</span>
+<span class="s plain-str">5^6x6.7H7</span>
+<span class="s plain-str">0F0v0N1p1</span>
+<span class="s plain-str">3T3p344x5</span>
+<span class="s plain-str">4*6L6|6`7</span>
+<span class="s plain-str">6H7h7.8T8</span>
+<span class="s plain-str">92:T:.;P;</span>
+<span class="s plain-str">&lt;6=&quot;&gt;D&gt;t&gt;</span>
+<span class="s plain-str">_extentx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">_extenty <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">{NUMLOCK}</span>
+<span class="s plain-str">{CAPSLOCK}</span>
+<span class="s plain-str">&amp;Sign Off</span>
+<span class="s plain-str">{SCROLLLOCK}</span>
+<span class="s plain-str">aol://3548:</span>
+<span class="s plain-str">aim:buddyicon</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:2-2- <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">&amp;Print... <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aim:GoChat?roomname= <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aim:goim?screenname= <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">AIM_IMessage</span>
+<span class="s plain-str">Aim_Chatwnd</span>
+<span class="s plain-str">aim:getfile?screenname= <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">AIM_CSignOnWnd</span>
+<span class="s plain-str">_Oscar_Locate <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">AIM_CtlGroupWnd</span>
+<span class="s plain-str">File:///C:/aux/aux <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aim:buddyicon?screenname=</span>
+<span class="s plain-str">_Oscar_BuddyListWin</span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×42</span></span>
+<span class="s plain-str">_Oscar_Tree <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">_Oscar_StatusNotify</span>
+<span class="s plain-str">WndAte32Class <span style="color:#30363d;font-size:0.75em">×58</span></span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×32</span></span>
+<span class="s plain-str">_Oscar_IconBtn <span style="color:#30363d;font-size:0.75em">×324</span></span>
+<span class="s plain-str">_Oscar_RateMeter <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">aim:goim?screenname=&amp;message=</span>
+<span class="s plain-str">&amp;People <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">&amp;Timestamp <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;Block...</span>
+<span class="s plain-str">_Oscar_PersistantCombo <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">&lt;A HREF=&quot; <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Chat Room:</span>
+<span class="s plain-str">Send &amp;File</span>
+<span class="s plain-str">&lt;font color=#000000&gt;</span>
+<span class="s plain-str">&amp;Exchange=</span>
+<span class="s plain-str">&amp;Instace=</span>
+<span class="s plain-str">&lt;A HREF=</span>
+<span class="s plain-str">&lt; a href= <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Restart</span>
+<span class="s plain-str">&amp;message=</span>
+<span class="s plain-str">&lt;B&gt;ScreenName:&lt;/B&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;B&gt;Password:&lt;/B&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ComboBox <span style="color:#30363d;font-size:0.75em">×10</span></span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×14</span></span>
+<span class="s plain-str">Commands On</span>
+<span class="s plain-str">_Oscar_Static <span style="color:#30363d;font-size:0.75em">×46</span></span>
+<span class="s plain-str">person here</span>
+<span class="s plain-str">people here</span>
+<span class="s plain-str">Shell32</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">Interval</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">BackStyle</span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">Buddy Chat <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">_Oscar_TabGroup <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">Downloading</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">/Vv KoBe vV</span>
+<span class="s plain-str">_Oscar_Separator <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;B&gt;Name: &lt;/B&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;B&gt;People:&lt;/B&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">AIM_ChatInviteSendWnd <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Most Likely</span>
+<span class="s plain-str">Yeah Right!</span>
+<span class="s plain-str">ProbabLee</span>
+<span class="s plain-str">Snapple</span>
+<span class="s plain-str">Cool-Aid</span>
+<span class="s plain-str">Root Beer</span>
+<span class="s plain-str">Idle Mins <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">Loading.... <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Loading... <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Loading.. <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Loading.</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;&lt;h3&gt;</span>
+<span class="s plain-str">&lt;FONT FACE= <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">&lt;B&gt;      :::               :::       :::::::::::</span>
+<span class="s plain-str">&lt;B&gt;      :::    :::::::    :::           :::</span>
+<span class="s plain-str">&lt;B&gt;:::   :::   :::   :::   :::           :::</span>
+<span class="s plain-str">&lt;B&gt; :::::::     :::::::    :::::::::     :::</span>
+<span class="s plain-str">Pringles</span>
+<span class="s plain-str">Doritos</span>
+<span class="s plain-str">Pretzels</span>
+<span class="s plain-str">Beef-Jerky</span>
+<span class="s plain-str">Hot Dogs</span>
+<span class="s plain-str">Hamburgers</span>
+<span class="s plain-str">McDonalds</span>
+<span class="s plain-str">Burger King</span>
+<span class="s plain-str">Wendy&#x27;s</span>
+<span class="s plain-str">Taco Bell</span>
+<span class="s plain-str">Popcorn</span>
+<span class="s plain-str">Shish-Ka-Bob</span>
+<span class="s plain-str">Attention</span>
+<span class="s plain-str">&lt;font face=&quot;arial&quot;&gt;    ;                                              ;</span>
+<span class="s plain-str">&lt;font face=&quot;arial&quot;&gt;   ,;;         ,</span>
+<span class="s plain-str">&lt;font face=&quot;arial&quot;&gt;,;     ;,</span>
+<span class="s plain-str">Search for</span>
+<span class="s plain-str">was found!</span>
+<span class="s plain-str">Write Mail <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">aol://9293: <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Maul32 Bas</span>
+<span class="s plain-str">by Maul32</span>
+<span class="s plain-str">NEWUSER <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">NewUser <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Limp Bizkit</span>
+<span class="s plain-str">Nirvana</span>
+<span class="s plain-str">Offspring</span>
+<span class="s plain-str">SlipKnot</span>
+<span class="s plain-str">Kid Rock</span>
+<span class="s plain-str">Veruca Salt</span>
+<span class="s plain-str">Wierd Al</span>
+<span class="s plain-str">Green Day</span>
+<span class="s plain-str">Static-X</span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;,,             ,,                                 ,, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;         ;; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;      ,;;;;   ;;;       ;;;;,         ;;;;  ;;;         ,;;;; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;;;,    ;;;    ;;          ;;;; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;;;;;   ;;;   ,; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt; ;;;;;;;;; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;Font face=&quot;Arial&quot;&gt;   ;;;,;; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Sign On</span>
+<span class="s plain-str">Ingored <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">UnIngored <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Playing - <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">pl&#x27;&#x27; And 0 -</span>
+<span class="s plain-str">cancel&#x27;&#x27;</span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">General <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Marketing <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">you online</span>
+<span class="s plain-str">:                               &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                              &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                            &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                          &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                        &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                      &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                    &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:                 &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:               &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:              &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">:           &lt;font color=#000000&gt;&lt;/b&gt;&lt;font ptsize=10&gt;</span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt; a href=&quot;</span>
+<span class="s plain-str">handle?</span>
+<span class="s plain-str">] Trigger [</span>
+<span class="s plain-str">ms idle off</span>
+<span class="s plain-str">Isnt Online</span>
+<span class="s plain-str">] Commands</span>
+<span class="s plain-str">] Times</span>
+<span class="s plain-str">Time Reset</span>
+<span class="s plain-str">ProFile</span>
+<span class="s plain-str">] Mp3s In [</span>
+<span class="s plain-str">Has X&#x27;ed [</span>
+<span class="s plain-str">_IID_UPCHAT1</span>
+<span class="s plain-str">_IID_FORM3</span>
+<span class="s plain-str">_IID_FORM1</span>
+<span class="s plain-str">_IID_FORM2</span>
+<span class="s plain-str">_IID_FORM4</span>
+<span class="s plain-str">_IID_FORM5</span>
+</details>
+<div class="stats">Total unique strings: 2285 · Interesting: 459 · Noise filtered: 1184</div>
+</div></body></html>

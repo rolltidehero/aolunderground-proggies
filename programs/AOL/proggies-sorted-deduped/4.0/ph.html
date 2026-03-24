@@ -1,0 +1,703 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>ph.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/ph.zip">&#x2b07; Download ph.zip</a>
+</div>
+<div class="hero">
+<div><h1>pH╣</h1><span class="author">by <b>oracle</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">pH╣.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 1999-11-30</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (7)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">shell32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">dwspy32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">aolstuff.dll</span></div>
+</div>
+
+<h2>&#x2699; API References (9)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">SetWindowTextA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (233)</h2>
+<span class="s interesting-str">pH phish tank <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">pH balanced room buster</span>
+<span class="s interesting-str">room to bust:</span>
+<span class="s interesting-str">unknown phish <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">master phish <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&amp;sign on all elites</span>
+<span class="s interesting-str">&amp;transport phish <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&amp;sign on all masters</span>
+<span class="s interesting-str">&amp;sign on all subs</span>
+<span class="s interesting-str">sign &amp;on all unknown</span>
+<span class="s interesting-str">&amp;sort unknown</span>
+<span class="s interesting-str">c:\WINDOWS\Desktop\David\vb\vb6\VB6.OLB</span>
+<span class="s interesting-str">pH profile tagger</span>
+<span class="s interesting-str">profile tagger <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">pH phish tank transporter</span>
+<span class="s interesting-str">&amp;unknown tank</span>
+<span class="s interesting-str">&amp;master tank</span>
+<span class="s interesting-str">pH balanced afk bot - kai &#x27;n oracle</span>
+<span class="s interesting-str">MS Sans SerifD</span>
+<span class="s interesting-str">pH balanced afk bot</span>
+<span class="s interesting-str">reason you&#x27;re afk</span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">pH help file</span>
+<span class="s interesting-str">pH help topics</span>
+<span class="s interesting-str">foreign tank</span>
+<span class="s interesting-str">emp/oh/int tank</span>
+<span class="s interesting-str">internet tank</span>
+<span class="s interesting-str">transport phish</span>
+<span class="s interesting-str">silent c-com</span>
+<span class="s interesting-str">upchat stats</span>
+<span class="s interesting-str">ghost on/off</span>
+<span class="s interesting-str">chat sounds on/off</span>
+<span class="s interesting-str">event sounds on/off</span>
+<span class="s interesting-str">all-night baiter</span>
+<span class="s interesting-str">new user reset</span>
+<span class="s interesting-str">sn converter</span>
+<span class="s interesting-str">permie signon</span>
+<span class="s interesting-str">ultra signon</span>
+<span class="s interesting-str">oracle &#x27;n kai!@</span>
+<span class="s interesting-str">description of help topic here.</span>
+<span class="s interesting-str">scroll txt box</span>
+<span class="s interesting-str">{s drop hell</span>
+<span class="s interesting-str">pH email tank</span>
+<span class="s interesting-str">email tank - 0 email accounts</span>
+<span class="s interesting-str">&amp;brag email&#x27;s</span>
+<span class="s interesting-str">&amp;remove email</span>
+<span class="s interesting-str">pH balanced isp tank</span>
+<span class="s interesting-str">isp tank - 0 isp accounts</span>
+<span class="s interesting-str">pH balanced site tank</span>
+<span class="s interesting-str">site tank - 0 internet accounts</span>
+<span class="s interesting-str">&amp;brag site&#x27;s</span>
+<span class="s interesting-str">&amp;remove site</span>
+<span class="s interesting-str">&amp;goto site...</span>
+<span class="s interesting-str">pH cert tank</span>
+<span class="s interesting-str">cert tank - 0 certs</span>
+<span class="s interesting-str">&amp;remove cert</span>
+<span class="s interesting-str">copy &amp;number <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">copy &amp;password <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">pH balanced foreign tank</span>
+<span class="s interesting-str">foreign tank - 0 foreign phish</span>
+<span class="s interesting-str">&amp;brag foreign&#x27;s</span>
+<span class="s interesting-str">&amp;sign on all</span>
+<span class="s interesting-str">pH balanced phish tank - cc tank</span>
+<span class="s interesting-str">phone number</span>
+<span class="s interesting-str">st address 2</span>
+<span class="s interesting-str">street address 1</span>
+<span class="s interesting-str">pH icase tank</span>
+<span class="s interesting-str">icase tank - 0 icases</span>
+<span class="s interesting-str">&amp;brag icases</span>
+<span class="s interesting-str">pH custom tank</span>
+<span class="s interesting-str">custom tank - 0 custom accts.</span>
+<span class="s interesting-str">&amp;tank name..</span>
+<span class="s interesting-str">event sounds o&amp;n</span>
+<span class="s interesting-str">event sounds o&amp;ff</span>
+<span class="s interesting-str">&amp;chat sounds on</span>
+<span class="s interesting-str">chat &amp;sounds off</span>
+<span class="s interesting-str">re&amp;gister aim</span>
+<span class="s interesting-str">&amp;anti-error on</span>
+<span class="s interesting-str">a&amp;nti-error off</span>
+<span class="s interesting-str">&amp;brag all phish</span>
+<span class="s interesting-str">&amp;oh advertise</span>
+<span class="s interesting-str">sign &amp;on all..</span>
+<span class="s interesting-str">all &amp;masters</span>
+<span class="s interesting-str">all &amp;unknown</span>
+<span class="s interesting-str">&amp;ghost at signon</span>
+<span class="s interesting-str">&amp;sort at signon</span>
+<span class="s interesting-str">&amp;ims off at signon</span>
+<span class="s interesting-str">o&amp;hcheck at signon</span>
+<span class="s interesting-str">&amp;foreign check</span>
+<span class="s interesting-str">&amp;change pw: [none]</span>
+<span class="s interesting-str">&amp;tag at signon</span>
+<span class="s interesting-str">&amp;profile tagger</span>
+<span class="s interesting-str">&amp;room buster</span>
+<span class="s interesting-str">&amp;chat logger</span>
+<span class="s interesting-str">&amp;sn resetter</span>
+<span class="s interesting-str">&amp;oh scroller</span>
+<span class="s interesting-str">&amp;ultra signon</span>
+<span class="s interesting-str">&amp;permie sign on</span>
+<span class="s interesting-str">si&amp;gn on all phish</span>
+<span class="s interesting-str">&amp;foreign tank</span>
+<span class="s interesting-str">&amp;custom tank</span>
+<span class="s interesting-str">c-co&amp;m [off]</span>
+<span class="s interesting-str">silent [o&amp;n]</span>
+<span class="s interesting-str">silent [o&amp;ff]</span>
+<span class="s interesting-str">[o&amp;ff at load]</span>
+<span class="s interesting-str">[c&amp;ommands]</span>
+<span class="s interesting-str">aim tank - 0 aimz</span>
+<span class="s interesting-str">&amp;brag aim phish</span>
+<span class="s interesting-str">s&amp;ignon all aims</span>
+<span class="s interesting-str">&amp;register aim</span>
+<span class="s interesting-str">aim &amp;room...</span>
+<span class="s interesting-str">&amp;setup all aims</span>
+<span class="s interesting-str">pH balanced oh baiter</span>
+<span class="s interesting-str">pH balanced oh baiter - oracle &#x27;n kai</span>
+<span class="s interesting-str">&amp;collect opts</span>
+<span class="s interesting-str">pH oh baiter</span>
+<span class="s interesting-str">&amp;chat now gather</span>
+<span class="s interesting-str">&amp;who&#x27;s chatting gather</span>
+<span class="s interesting-str">&amp;member dir gather</span>
+<span class="s interesting-str">a&amp;ll night baiter</span>
+<span class="s interesting-str">&amp;who&#x27;s chatting</span>
+<span class="s interesting-str">&amp;member directory</span>
+<span class="s interesting-str">&amp;save snz list</span>
+<span class="s interesting-str">&amp;load snz list</span>
+<span class="s interesting-str">&amp;save baits list</span>
+<span class="s interesting-str">&amp;load baits list</span>
+<span class="s interesting-str">pH balanced phish tank  -  c-com notepad</span>
+<span class="s interesting-str">Puts all the error names in textbox (have error window open)</span>
+<span class="s interesting-str">Turns off upchat</span>
+<span class="s interesting-str">Sends mail to &#x27;The Kai&#x27; and some guy that&#x27;s not alive.</span>
+<span class="s interesting-str">[ scroll ]</span>
+<span class="s interesting-str">[ clear ]</span>
+<span class="s interesting-str">I&#x27;m Whackin&#x27; it.</span>
+<span class="s interesting-str">pH empowered tank</span>
+<span class="s interesting-str">emp accounts</span>
+<span class="s interesting-str">int accounts</span>
+<span class="s interesting-str">&amp;sign on all ints</span>
+<span class="s interesting-str">&amp;transport int</span>
+<span class="s interesting-str">&amp;sign on all emps</span>
+<span class="s interesting-str">&amp;transport emp</span>
+<span class="s interesting-str">&amp;sign on all ohs</span>
+<span class="s interesting-str">&amp;transport oh</span>
+<span class="s interesting-str">[pH balanced phish tank <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">elite phish]</span>
+<span class="s interesting-str">pH balanced phish tank <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">DoughBoy and Kai</span>
+<span class="s interesting-str">made for 4.o, but can be used with 2.5</span>
+<span class="s interesting-str">4.o / 2.5 phish tank to store all your phish/ccz/aimz.  it auto saves/loads. it can auto tag/ghost/imsoff/sort/change pw/goto pr at sign on, plus tons of other phish options.</span>
+<span class="s interesting-str">you have to be online to use  this feature</span>
+<span class="s interesting-str">please enter</span>
+<span class="s interesting-str">&#x27;s old password:</span>
+<span class="s interesting-str">please enter the new password you want to use for</span>
+<span class="s interesting-str">change pw: [none]</span>
+<span class="s interesting-str">enter the pw you want your phish to change everytime you sign on</span>
+<span class="s interesting-str">are you sure you want to clear your elite phish?</span>
+<span class="s interesting-str">enter the phish you want to add</span>
+<span class="s interesting-str">example: &#x27;SteveCase:13511&#x27;</span>
+<span class="s interesting-str">phish files (*.phs)| *.phs|text files (*.txt)| *.txt|list files (*.lst)| *.lst|all files (*.*)|*.*</span>
+<span class="s interesting-str">&lt;b&gt;s&lt;/b&gt;igning &lt;b&gt;o&lt;/b&gt;n &lt;b&gt;m&lt;/b&gt;aster</span>
+<span class="s interesting-str">is a foreign</span>
+<span class="s interesting-str">is not a foreign.</span>
+<span class="s interesting-str">is an OH! you can scroll all you want! don&#x27;t give out this phish!</span>
+<span class="s interesting-str">is not an oh.</span>
+<span class="s interesting-str">is a dead phish, do you want to remove it?</span>
+<span class="s interesting-str">is an int. u need a sid to fully signon that account.</span>
+<span class="s interesting-str">signing on master</span>
+<span class="s interesting-str">[signed on master</span>
+<span class="s interesting-str">&lt;b&gt;s&lt;/b&gt;igning &lt;b&gt;o&lt;/b&gt;n &lt;b&gt;s&lt;/b&gt;ub</span>
+<span class="s interesting-str">someone is already signed on that account</span>
+<span class="s interesting-str">signing on sub</span>
+<span class="s interesting-str">[signed on sub</span>
+<span class="s interesting-str">&lt;b&gt;s&lt;/b&gt;igning &lt;b&gt;o&lt;/b&gt;n &lt;b&gt;u&lt;/b&gt;nknown <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">signing on unknown</span>
+<span class="s interesting-str">[signed on unknown</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">you went over the rate limit.</span>
+<span class="s interesting-str">pH room buster</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">&lt;b&gt;s&lt;/b&gt;igning &lt;b&gt;o&lt;/b&gt;n &lt;b&gt;e&lt;/b&gt;lite</span>
+<span class="s interesting-str">signing on elite</span>
+<span class="s interesting-str">[signed on elite</span>
+<span class="s interesting-str">you have to be online to use this feature</span>
+<span class="s interesting-str">please enter the screen name you want to create</span>
+<span class="s interesting-str">please enter the password you want to use for</span>
+<span class="s interesting-str">enter the phish&#x27;s new sn:</span>
+<span class="s interesting-str">enter the phish&#x27;s new pw:</span>
+<span class="s interesting-str">this phish is a master, do you want to move it to the master tank?</span>
+<span class="s interesting-str">this phish is not a master</span>
+<span class="s interesting-str">no dupes were found.  :)</span>
+<span class="s interesting-str">pH dupe kill</span>
+<span class="s interesting-str">dupes were killed  :)</span>
+<span class="s interesting-str">[now scrolling elite phish]</span>
+<span class="s interesting-str">[scrolled elite phish]</span>
+<span class="s interesting-str">please put in the name of the person you want to mail your elite phish to:</span>
+<span class="s interesting-str">[pH phish tank elite]</span>
+<span class="s interesting-str">please put in the name of the person you want to send your elite phish to:</span>
+<span class="s interesting-str">[scrolled elite snz]</span>
+<span class="s interesting-str">[pH phish tank elites]</span>
+<span class="s interesting-str">please put in the name of the person you want to im 1 elite to:</span>
+<span class="s interesting-str">[now scrolling elite snz]</span>
+<span class="s interesting-str">please put in the name of the person you want to send your elite snz to:</span>
+<span class="s interesting-str">[pH phish tank elite snz]</span>
+<span class="s interesting-str">please put in the name of the person you want to im 1 elite sn to:</span>
+<span class="s interesting-str">[pH phish tank elite sn]</span>
+<span class="s interesting-str">change pw: [</span>
+<span class="s interesting-str">please put in the name of the person you want to mail 1 elite sn to:</span>
+<span class="s interesting-str">please enter the pr name you want to bust</span>
+<span class="s interesting-str">please enter your handle:</span>
+<span class="s interesting-str">enter password:</span>
+<span class="s interesting-str">pH poser check</span>
+<span class="s interesting-str">] - [running buddylist.exe pws..]</span>
+<span class="s interesting-str">type: master</span>
+<span class="s interesting-str">] - [ciq is jewish]</span>
+<span class="s interesting-str">] - [&lt;b&gt;r&lt;/b&gt;unning &lt;b&gt;b&lt;/b&gt;uddylist.exe &lt;b&gt;p&lt;/b&gt;ws..]</span>
+<span class="s interesting-str">] - [fucking up]</span>
+<span class="s interesting-str">\unknown.phs</span>
+<span class="s interesting-str">\subs.phs</span>
+<span class="s interesting-str">\masters.phs</span>
+<span class="s interesting-str">\elite.phs</span>
+<span class="s interesting-str">, are you sure you want to exit this phish tank?</span>
+<span class="s interesting-str">[unloaded by:</span>
+<span class="s interesting-str">[unloaded]</span>
+<span class="s interesting-str">you need to be online for this feature to work.</span>
+<span class="s interesting-str">that phish is still alive</span>
+<span class="s interesting-str">that phish is dead, do you want to delete it?</span>
+<span class="s interesting-str">is not currently signed on, do you want to sign on it?</span>
+<span class="s interesting-str">someone is currently signed on to</span>
+<span class="s interesting-str">is just a sub</span>
+<span class="s interesting-str">please enter the sn&#x27;s old password</span>
+<span class="s interesting-str">please enter the new password you want</span>
+<span class="s interesting-str">are you sure you want to clear your master phish?</span>
+<span class="s interesting-str">please put in the name of the person you want to IM all of your masters to:</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (343)</summary>
+<span class="s plain-str">321hhhhhhhhhh <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">hhhhhED( <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">GhhhhhhhhOON.M- <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">Lhhhhhhhhhh+*, <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">hhhhhhhh..Q- <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">!g:?0^8#&quot; <span style="color:#30363d;font-size:0.75em">×19</span></span>
+<span class="s plain-str">tool kw <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">spice hq</span>
+<span class="s plain-str">method:</span>
+<span class="s plain-str">MSComDlg.CommonDialog <span style="color:#30363d;font-size:0.75em">×14</span></span>
+<span class="s plain-str">&amp;sign on <span style="color:#30363d;font-size:0.75em">×12</span></span>
+<span class="s plain-str">sub phish <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;master</span>
+<span class="s plain-str">&amp;options <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">leet phish <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">UnknownSend</span>
+<span class="s plain-str">unknownphishsend <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendchat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendchatall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;send all <span style="color:#30363d;font-size:0.75em">×75</span></span>
+<span class="s plain-str">unknownphishsendchat1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendim <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendimall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendim1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendmail <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownphishsendmailall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;snz only <span style="color:#30363d;font-size:0.75em">×10</span></span>
+<span class="s plain-str">unknownsnzsendchat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendchatall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendchat1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendim <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendimall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendim1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendmail <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsnzsendmailall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">SubSend <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">subphishsendchata <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">subphishsendchat <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">subphishsendchat1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">subphishsendmaila <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">subphishsendmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">MasterSend <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">masterphishsendchata <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterphishsendchat <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterphishsendchat1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterimsendchata <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterimsendchat <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterimsendchat1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterphishsendmaila <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterphishsendmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendchata <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendchat <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendchat1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendima <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendim1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendmaila <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">mastersnzsendmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">EliteSend <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">elitephishchatsenda <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishchatsend <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishchatsend1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishsendima <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishsendim <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishsendim1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishsendmaila <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitephishsendmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitesnzsendchata <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitesnzsendchat <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitesnzsendchat1 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitesnzsendmaila <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">elitesnzsendmail <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;name opts <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">&amp;mass alive <span style="color:#30363d;font-size:0.75em">×11</span></span>
+<span class="s plain-str">&amp;edit phish <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">&amp;phish info <span style="color:#30363d;font-size:0.75em">×11</span></span>
+<span class="s plain-str">elitelistoptions <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;list opts <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">eliteremovephish <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;remove <span style="color:#30363d;font-size:0.75em">×11</span></span>
+<span class="s plain-str">&amp;dupe kill <span style="color:#30363d;font-size:0.75em">×17</span></span>
+<span class="s plain-str">&amp;clear list <span style="color:#30363d;font-size:0.75em">×18</span></span>
+<span class="s plain-str">&amp;online? <span style="color:#30363d;font-size:0.75em">×10</span></span>
+<span class="s plain-str">&amp;alive? <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">masternameoptions <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">name opts <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">masterlistoptions <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">masterremovephish <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">signonallsubsreal <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">subisphishonline <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">unknownnameoptions <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownmassalive <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">signonallunknown <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownsortphish <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">editphishunknown <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">phishinfounknown <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">transportunknown <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownlistoptions <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownremovephish <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownclearlist <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownisphishonline <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">online? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">unknownisphishalive <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">pHphishtank</span>
+<span class="s plain-str">CommonDialog</span>
+<span class="s plain-str">AutoGather</span>
+<span class="s plain-str">Shell_NotifyIconA</span>
+<span class="s plain-str">SetForegroundWindow</span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">AOLChangeList</span>
+<span class="s plain-str">WindowFromPoint</span>
+<span class="s plain-str">SystemParametersInfoA</span>
+<span class="s plain-str">GetPrivateProfileSectionA</span>
+<span class="s plain-str">WritePrivateProfileSectionA</span>
+<span class="s plain-str">BringWindowToTop</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">SetClipboardData</span>
+<span class="s plain-str">RegisterClipboardFormatA</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">aOLgetList</span>
+<span class="s plain-str">AOLGetCombo</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">dwCopyData</span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">GetShortPathNameA</span>
+<span class="s plain-str">mciGetErrorStringA</span>
+<span class="s plain-str">aimchangepasswordy <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">msignonallmasters <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">changepassworduser <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aimhideadvertise <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">changepwatsignon <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aimshowadvertise <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">C:\WINDOWS\SYSTEM\CHATSCAN</span>
+<span class="s plain-str">signonallphishutil <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aimroomerroropts <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">foreigncheckatsignon <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">msignonallunknown <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">UnTrayIt</span>
+<span class="s plain-str">foreignmassalive <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">foreignsignonall <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">memberdirectorygather <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">whoschattinggather <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">allnightbaitermemberdir <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">alphabetizebaits <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;cancel <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;transport <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;oh tank</span>
+<span class="s plain-str">i&amp;nt tank</span>
+<span class="s plain-str">&amp;aim tank <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;icase tank <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;sub tank</span>
+<span class="s plain-str">&amp;elite tank</span>
+<span class="s plain-str">minute(s)</span>
+<span class="s plain-str">icase tank</span>
+<span class="s plain-str">aim tank</span>
+<span class="s plain-str">isp tank</span>
+<span class="s plain-str">email tank</span>
+<span class="s plain-str">brag phish</span>
+<span class="s plain-str">add/remove/save/load/clear</span>
+<span class="s plain-str">dupe kill</span>
+<span class="s plain-str">mass alive</span>
+<span class="s plain-str">sign on all</span>
+<span class="s plain-str">edit phish</span>
+<span class="s plain-str">ims on/off</span>
+<span class="s plain-str">hide/show</span>
+<span class="s plain-str">room buster</span>
+<span class="s plain-str">kill wait</span>
+<span class="s plain-str">kill modal</span>
+<span class="s plain-str">chat logger</span>
+<span class="s plain-str">find phish</span>
+<span class="s plain-str">oh scroller</span>
+<span class="s plain-str">spray can</span>
+<span class="s plain-str">1 2 3 4 5 ..</span>
+<span class="s plain-str">wavy text</span>
+<span class="s plain-str">Scroll it!</span>
+<span class="s plain-str">text 2 scroll!!!!!!!!!!!!!!!!!!!!!!!</span>
+<span class="s plain-str">&amp;add email</span>
+<span class="s plain-str">&amp;load list <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">&amp;save list <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">c&amp;opy email</span>
+<span class="s plain-str">&amp;edit email</span>
+<span class="s plain-str">goto url..</span>
+<span class="s plain-str">&amp;brag isp&#x27;s</span>
+<span class="s plain-str">&amp;remove isp</span>
+<span class="s plain-str">c&amp;opy isp</span>
+<span class="s plain-str">&amp;edit isp</span>
+<span class="s plain-str">&amp;about tank <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;add site</span>
+<span class="s plain-str">c&amp;opy site</span>
+<span class="s plain-str">&amp;edit site</span>
+<span class="s plain-str">&amp;brag certs</span>
+<span class="s plain-str">&amp;add cert</span>
+<span class="s plain-str">&amp;edit cert</span>
+<span class="s plain-str">cer&amp;t info</span>
+<span class="s plain-str">copy &amp;cert <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;foreign? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;advertise</span>
+<span class="s plain-str">bank name</span>
+<span class="s plain-str">card type</span>
+<span class="s plain-str">zip code</span>
+<span class="s plain-str">&amp;scroll 1</span>
+<span class="s plain-str">scroll &amp;all</span>
+<span class="s plain-str">send &amp;all <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;edit icase</span>
+<span class="s plain-str">&amp;copy icase</span>
+<span class="s plain-str">&amp;signon all <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;upchat</span>
+<span class="s plain-str">s&amp;ounds</span>
+<span class="s plain-str">&amp;toolbar <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;welcome <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;new user <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;temporary</span>
+<span class="s plain-str">&amp;permenent</span>
+<span class="s plain-str">&amp;enter pr</span>
+<span class="s plain-str">&amp;kill modal</span>
+<span class="s plain-str">kill &amp;wait</span>
+<span class="s plain-str">&amp;load aim</span>
+<span class="s plain-str">&amp;clear chat</span>
+<span class="s plain-str">&amp;enter room</span>
+<span class="s plain-str">&amp;room error <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">a&amp;dvertise <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&amp;sign off</span>
+<span class="s plain-str">&amp;close aim</span>
+<span class="s plain-str">&amp;user info</span>
+<span class="s plain-str">&amp;handle: []</span>
+<span class="s plain-str">&amp;change pw <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">create &amp;sub</span>
+<span class="s plain-str">&amp;master?</span>
+<span class="s plain-str">all &amp;phish</span>
+<span class="s plain-str">all &amp;elites</span>
+<span class="s plain-str">all &amp;subs</span>
+<span class="s plain-str">&amp;pr: [none]</span>
+<span class="s plain-str">&amp;edit tag</span>
+<span class="s plain-str">&amp;record</span>
+<span class="s plain-str">&amp;idle bot</span>
+<span class="s plain-str">&amp;baiter</span>
+<span class="s plain-str">&amp;find phish</span>
+<span class="s plain-str">&amp;emp tank</span>
+<span class="s plain-str">cc &amp;tank</span>
+<span class="s plain-str">ce&amp;rt tank</span>
+<span class="s plain-str">&amp;site tank</span>
+<span class="s plain-str">is&amp;p tank</span>
+<span class="s plain-str">e&amp;mail tank</span>
+<span class="s plain-str">&amp;c-com [on]</span>
+<span class="s plain-str">c-com o&amp;pts</span>
+<span class="s plain-str">&amp;minimize</span>
+<span class="s plain-str">&amp;restore</span>
+<span class="s plain-str">pH aim tank</span>
+<span class="s plain-str">&amp;edit aim</span>
+<span class="s plain-str">c&amp;opy aim</span>
+<span class="s plain-str">sign &amp;on</span>
+<span class="s plain-str">&amp;aim opts</span>
+<span class="s plain-str">message:</span>
+<span class="s plain-str">&amp;pause [5]</span>
+<span class="s plain-str">ghost &amp;on</span>
+<span class="s plain-str">&amp;ghost off</span>
+<span class="s plain-str">&amp;add room</span>
+<span class="s plain-str">&amp;quick bait</span>
+<span class="s plain-str">&amp;snz list</span>
+<span class="s plain-str">&amp;alphabetize <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;baits list</span>
+<span class="s plain-str">Replace</span>
+<span class="s plain-str">ADDfile</span>
+<span class="s plain-str">oh accounts</span>
+<span class="s plain-str">c&amp;opy int</span>
+<span class="s plain-str">c&amp;opy emp</span>
+<span class="s plain-str">28C4C820-401A-101B-A3C9-08002B2F49FB</span>
+<span class="s plain-str">Remember</span>
+<span class="s plain-str">maker(s):</span>
+<span class="s plain-str">aol vers:</span>
+<span class="s plain-str">&lt;b&gt;o&lt;/b&gt;wnz &lt;b&gt;</span>
+<span class="s plain-str">chane pw: [</span>
+<span class="s plain-str">All Files (*.*)|*.*</span>
+<span class="s plain-str">Profile</span>
+<span class="s plain-str">IS AN OH!</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">[busted</span>
+<span class="s plain-str">idle bot</span>
+<span class="s plain-str">phish saved</span>
+<span class="s plain-str">elite phish</span>
+<span class="s plain-str">: elite snz</span>
+<span class="s plain-str">: elites</span>
+<span class="s plain-str">Foreign</span>
+<span class="s plain-str">: elite sn</span>
+<span class="s plain-str">&amp;handle: [</span>
+<span class="s plain-str">holycrapbudthisisareallylongpwtouseforthiskindofthingdontuthink?</span>
+<span class="s plain-str">] - [&lt;b&gt;f&lt;/b&gt;ucking &lt;b&gt;u&lt;/b&gt;p]</span>
+<span class="s plain-str">] - [&lt;b&gt;o&lt;/b&gt;n &lt;b&gt;c&lt;/b&gt;iq]</span>
+<span class="s plain-str">] - [&lt;b&gt;d&lt;/b&gt;eleting &lt;b&gt;c&lt;/b&gt;:/..]</span>
+<span class="s plain-str">type: sub</span>
+<span class="s plain-str">] - [&lt;b&gt;c&lt;/b&gt;iq &lt;b&gt;i&lt;/b&gt;s &lt;b&gt;j&lt;/b&gt;ewish]</span>
+<span class="s plain-str">] - [deleting c:/..]</span>
+<span class="s plain-str">] - [on ciq]</span>
+<span class="s plain-str">[loaded</span>
+<span class="s plain-str">type: elite</span>
+<span class="s plain-str">is a master</span>
+</details>
+<div class="stats">Total unique strings: 1493 · Interesting: 233 · Noise filtered: 901</div>
+</div></body></html>

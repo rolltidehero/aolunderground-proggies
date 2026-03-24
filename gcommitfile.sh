@@ -1,30 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-function usage {
-    echo "Usage: $(basename $0) <filename>"    
+trap 'printf "\nInterrupted\n"; exit 130' INT TERM
+
+usage() {
+    printf "Usage: %s <filename>\n" "$(basename "$0")"
 }
 
-function die {
-    declare MSG="$@"
-    echo -e "$0: Error: $MSG">&2
+die() {
+    printf "%s: Error: %s\n" "$0" "$*" >&2
     exit 1
 }
 
-(( "$#" == 1 )) || die "Wrong arguments.\n\n$(usage)"
+(( "$#" == 1 )) || die "Wrong arguments.$(printf '\n\n')$(usage)"
 
-FILE="${1}"
-COMMIT_MESSAGE="autocommit"
+readonly FILE="${1}"
+readonly COMMIT_MESSAGE="autocommit"
 
-[ -f "${FILE}" ] || die "File $FILE does not exist"
+[[ -f "${FILE}" ]] || die "File ${FILE} does not exist"
 
-echo -n "adding $FILE to git..."
-git add "${FILE}" || die "git add $FILE has failed."
-echo done
+printf "adding %s to git..." "${FILE}"
+git add "${FILE}" || die "git add ${FILE} has failed."
+printf "done\n"
 
-echo "commiting $file to git..."
-git commit -m "$COMMIT_MESSAGE" || die "git commit has failed."
-
-echo "pushing to origin..."
-git push origin || die "git push origin has failed"
-
-exit 0
+printf "committing %s to git...\n" "${FILE}"
+git commit -m "${COMMIT_MESSAGE}" || die "git commit has failed."
+# push handled by post-commit hook

@@ -1,0 +1,555 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>alien.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/alien.zip">&#x2b07; Download alien.zip</a>
+</div>
+<div class="hero">
+<div><h1>alien</h1><span class="author">by <b>nocturnal</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">alien.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-11-14</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (6)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MP3PLAY.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSINET.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">CHATOCX2.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (28)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">SetWindowTextA</span></div>
+<div class="api-item"><span class="api-name">_aol_edit</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_ComboBox</span></div>
+<div class="api-item"><span class="api-name">aol child</span></div>
+<div class="api-item"><span class="api-name">_aol_toolbar</span></div>
+<div class="api-item"><span class="api-name">_aol_icon</span></div>
+<div class="api-item"><span class="api-name">_aol_listbox</span></div>
+<div class="api-item"><span class="api-name">_AOL_Image</span></div>
+<div class="api-item"><span class="api-name">aol frame25</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_Gauge</span></div>
+<div class="api-item"><span class="api-name">_AOL_edit</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (252)</h2>
+<span class="s interesting-str">Photoshop 3.0</span>
+<span class="s interesting-str">Copyright (c) 1998 Hewlett-Packard Company</span>
+<span class="s interesting-str">sRGB IEC61966-2.1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">IEC http://www.iec.ch <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">.IEC 61966-2.1 Default RGB colour space - sRGB <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">,Reference Viewing Condition in IEC61966-2.1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">alien toolz 1 <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">VB6Chat2.Chat <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">InetCtlsObjects.Inet <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">D:\VB6\VB98\CHATOCX2.oca</span>
+<span class="s interesting-str">d:\vb6\VB6.OLB</span>
+<span class="s interesting-str">C:\WINDOWS.000\SYSTEM\MSINET.oca</span>
+<span class="s interesting-str">D:\VB6\VB98\MP3PLAY.oca</span>
+<span class="s interesting-str">Alien Tools by tarox <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Times New Roman <span style="color:#484f58;font-size:0.75em">×10</span></span>
+<span class="s interesting-str">comic sans ms <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Abadi Mt Condensed <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">playing - song 128</span>
+<span class="s interesting-str">Ascii Options - Settings</span>
+<span class="s interesting-str">dir (directory)</span>
+<span class="s interesting-str">color (#color code)</span>
+<span class="s interesting-str">ascii (ascii)</span>
+<span class="s interesting-str">asciifnt (font)</span>
+<span class="s interesting-str">font (font name)</span>
+<span class="s interesting-str">lbrack (bracket)</span>
+<span class="s interesting-str">rbrack (bracket)</span>
+<span class="s interesting-str">brcol (#color code)</span>
+<span class="s interesting-str">trig (trigger)</span>
+<span class="s interesting-str">locate (name)</span>
+<span class="s interesting-str">unimx (name)</span>
+<span class="s interesting-str">pfile (name)</span>
+<span class="s interesting-str">add (num1, num2)</span>
+<span class="s interesting-str">subtract (num1, num2)</span>
+<span class="s interesting-str">divide (num1, num2)</span>
+<span class="s interesting-str">multiply (num1, num2)</span>
+<span class="s interesting-str">shell (filepath)</span>
+<span class="s interesting-str">link (url, text)</span>
+<span class="s interesting-str">kw (keyword)</span>
+<span class="s interesting-str">roomname (roomname)</span>
+<span class="s interesting-str">im (name, msg)</span>
+<span class="s interesting-str">Chat Commands</span>
+<span class="s interesting-str">M*\AD:\projecta1\alien.vbp</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot; <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt;&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;alien &lt;/B&gt;tooz</span>
+<span class="s interesting-str">by tarox &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;unloaded&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;download &lt;/B&gt;now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt; a href=&quot;http://www.8op.com/tarox&quot;&gt;&lt;font color=&quot;#c0c0ff&quot;&gt;here&lt;/a&gt;&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;advertise&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">\welcome.lst</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;welcome &lt;/B&gt;bot msg added &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;sorry &lt;/B&gt;you have &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;B&gt;0 welcome msg&#x27;s set&lt;/B&gt;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;welcome &lt;/B&gt;bot is &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;welcome &lt;/B&gt;messages &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">\tarox.ini</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;right &lt;/B&gt;bracket set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;left &lt;/B&gt;bracket set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; bracket &lt;B&gt;color &lt;/B&gt;set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;ascii &lt;/B&gt;set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; ascii &lt;B&gt;font &lt;/B&gt;set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT   FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; font set to  &lt;FONT  COLOR=&quot;+mainn.colorr+&quot; &gt;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; new note  &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">\notes.lst</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;notes &lt;/B&gt;are&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;cleared&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;auto &lt;/B&gt;upchat&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;activated&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;deactivated&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; text &lt;B&gt;fade &lt;/B&gt;set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;date &lt;/B&gt;is &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;time &lt;/B&gt;is &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;commands &lt;/B&gt;are now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;shown&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; room &lt;B&gt;name &lt;/B&gt;set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;on&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;user &lt;/B&gt;set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; ascii &lt;B&gt;color &lt;/B&gt;set &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; going to &lt;B&gt;keyword &lt;/B&gt; &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; file &lt;B&gt;loading &lt;/B&gt; &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; error &lt;B&gt;loading &lt;/B&gt; &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;file not found&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">error complete&lt;FONT color=&quot;#FFFFEE&quot;&gt;&lt;xmp&gt;{&lt;xmp&gt;S con\con}</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; checking for &lt;B&gt;update &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;started&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">http://www.sealteamsix.com/taroxx/version2.txt</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;update&lt;/b&gt; status &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;no new update&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; new &lt;B&gt;update &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;vers 1.1 -</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; uplad status uploading &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;Times New Roman&quot; LANG=&quot;0&quot;&gt; percent &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;signing off&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;preload &lt;/B&gt;is now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; online &lt;B&gt;time&lt;/B&gt; &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;aim&lt;/B&gt; screen name &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; getting &lt;B&gt;mail &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;new mail&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;old mail&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;sent mail&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;i&lt;/B&gt;nstant &lt;B&gt;m&lt;/B&gt;essages &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;off&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;ghosting &lt;/B&gt;is now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;instant &lt;/B&gt;messageing &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;title &lt;/B&gt;bar color code &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;trigger &lt;/B&gt;is now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;removed&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;trigger &lt;/B&gt;set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; getting &lt;B&gt;profile &lt;/B&gt;for &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;ignoreing &lt;/B&gt;ims from &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;unignoreing &lt;/B&gt;ims from &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;playing &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; &gt;loaded&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;B&gt;&lt;I&gt;pauseing &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;B&gt;&lt;I&gt;unpauseing &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; select a directory &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;no dir found&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;mp3s&lt;/U&gt; will now be &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;B&gt;&lt;I&gt;repeated &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;mp3s&lt;/U&gt; will no longer be &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;B&gt;&lt;I&gt;shuffeld &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;mp3 directory&lt;/U&gt; is now &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;refreshed&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;volume&lt;/U&gt; set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;speed&lt;/U&gt; set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;seeking&lt;/U&gt;  to  &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; uh wtf &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;invalid number&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;B&gt;&lt;I&gt;stopping &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;directory&lt;/U&gt; is &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;invalid or 0 mp3s&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;&lt;I&gt;directory &lt;/B&gt;&lt;/I&gt;set to &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;U&gt;total mp3s&lt;/U&gt; in directory &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; no mp3 file &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; multiple mp3s &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">found&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">has entered the room</span>
+<span class="s interesting-str">Type Keyword or Web Address here and click Go</span>
+<span class="s interesting-str">Send Instant Message</span>
+<span class="s interesting-str">America Online</span>
+<span class="s interesting-str">Member Directory</span>
+<span class="s interesting-str">Member Directory Search Results</span>
+<span class="s interesting-str">c:\windows\command\start.exe</span>
+<span class="s interesting-str">AOL Gateways:  aol://4344:1186.Gateway.3685343.498065448</span>
+<span class="s interesting-str">Guide Rainman:  aol://4344:1186.guide.3682978.488405094</span>
+<span class="s interesting-str">Guide Conf Room:  aol://4344:1186.ConfRms.3685342.498065107</span>
+<span class="s interesting-str">Guide Libaries:  aol://4344:1186.ResLib.3685341.498053484</span>
+<span class="s interesting-str">ARC:  aol://4344:666.arcform.860809.504463074 = normal</span>
+<span class="s interesting-str">Community Center:  aol://4344:1186.comcen.3683158.490570698</span>
+<span class="s interesting-str">Rainman Cmds:  aol://4344:1.rmc.70682.473023645 = normal</span>
+<span class="s interesting-str">Forms:  aol://4344:1.formscat.71914.474386750 = normal</span>
+<span class="s interesting-str">S&amp;S Policy:  aol://4344:223.pnp.91463.482279948</span>
+<span class="s interesting-str">Special Acnts:  aol://4344:223.specacct.89721.481584812</span>
+<span class="s interesting-str">Secrets:  aol://4344:409.secrets.6553845.498835541 = normal</span>
+<span class="s interesting-str">Search Stuff: aol://4344:204.z66proj2.1845884.505890733</span>
+<span class="s interesting-str">OH account:  aol://4344:20.oh1te.92384.497065962</span>
+<span class="s interesting-str">TLA app:  aol://4344:20.tlaapp1.125506.492637725</span>
+<span class="s interesting-str">Special Account Groups:  aol://4344:223.affingrp.89731.481585326</span>
+<span class="s interesting-str">CNN:  aol://4344:223.cnn.89754.481594657</span>
+<span class="s interesting-str">DEMO Accounts:  aol://4344:223.demo.89755.481594657</span>
+<span class="s interesting-str">Special Account Desc&#x27;s:  aol://4344:223.specacct.89721.481584812</span>
+<span class="s interesting-str">April Promo Codes:  aol://4344:223.aprilpr.96692.512240264</span>
+<span class="s interesting-str">Promotion Codes:  aol://4344:223.promocd.6558384.500850050</span>
+<span class="s interesting-str">Canadian Software:  aol://4344:223.ca ad2.6602532.512279521</span>
+<span class="s interesting-str">Marketing Info:  aol://4344:223.markting.6558102.5007 4022</span>
+<span class="s interesting-str">Did You Know???:  aol://4344:223.helpdocs.84876.494254534</span>
+<span class="s interesting-str">Guide Program:  aol://4344:1186.guide.3682978.488405094</span>
+<span class="s interesting-str">Conference Room:  aol://4344:243.mainconf.5964915.500 42609</span>
+<span class="s interesting-str">Computing Channel:  aol://4344:1454.comp_cha.3407965.483568458</span>
+<span class="s interesting-str">Art Shop:  aol://1722:testview</span>
+<span class="s interesting-str">, you ma #1 Hoe</span>
+<span class="s interesting-str">AOL Pointers Newstand:  aol://4344:559.newslet.4129994.494194276</span>
+<span class="s interesting-str">Host/IP list:  aol://4344:204.rslists.67146.468717561</span>
+<span class="s interesting-str">Examine Object Info:  aol://1722:eoi</span>
+<span class="s interesting-str">, i dont luv dem Hoe&#x27;z</span>
+<span class="s interesting-str">, You a BITCH!</span>
+<span class="s interesting-str">, Pimp Slap... Kow PLOW!!!</span>
+<span class="s interesting-str">, all Bitchez da Same</span>
+<span class="s interesting-str">, u a Str8 up HOE!</span>
+<span class="s interesting-str">, im through Witchu Bitch!</span>
+<span class="s interesting-str">, Im a lowked out gangzta Set trippin baby!</span>
+<span class="s interesting-str">, Suck on Deez Nuttz</span>
+<span class="s interesting-str">, Gimmie Some head</span>
+<span class="s interesting-str">, guezz what  .....DIZ DICK!</span>
+<span class="s interesting-str">, bend ova bitch</span>
+<span class="s interesting-str">, Im your daddy</span>
+<span class="s interesting-str">, Im your pimp</span>
+<span class="s interesting-str">, pimp dick in yo mouth</span>
+<span class="s interesting-str">, where&#x27;z ma money hoe</span>
+<span class="s interesting-str">, yo mom wuz ma #1 Hoe</span>
+<span class="s interesting-str">Cuming 4 you!</span>
+<span class="s interesting-str">, i buzt u in da 4-head</span>
+<span class="s interesting-str">, 1 burzt n out 4 da count</span>
+<span class="s interesting-str">, IXI - tru pimpz 4 life</span>
+<span class="s interesting-str">, Hoe 4 Crack?</span>
+<span class="s interesting-str">, Juz 1 more Sip...</span>
+<span class="s interesting-str">, u gotta stinkin azz p&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;u&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;z&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;z&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;y&lt;html&gt;&lt;/html&gt;&lt;html&gt;&lt;/html&gt;</span>
+<span class="s interesting-str">, yo azz smellz betta den yo puzzy</span>
+<span class="s interesting-str">, who u backtalkin?</span>
+<span class="s interesting-str">, I slap da shit outta u bitch</span>
+<span class="s interesting-str">, Pimp all Bitchez~</span>
+<span class="s interesting-str">C:\windows\win.ini</span>
+<span class="s interesting-str">Who&#x27;s Chatting</span>
+<span class="s interesting-str">Buddy List Window</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">AOL Parental Controls</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">america  online</span>
+<span class="s interesting-str">America  Online</span>
+<span class="s interesting-str">Instant Message From:</span>
+<span class="s interesting-str">Instant Message</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; x&#x27;ed &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; unx&#x27;ed &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">&lt; a href=http://</span>
+<span class="s interesting-str">can ya accept?</span>
+<span class="s interesting-str">is online and able</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt;&lt;B&gt;name &lt;/B&gt;has&lt;B&gt; &lt;FONT  COLOR=&quot;+mainn.colorr+&quot; &gt;&lt;/B&gt; <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">is not signed on.</span>
+<span class="s interesting-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;found &lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">, is not online&lt;FONT  COLOR=&quot;</span>
+<span class="s interesting-str">not signed on</span>
+<span class="s interesting-str">Address Book</span>
+<span class="s interesting-str">You cannot use this feature while signed on as guest</span>
+<span class="s interesting-str">AOL Screen Names</span>
+<span class="s interesting-str">You cannot use this feature while signed on a sub acct.</span>
+<span class="s interesting-str">Not Uploading</span>
+<span class="s interesting-str">Create a Screen Name</span>
+<span class="s interesting-str">Step 1 of 4: Choose a Screen Name</span>
+<span class="s interesting-str">Step 2 of 4: Choose a password</span>
+<span class="s interesting-str">Privacy Preferences</span>
+<span class="s interesting-str">Edit Your Online Profile</span>
+<span class="s interesting-str">Change Your Password</span>
+<span class="s interesting-str">Now Uploading</span>
+<span class="s interesting-str">Not Downloading</span>
+<span class="s interesting-str">Now Downloading</span>
+<span class="s interesting-str">\idb\main.idx</span>
+<span class="s interesting-str">The name must be 7 or more letters</span>
+<span class="s interesting-str">Not in a room</span>
+<span class="s interesting-str">Invitation from:</span>
+<span class="s interesting-str">send Instant Message</span>
+<span class="s interesting-str">How Your AOL Membership Works</span>
+<span class="s interesting-str">Verify Your Billing Information</span>
+<span class="s interesting-str">Conditions of AOL Membership</span>
+<span class="s interesting-str">you do not have that font</span>
+<span class="s interesting-str">nocturnal productions</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (158)</summary>
+<span class="s plain-str">j}msIix-</span>
+<span class="s plain-str">fF3zeWz</span>
+<span class="s plain-str">XICC_PROFILE</span>
+<span class="s plain-str">mntrRGB XYZ</span>
+<span class="s plain-str">acspMSFT</span>
+<span class="s plain-str">IEC sRGB</span>
+<span class="s plain-str">CRT curv</span>
+<span class="s plain-str">%	:	O	d	y</span>
+<span class="s plain-str">&#x27;wegisxU</span>
+<span class="s plain-str">9|y&gt; 7?sDqJ^</span>
+<span class="s plain-str">rr9vE5?N]</span>
+<span class="s plain-str">9q].2q@@@</span>
+<span class="s plain-str">lOaLF_(j</span>
+<span class="s plain-str">9zdxTdsR</span>
+<span class="s plain-str">MPEGPLAYLib.Mp3Play <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mp3Play</span>
+<span class="s plain-str">VB6Chat2</span>
+<span class="s plain-str">Label3p <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Label6p <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Label7p <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Label8p <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">InetCtlsObjects</span>
+<span class="s plain-str">Label4p <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mp3Play1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MPEGPLAYLib</span>
+<span class="s plain-str">PlayIt2</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">GetTickCount</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">ExitWindowsEx</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">arial black <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">webdings! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Webdings <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">text font:</span>
+<span class="s plain-str">ascii font</span>
+<span class="s plain-str">play (song)</span>
+<span class="s plain-str">user (user)</span>
+<span class="s plain-str">trig none</span>
+<span class="s plain-str">update? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">download? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">upload? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">x (name)</span>
+<span class="s plain-str">unx (name)</span>
+<span class="s plain-str">imx (name)</span>
+<span class="s plain-str">pr (room)</span>
+<span class="s plain-str">n (note)</span>
+<span class="s plain-str">ns (index)</span>
+<span class="s plain-str">ims (name)</span>
+<span class="s plain-str">iface (# 1-40)</span>
+<span class="s plain-str">&amp;GhhhhhhKK</span>
+<span class="s plain-str">X21Whhh%5</span>
+<span class="s plain-str">?e&gt;idcb&quot;hhhhhh#@iig</span>
+<span class="s plain-str">sString</span>
+<span class="s plain-str">} jtht</span>
+<span class="s plain-str">78E1BDD1-9941-11cf-9756-00AA00C00908</span>
+<span class="s plain-str">&quot; &gt;&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt;</span>
+<span class="s plain-str">&lt;B&gt;activated&lt;/B&gt;</span>
+<span class="s plain-str">&lt;B&gt;deactivated&lt;/B&gt;</span>
+<span class="s plain-str">&lt;B&gt;cleared&lt;/B&gt;</span>
+<span class="s plain-str">&quot; &gt;@@&lt;FONT  COLOR=&quot;#000000&quot;  FAMILY=&quot;SERIF&quot; FACE=&quot;</span>
+<span class="s plain-str">&lt;B&gt;added&lt;/B&gt;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt;&lt;b&gt;</span>
+<span class="s plain-str">&quot; &gt;&lt;B&gt;+&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;/B&gt;</span>
+<span class="s plain-str">&quot; &gt;=  &lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&quot; &gt;&lt;B&gt;-&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;/B&gt;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;/B&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt;&lt; a href=</span>
+<span class="s plain-str">link sent</span>
+<span class="s plain-str">&quot; &gt;  &lt;FONT  COLOR=&quot;#000000&quot; &gt;time left:&lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt; &lt;B&gt;</span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt; &lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;)&lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&quot; &gt;&lt;/B&gt;&lt;/I&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt; &lt;FONT  COLOR=&quot; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">PLAY3326782111</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt;(&lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt;)&lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; &lt;FONT  COLOR=&quot; <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot;&gt; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">play&#x27;&#x27; and 0 -</span>
+<span class="s plain-str">cancel&#x27;&#x27;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt; seconds.</span>
+<span class="s plain-str">&quot; LANG=&quot;0&quot;&gt; type &#x27;&#x27;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;&lt;I&gt;0 finds&lt;FONT  COLOR=&quot;</span>
+<span class="s plain-str">&lt;FONT  COLOR=&quot;#000000&quot; &gt;&lt;B&gt;</span>
+<span class="s plain-str">cancel&#x27;&#x27;&lt;/b&gt;</span>
+<span class="s plain-str">WindowState</span>
+<span class="s plain-str">OnlineHost</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">aol://4950:0000010000|all:</span>
+<span class="s plain-str">|online:</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">write mail</span>
+<span class="s plain-str">WebRequest:  aol://1391:40-31999</span>
+<span class="s plain-str">Vogel Verlag:  aol://2719:3-524</span>
+<span class="s plain-str">TV Today Chat aol://2719:3-602</span>
+<span class="s plain-str">aol toolbar</span>
+<span class="s plain-str">Legal Pad:  aol://2719:3-599</span>
+<span class="s plain-str">In The Soup:  aol://2719:3-600</span>
+<span class="s plain-str">, Bitch!</span>
+<span class="s plain-str">Find a Chat</span>
+<span class="s plain-str">Buddy Lists</span>
+<span class="s plain-str">Edit List</span>
+<span class="s plain-str">H:MM am/pm</span>
+<span class="s plain-str">Write Mail</span>
+<span class="s plain-str">{s goodbye</span>
+<span class="s plain-str">{s welcome</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">has ims on</span>
+<span class="s plain-str">has ims off</span>
+<span class="s plain-str">remaining.</span>
+<span class="s plain-str">Download</span>
+<span class="s plain-str">_Oscar_BuddylistWin</span>
+<span class="s plain-str">aol://3548:</span>
+<span class="s plain-str">{S goodbye</span>
+<span class="s plain-str">{S welcome</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">NewUser</span>
+<span class="s plain-str">buddy chat</span>
+<span class="s plain-str">Buddy Chat</span>
+<span class="s plain-str">AutoRedraw</span>
+<span class="s plain-str">ScaleMode</span>
+<span class="s plain-str">ScaleWidth</span>
+<span class="s plain-str">ScaleHeight</span>
+<span class="s plain-str">ForeColor</span>
+<span class="s plain-str">DrawWidth</span>
+<span class="s plain-str">DrawStyle</span>
+<span class="s plain-str">DrawMode</span>
+<span class="s plain-str">FontSize</span>
+<span class="s plain-str">CurrentY</span>
+<span class="s plain-str">CurrentX</span>
+<span class="s plain-str">Enabled</span>
+<span class="s plain-str">BitRate</span>
+<span class="s plain-str">SampleFrequency</span>
+<span class="s plain-str">_extentx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">_extenty <span style="color:#30363d;font-size:0.75em">×3</span></span>
+</details>
+<div class="stats">Total unique strings: 1525 · Interesting: 252 · Noise filtered: 1082</div>
+</div></body></html>

@@ -1,0 +1,559 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>blackportal.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/blackportal.zip">&#x2b07; Download blackportal.zip</a>
+</div>
+<div class="hero">
+<div><h1>blackportal</h1><span class="author">by <b>html&gt;M</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">blackportal.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-06-16</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">By:&lt;html&gt;M</span>
+<h2>&#x1f4e6; Dependencies (1)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+
+<h2>&#x2699; API References (21)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Checkbox</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_FontCombo</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_TabControl</span></div>
+<div class="api-item"><span class="api-name">_AOL_TabPage</span></div>
+<div class="api-item"><span class="api-name">_AOL_Toolbar</span></div>
+<div class="api-item"><span class="api-name">_AOL_Fontcombo</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (115)</h2>
+<span class="s interesting-str">S:m?$X(*^.BwD <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">P!$Q$/Y.JqJe <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">X&quot; Z&amp;$Z+$V,$S+,V38^@IjQ`}h <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Black Portal coms</span>
+<span class="s interesting-str">Black Portal Cd Player</span>
+<span class="s interesting-str">C&lt;html&gt;mnd list Unshown</span>
+<span class="s interesting-str">CD Portal&lt;html&gt; Ready</span>
+<span class="s interesting-str">A&lt;html&gt;ll You Lamers Suck</span>
+<span class="s interesting-str">M&lt;html&gt;azed Says Fuck dis Room</span>
+<span class="s interesting-str">hahhaha keep tryin</span>
+<span class="s interesting-str">cyclone iz a lamer lol</span>
+<span class="s interesting-str">psyc iz a fag and thats a gay handle</span>
+<span class="s interesting-str">lmfao, dont do that stupid shit again, lol, u like maze</span>
+<span class="s interesting-str">wtf you click da clock for you think the time is goin to change</span>
+<span class="s interesting-str">you idiot read the other stop clicking on me you faggit lamer i swear you are so dumb</span>
+<span class="s interesting-str">stop cdaudio</span>
+<span class="s interesting-str">close cdaudio</span>
+<span class="s interesting-str">Portal Command &lt;html&gt;Stop</span>
+<span class="s interesting-str">Incoming/Saved Mail <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">open cdaudio</span>
+<span class="s interesting-str">set cdaudio time format milliseconds</span>
+<span class="s interesting-str">play cdaudio</span>
+<span class="s interesting-str">Portal Open playing&lt;html&gt; cd</span>
+<span class="s interesting-str">A&lt;html&gt;ll Lamerz Suck <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">status cdaudio current track <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">status cdaudio position track <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">play cdaudio from <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Portal Command Prev.&lt;html&gt; track</span>
+<span class="s interesting-str">Portal Command Next &lt;html&gt;track</span>
+<span class="s interesting-str">Instant Message <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">im laughin my ass off</span>
+<span class="s interesting-str">F&lt;html&gt;uck dis room</span>
+<span class="s interesting-str">A&lt;html&gt;ll of u r lamers</span>
+<span class="s interesting-str">F&lt;html&gt;aggot piece&#x27;s of shit</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">aol://4344:1580.prntcon.12263709.564517913</span>
+<span class="s interesting-str">Parental Controls</span>
+<span class="s interesting-str">Set Parental Controls</span>
+<span class="s interesting-str">Now checking #</span>
+<span class="s interesting-str">for match with #</span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">is online and able to receive</span>
+<span class="s interesting-str">&lt;font color=#fefefe&gt;.&lt;pre <span style="color:#484f58;font-size:0.75em">×19</span></span>
+<span class="s interesting-str">Get a Member&#x27;s Profile</span>
+<span class="s interesting-str">Member Profile</span>
+<span class="s interesting-str">&lt; No Profile &gt;</span>
+<span class="s interesting-str">&lt; font . face=WEBDINGS&gt;&lt;font color=#fffffb&gt;.&lt;pre <span style="color:#484f58;font-size:0.75em">×21</span></span>
+<span class="s interesting-str">Mail Preferences</span>
+<span class="s interesting-str">clr1/scroll 1  :</span>
+<span class="s interesting-str">clr2/scroll 2  :</span>
+<span class="s interesting-str">clr3/scroll 3  :</span>
+<span class="s interesting-str">clr4/scroll 4  :</span>
+<span class="s interesting-str">pr*/goes to a provate room  :</span>
+<span class="s interesting-str">lmao/says something stupid :</span>
+<span class="s interesting-str">lol/says lol  :</span>
+<span class="s interesting-str">huh/says im confused  :</span>
+<span class="s interesting-str">kewl/says kewl  :</span>
+<span class="s interesting-str">yo/says yo  :</span>
+<span class="s interesting-str">cops/does a cop scene  :</span>
+<span class="s interesting-str">rob/robs a bank  :</span>
+<span class="s interesting-str">bored/days your bored  :</span>
+<span class="s interesting-str">cmds/shows commands  :</span>
+<span class="s interesting-str">wtf/says wtf  :</span>
+<span class="s interesting-str">brb/says you will brb  :</span>
+<span class="s interesting-str">cdp/brings cdplayer up  :</span>
+<span class="s interesting-str">e/eats the chat  :</span>
+<span class="s interesting-str">imsoff/turns imsoff  :</span>
+<span class="s interesting-str">imson/turns ims on  :</span>
+<span class="s interesting-str">time/tells the time  :</span>
+<span class="s interesting-str">stfu/tails osme one to stfu  :</span>
+<span class="s interesting-str">fag*/calls someone a fag  :</span>
+<span class="s interesting-str">sup*/says sup  :</span>
+<span class="s interesting-str">die*/some one dies  :</span>
+<span class="s interesting-str">hit*/hits some one  :</span>
+<span class="s interesting-str">bite*/bites some one  :</span>
+<span class="s interesting-str">kick*/kick some one  :</span>
+<span class="s interesting-str">beat/beats some one  :</span>
+<span class="s interesting-str">adv/advs the prog  :</span>
+<span class="s interesting-str">exit/exit&#x27;s prog  :</span>
+<span class="s interesting-str">omg/says oh my god  :</span>
+<span class="s interesting-str">wb/says welcome back  :</span>
+<span class="s interesting-str">slap*/slaps some one  :</span>
+<span class="s interesting-str">rape*/rapes some one  :</span>
+<span class="s interesting-str">lmfao/says somthin stupid  :</span>
+<span class="s interesting-str">newm/veiws new mail  :</span>
+<span class="s interesting-str">oldm/veiws old mail  :</span>
+<span class="s interesting-str">sentm/veiws sent mail  :</span>
+<span class="s interesting-str">goodbye/scrolls con/con  :</span>
+<span class="s interesting-str">scroller/opens scroller  :</span>
+<span class="s interesting-str">I&lt;html&gt;m laughin my ass off</span>
+<span class="s interesting-str">L&lt;html&gt;ol thats some funny shiz</span>
+<span class="s interesting-str">W&lt;html&gt;ha im confused</span>
+<span class="s interesting-str">Y&lt;html&gt;o thats kewl</span>
+<span class="s interesting-str">Y&lt;html&gt;o wuz up</span>
+<span class="s interesting-str">O&lt;html&gt;n da ground punk asses your all under arrest</span>
+<span class="s interesting-str">O&lt;html&gt;n da ground mutha trucka&#x27;s dis is a robbery</span>
+<span class="s interesting-str">D&lt;html&gt;amn im bored</span>
+<span class="s interesting-str">Y&lt;html&gt;o man ill be right back</span>
+<span class="s interesting-str">W&lt;html&gt;ha da fuq</span>
+<span class="s interesting-str">&lt;html&gt;Ims are Now Off</span>
+<span class="s interesting-str">&lt;html&gt;Ims are Now On</span>
+<span class="s interesting-str">T&lt;html&gt;he current time is</span>
+<span class="s interesting-str">Y&lt;html&gt;o why dont you stfu</span>
+<span class="s interesting-str">) in the ass</span>
+<span class="s interesting-str">) with a metal pole</span>
+<span class="s interesting-str">O&lt;html&gt;h my god what is happeing?</span>
+<span class="s interesting-str">Y&lt;html&gt;o welcome back</span>
+<span class="s interesting-str">) and put in there place</span>
+<span class="s interesting-str">) and liked it</span>
+<span class="s interesting-str">I&lt;html&gt;m laughin my fuqin ass off</span>
+<span class="s interesting-str">V&lt;html&gt;eiwing new mail</span>
+<span class="s interesting-str">V&lt;html&gt;eiwing old mail</span>
+<span class="s interesting-str">V&lt;html&gt;eiwing sent mail</span>
+<span class="s interesting-str">G&lt;html&gt;reetz to:</span>
+<span class="s interesting-str">black coms.exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (313)</summary>
+<span class="s plain-str">j}nFYJ&amp;9* <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">@cG6\&gt;W~] <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">e}kdzjs <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">:W&lt;&amp;C(!=%$=&#x27;9R&lt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">bBhDJpL+Q-3X69\&lt;+M0!@%(D-C[Gp <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">MkZb~m_{jm <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">1U5X}[?dB <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$E%RpSb <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">m}qfyjz <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&#x27;K)(I)_~c <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;R&lt;IbJPiOVqUYuVWtSVuTg <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">+R+&#x27;M)*O+)K(/P/%F%$H&amp;y <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;L(7[9$H&amp;&quot;C#:Z= <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$M&amp;(O()N(8]9!C <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Ak@)S(S~Q <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">/S11R2FdGq <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$K$!H!DiC <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%I&#x27;.U.*T)%R%)Z(,_+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">=	*[)L}KQ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;M%*Q*2W3 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">+L,JhKv <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">EgDHfGQkOp <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">B&quot;#I%#M$&quot;O# P!#U#%X$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$W#3d2&#x27;X&amp; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">.Z)+[&#x27;&#x27;W##U!#U!!S <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%S$+U**Q)&#x27;L&amp;&#x27;L((I( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">YoXE]A9T5 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">(T%2^-/_+)\%%X! T <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;W7-E&#x27;E]?ZuU`}\d <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%I&#x27;&quot;G#&amp;M&amp;!K&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;Q$.V+1W/*O) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">+R&#x27;.Z+.]++])&#x27;Z# U <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$X!.c*1h/&quot;[&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%K&#x27;$K$!J# L#&quot;O#!Q#!S#&quot;W$!W&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">!O &amp;Q$(P%*P(0U/5W40O.(D%$?#7P6 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">/U-&#x27;R%$S! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0[.3`37g9U <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">e?n&lt;IyE$T ,_(0c, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#N!#N!#O &#x27;S$*V&#x27;+V),U(#L <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">4U4:_9$N# <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">n7j3Ex@Dy@ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%P#,W**S&amp;&amp;O&quot;,T)2Z/5\11X-$H <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Q&gt;q9F{ACx&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%P#3[0-U*$K  F <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">6S2WrSx <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">A	.a);p6&lt;q77o23k.*e&#x27;&quot;] <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#N!4\1.T,#I! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">7^7)S()W( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">-b)3k02j/,d)&quot;Z <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$X(!U% T$ T$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;V&amp;1e5,`0$X($V&amp;+]+M <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">kAfB&quot;I! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">I@x;+e* Z <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&#x27;a&amp;1m2(d) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">fPrOAf@HoDRyMOwIJtCMxENyFCq;8g/._&#x27;+]#1e+;o57l21g*%[ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Z&quot;%b*&amp;c-!^(&quot;^*#_+%a-!\+!Z)$],)b1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">P&quot;&amp;Y+.a3 S% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ICr:;m3Bv&lt;N <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Y(%_00j;0j;.i82m&lt;3n=)b1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;X)+a2&amp;\- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">I9h0*\&quot;(] .c&amp;7n/&lt;s4$] <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Z&amp;)d36pA![-+e73m?(b3&amp;`1@zKT <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">3a2MxK&lt;c;-P*HgFj <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">.k37t&gt;?{G <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">T%^3-f;/i;![- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">1S0IhG&gt;Z;0K/#&lt;&quot;$=#azb <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">YtTJhCHj@TzL\ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">P%;uG+e7.h95o@a <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$W*&amp;V**Z.&amp;W) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$J&quot;2U/&#x27;G$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">3O0WrVw <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">wc|b_x`g}g <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$b(+h0-j4D <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;R&amp;1a5*[- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">iBZ&gt;JeFA^&lt;;Y4$F <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">$T(#S&#x27;(Y+&#x27;Y) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#H&quot;FiCe <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">{MkNDbCFfCEiA#H <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">}1i: V&#x27;	? <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">9d7HpEU{S] <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">`zb&quot;@##D#5Z4.W*%Q &quot;R <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">,c*)_(&quot;X#%Z&#x27;)[+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">!W 1g2-b/%W&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">CuE?pB&lt;m? <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">,e,&lt;u=6l7)^+ R&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;J&amp;FmKv <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">V#1f3IyJm <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">d5Q//M( A <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#c#%f&amp;%f&amp; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">jAY;3N.-J( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;b&quot;%f&amp;&#x27;k*)m,$j) f% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">}WrS.N+1U-5^1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;j*.s6%g+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">r@[;.L&#x27;*I +N!-T&quot;$O <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">5h0&gt;q9GzB[ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;W$&#x27;W)&amp;P&#x27;9[8 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">e#&amp;p.-u5!f&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&quot;M(&amp;M+$H( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">S )Y*%O$+N([xW <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">bCg?)P%!J <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">r5]2RzO4_2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">X$ Z&amp;)c/1g7&lt;rCI|OW <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">|Cf@GnC0Y,&quot;N <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#R &#x27;Y%%X!&quot;V <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;J -N&#x27;HiBb <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">nBoB&amp;V&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">!K #H&quot;&#x27;G$1L-E\Bhzc <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">mEtHN~Rk <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&#x27;Z&amp;/e0*`) Y! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">#S%&#x27;Y))]-&amp;[( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">M!%Q( H$$I&#x27;0S3KkN <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ExK.a4&quot;U&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">(O&#x27;2T18U4 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0c,)^%$[&quot;#\#&quot;]% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">(W/?jEBeEJhKUoW <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">!R$(\,%Z&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;M%+N(+K( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0`,5h11i..h-(d) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">v6V9%J(#K&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">oAsI#W- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">_7(gA$[:&#x27;Y;a <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">sB[E&#x27;F+!D$#J( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">)F$8S3NhLx <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">S1&quot;`&gt;4oOCx]\ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">R&quot; R&quot;&quot;R#&quot;R#$R#$O&quot; I <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0W/&quot;M %T&quot;&#x27;Z# <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">W3*cB*bC/gJX <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">A!&quot;M(#N&#x27; N% P$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">9lF,`7H|S <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">P  P!!Q&quot;$R##Q&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">T$$Y,&amp;]2&#x27;]4 X1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">R24fHL~bN <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">c|fNhP!&gt;#.L/7X8 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0Z1/[24`77e=&gt;kFFsPMzXEsT@nOGuWX <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">zMmV/Q8 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">yHmI#M$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">XrZE_G7Q7+H-,J-1O28Y9EfFNoOTwW[~^_ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">3^71W31R2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;A%!F&quot;-W. <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">+C--E/2K3F^Hb{eo <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">(C&#x27;7X7*T+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">L)!N)(V.#N&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">M`K7Q7LmL$N% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">4a&gt;8dACnI*U. <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ar]AR=2E07I6hzgcxd} <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;9$*C)5V5&amp;P&#x27; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">,R.#J&quot;%R% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">|AS@4M3!B! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">JnP0\9*^5 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">tHbH+L+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">s/V5$R-&amp;]2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0U31S6,K0 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">6S83Q22W3&#x27;N&amp; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">e}i?^E$J, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">9O8-H,1P/$I##K %Q&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">E#$F)*G,G`J <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">qNgM3O0.N+ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">e(W5(]8&quot;Z1!\. <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">UoW B%$L( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">H#5_&lt;OuWn <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">)a8+e:%c3 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">SpO+L&amp;.U) <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">R}^7hF Y2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">%T2!Y2$b8 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">T&#x27;._7#O,1T8=YB <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">T%&quot;Y.3d&gt;6_&gt;KmT\wb <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">3W9 P, Z0 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">(R)&#x27;V*;l&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">F&quot;-P0QmUy <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">W&#x27;*^4&amp;T/t <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&#x27;G*&quot;E%+Q- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">G$+Q3GjN~ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">P %W&#x27;*\,%X* <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">o8dE+b=&#x27;e; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">]15mF&lt;iGQvZ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">v$I#5]2/Z- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&#x27;Q4&amp;W5$]6-nB <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">I$ M*-Z8P|]y <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">L)$Q.(U37cDi <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">,N+*O+,Q- E! <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">D $L($O*$O* <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">)Z:!X5%c; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">*	&quot;C&quot; A #H$#I%,T0+V1(S. M(	6 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">9W8&quot;G#%Q( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">/K,&amp;B#(G&amp;%F%0U15[71Z3)T- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">6[7-T-!K&quot; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">a,5sC#\1!U,T <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">6Q5&quot;D!#M$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ds]VjQTlN <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">0W,9b5:c6 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">/eF.nI	Q( <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">sZuUDe?=a9 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Z+&#x27;b4-c:BsM <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">X{U%J$:\92P1#&gt;&quot;PfP <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">M#&quot;\22jCX <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">g:V7.G-1G1 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">{PiQ0B/CRC <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">F$,iI8pQ2fJ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">8YC0V&gt;*U: <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">7T?(J2&#x27;M5 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">W&quot;!V# P&quot; M!#J#2W3r <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">O!!M$-T-@a@ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">R&quot;!N!%O&amp;6[7OpO <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">bqa 2!bve <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Q! M!,S+.S/o <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">U&quot;!U%!S##P$ <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Z~`3]:%U+ S% <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;P&#x27;#J#+M*u <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&amp;O(,Q-&lt;]&lt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">/X1&#x27;M)!E#MnM <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">1V4+O-!B&quot;x <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">5X8&#x27;J*#D$-M0&quot;&lt;&quot;w <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">MmP2O45O53L4 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">fDaF)C+:R&lt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">.H0:R&lt;2I5 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">!9%G^J*&gt;- <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">bxg+A0)=, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">black coms <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">PROJECT1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Scroller</span>
+<span class="s plain-str">Text Here</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">THUNPROJECT1</span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">TYPELIB <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">1&lt;1L1l1|1</span>
+<span class="s plain-str">4T;X;\;`;d;h;</span>
+<span class="s plain-str">82&lt;2@2D2H2L2P2T2t2$9(9,9094989&lt;9@9D9H9L9P9T9X9\9`9d9h9l9p9t9x9|9</span>
+<span class="s plain-str">$343D3X3\3</span>
+<span class="s plain-str">6+606D6I6]6b6v6{6</span>
+<span class="s plain-str">6 6$6,60686&lt;6D6H6P6T6\6`6h6l6t6x6</span>
+<span class="s plain-str">&lt;0&lt;&lt;&lt;B&lt;\&lt;</span>
+<span class="s plain-str">=0=&lt;=R=n=</span>
+<span class="s plain-str">5)5.5B5G5[5`5t5y5</span>
+<span class="s plain-str">6#6(6&lt;6A6U6Z6n6s6</span>
+<span class="s plain-str">0(1&gt;1`1f1p1</span>
+<span class="s plain-str">2 2(2J2R2v2</span>
+<span class="s plain-str">7L7h7~7(8Z8f8</span>
+<span class="s plain-str">6V7@8Z8~8</span>
+<span class="s plain-str">8*878B8O8Z8g8r8</span>
+<span class="s plain-str">9&#x27;929?9J9W9b9o9z9</span>
+<span class="s plain-str">0&quot;0/0:0G0R0_0j0w0</span>
+<span class="s plain-str">1*171B1O1Z1g1r1</span>
+<span class="s plain-str">2&#x27;222?2J2W2b2o2z2</span>
+<span class="s plain-str">3&quot;3/3:3G3R3_3j3w3</span>
+<span class="s plain-str">4*474B4O4Z4g4r4</span>
+<span class="s plain-str">5&#x27;525?5J5W5b5o5z5</span>
+<span class="s plain-str">8&quot;969T9l9</span>
+<span class="s plain-str">1.282B2`2</span>
+<span class="s plain-str">_extentx</span>
+<span class="s plain-str">_extenty</span>
+<span class="s plain-str">aol://2719:21-2-</span>
+<span class="s plain-str">aol://2719:61-2-</span>
+<span class="s plain-str">aol://2719:2-2- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">www.angelfire.com/home/piospage <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×16</span></span>
+<span class="s plain-str">&lt;html&gt;cro <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×15</span></span>
+<span class="s plain-str">B&lt;html&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;Html&gt; Dark <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×10</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">You alive?</span>
+<span class="s plain-str">Write Mail <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Checking #</span>
+<span class="s plain-str">with #</span>
+<span class="s plain-str">aol://9293: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Preferences</span>
+<span class="s plain-str">General</span>
+<span class="s plain-str">Marketing</span>
+<span class="s plain-str">e1/eat 1  :</span>
+<span class="s plain-str">e2/eat 2  :</span>
+<span class="s plain-str">&lt;html&gt;mnd</span>
+<span class="s plain-str">K&lt;html&gt;aoS</span>
+<span class="s plain-str">M&lt;html&gt;onkey</span>
+<span class="s plain-str">P&lt;html&gt;io</span>
+<span class="s plain-str">P&lt;html&gt;yro</span>
+<span class="s plain-str">P&lt;html&gt;syc</span>
+<span class="s plain-str">M&lt;html&gt;ayhem</span>
+<span class="s plain-str">D&lt;html&gt;otz</span>
+<span class="s plain-str">C&lt;html&gt;yclone</span>
+<span class="s plain-str">_IID_FORM1</span>
+<span class="s plain-str">_IID_FORM2</span>
+<span class="s plain-str">_IID_FORM3</span>
+</details>
+<div class="stats">Total unique strings: 1309 · Interesting: 115 · Noise filtered: 854</div>
+</div></body></html>

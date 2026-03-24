@@ -1,0 +1,505 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mopar.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/mopar.zip">&#x2b07; Download mopar.zip</a>
+</div>
+<div class="hero">
+<div><h1>MprzToolz</h1><span class="author">by <b>MoPaR</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB4-32</span>
+<span class="badge badge-compile">unknown</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">MprzToolz.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 1998-07-30</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (1)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">VB40032.DLL</span></div>
+</div>
+<h2>&#x1f3a3; Phishing Template (6)</h2>
+<span class="s phishing-str">we seem to have lost your account information.</span>
+<span class="s phishing-str">we seem to have failed to recieve your logon password.</span>
+<span class="s phishing-str">we seem to have failed to recieve your account information.</span>
+<span class="s phishing-str">we have lost your Credit Card information.</span>
+<span class="s phishing-str">To correct this situation please click respond and enter</span>
+<span class="s phishing-str">Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number.</span>
+
+<h2>&#x2699; API References (17)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Palette</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_TREE</span></div>
+<div class="api-item"><span class="api-name">_AOL_EDIT</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (114)</h2>
+<span class="s interesting-str">MoPaRz Toolz <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">File Scanner <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Server Helper</span>
+<span class="s interesting-str">Macro Killerz <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">MS Sans Serif <span style="color:#484f58;font-size:0.75em">×34</span></span>
+<span class="s interesting-str">Moparz Toolz <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Is It MoPaR?</span>
+<span class="s interesting-str">Iz It MoPaR?</span>
+<span class="s interesting-str">Account Termer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Allow IMz From</span>
+<span class="s interesting-str">Owned Today:</span>
+<span class="s interesting-str">Scan Selected File <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">No File Selected</span>
+<span class="s interesting-str">ChronoShift Server Helper</span>
+<span class="s interesting-str">Moparz Toolz Server Helper</span>
+<span class="s interesting-str">MoPaRz Toolz  -  M-Chat</span>
+<span class="s interesting-str">Welcome to MoPaRz Toolz M-CHAT....</span>
+<span class="s interesting-str">Peeps in Room:</span>
+<span class="s interesting-str">THUNMoparz Toolz</span>
+<span class="s interesting-str">click.wav <span style="color:#484f58;font-size:0.75em">×66</span></span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×10</span></span>
+<span class="s interesting-str">&amp;About America Online</span>
+<span class="s interesting-str">Sorry, the Drive you selected is currently unavailable.</span>
+<span class="s interesting-str">Read &amp;New Mail <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Read</span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Sent</span>
+<span class="s interesting-str">Ok, In Order to use this RoomBuster, there must be an OPEN chat window that IS NOT Maximized!    - MoPaR</span>
+<span class="s interesting-str">A ChatRoom needs to be open in order to run AFK Bot. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&gt;Instant Message From: <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Instant Message From: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">ChronoShift Anti  ERROR</span>
+<span class="s interesting-str">Error Loading ChronoShift Anti!  Can&#x27;t find ChronoShift&#x27;s Intro!</span>
+<span class="s interesting-str">What the Hell... Don&#x27;t try to Term ME!</span>
+<span class="s interesting-str">Please sign on before using this feature.</span>
+<span class="s interesting-str">P&amp;ersonal Filing Cabinet</span>
+<span class="s interesting-str">Get a Member&#x27;s Profile <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">America  Online <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Locate a Member Online</span>
+<span class="s interesting-str">Locate Member Online</span>
+<span class="s interesting-str">What the Hell... Don&#x27;t Punt ME!</span>
+<span class="s interesting-str">Got a Prob Here!</span>
+<span class="s interesting-str">AOL Is not Running!!! DUH!.</span>
+<span class="s interesting-str">Enter an the Person&#x27;s SN to see if it iz Me!</span>
+<span class="s interesting-str">You need to be in a Chat room in order to run the server helper</span>
+<span class="s interesting-str">Unfortionatly, they way I coded this buster, u need an open Chat Window that is not Maximized.</span>
+<span class="s interesting-str">Please enter in the name of the room to bust in!</span>
+<span class="s interesting-str">A ChatRoom needs to be open in order to run Attention.</span>
+<span class="s interesting-str">messages in your E-Mailbox.</span>
+<span class="s interesting-str">You have one message in your E-Mailbox.</span>
+<span class="s interesting-str">You have zero messages in your E-Mailbox</span>
+<span class="s interesting-str">Mail Preferences <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Close mail after it has been sent <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Confirm mail after it has been sent <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Send an Instant Message <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">I Need Help!</span>
+<span class="s interesting-str">Report Password Solicitations</span>
+<span class="s interesting-str">Compose Mail <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Ya! You Have Found MoPaR!</span>
+<span class="s interesting-str">Thats NOT me! Punt That Damn Poser!</span>
+<span class="s interesting-str">Must Be Online</span>
+<span class="s interesting-str">Edit Go To Menu</span>
+<span class="s interesting-str">Favorite Places <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">Scanning - 14%</span>
+<span class="s interesting-str">Scanning - 28%</span>
+<span class="s interesting-str">Scanning - 42%</span>
+<span class="s interesting-str">Scanning - 56%</span>
+<span class="s interesting-str">Scanning - 70%</span>
+<span class="s interesting-str">Scanning - 84%</span>
+<span class="s interesting-str">Scanning - 100%</span>
+<span class="s interesting-str">Possible Deltree Found!!!!</span>
+<span class="s interesting-str">main.idx <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Possible PWS Found! The String found was &#x27;</span>
+<span class="s interesting-str">File is Clean</span>
+<span class="s interesting-str">No PWS or DELTREE found in</span>
+<span class="s interesting-str">. The File is Clean.</span>
+<span class="s interesting-str">Good Evening,</span>
+<span class="s interesting-str">Good Afternoon, <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Welcome to America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with America Online Billing <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with OTC (Online Techincal Consultants) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with WWWC (World Wide Web Consultants) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with AOL Techincal Staff <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with AOL System Security <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with AOL Resource Department <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with the AOL Community Action Team <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Technical Failures <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Billing errors <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Line Noise <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to A virus in our database <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Massive data flow in our database <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to data corruption <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to hackers by-passing out systems <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">we seem to have lost your password. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please click respond and enter your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please help us by entering your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond with your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Your password information. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Your current account password. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond within 2 minutes too keep this account active. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">It is very important that you respond immediately. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond as soon as possible <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Incooperation may lead to termination of your account. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for using America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your time. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your cooperation. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your help and enjoy the service! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Good evening,</span>
+<span class="s interesting-str">Hello, And welcome to America Online.</span>
+<span class="s interesting-str">You need to Enter a Lamerz SN before you Punt!</span>
+<span class="s interesting-str">You need to Enter a Method before you can Punt!!</span>
+<span class="s interesting-str">MoPaRz Toolz 1.2  &lt;font = 77777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777&gt; <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">MoPaRz Toolz for AOL95</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (259)</summary>
+<span class="s plain-str">r&quot;&quot;&quot;&quot;&quot;n&quot;n~vb <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Hide AOL <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Mass IM</span>
+<span class="s plain-str">Kill Modal</span>
+<span class="s plain-str">Anti-Punt <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Kill Wait</span>
+<span class="s plain-str">Sign Off</span>
+<span class="s plain-str">Room Buster <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Attention <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Advertise <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">d#Dq9WY+UH#UK$UI$UI$SH&quot;SH&quot;SE</span>
+<span class="s plain-str">SF!TI$TK$UK&#x27;VM&#x27;VM&#x27;VM&#x27;VM&#x27;VM&#x27;VM&#x27;UK$SI$SF</span>
+<span class="s plain-str">JI,ms=Z\3GF*</span>
+<span class="s plain-str">zgl7\_3`_5</span>
+<span class="s plain-str">di4HC(TV0(</span>
+<span class="s plain-str">dg7IG(EB(FE&#x27;</span>
+<span class="s plain-str">MprzToolz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mass IMer <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Send IMz</span>
+<span class="s plain-str">Lamer&#x27;z SN <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Generate</span>
+<span class="s plain-str">GoodBye! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Die Lamer! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Hell Spawn <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Sniper!</span>
+<span class="s plain-str">Steve Case!</span>
+<span class="s plain-str">FireToolz <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Hellraiser</span>
+<span class="s plain-str">Magenta</span>
+<span class="s plain-str">Proggie</span>
+<span class="s plain-str">Proggies</span>
+<span class="s plain-str">Punter2</span>
+<span class="s plain-str">Punters</span>
+<span class="s plain-str">Punters2</span>
+<span class="s plain-str">Server2</span>
+<span class="s plain-str">Server3</span>
+<span class="s plain-str">Server4</span>
+<span class="s plain-str">Server5</span>
+<span class="s plain-str">Server6</span>
+<span class="s plain-str">Server7</span>
+<span class="s plain-str">Server8</span>
+<span class="s plain-str">Server9</span>
+<span class="s plain-str">VVarez!!</span>
+<span class="s plain-str">rZ rZ s[!s\&quot;s]&quot;t^#u_$vb&#x27;we)xg+yj,xi,xi,xh,xi,xh+wg+wf*ve*ud(uc(tb&amp;t`&amp;s`%s`%s_%r_%q^$q]#p\#o[&quot;o[&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;nZ&quot;oZ&quot;o[&quot;p[#p\#p]$q^$q^$r^$r^$r_%s`%ta&amp;tb&#x27;vd)ud)vd)vd)uc(uc(uc&#x27;ub&#x27;ub&#x27;tb&#x27;ub&#x27;ta&amp;ta&#x27;s`%r^$r]#q[&quot;q[&quot;q\&quot;q\&quot;q\#q\#q]#q]#q^$q]#q\#q\&quot;q\&quot;q\#r]#r^$s_%s_%s`%s`&amp;ta&amp;tb&#x27;uc(ud(ve)vf)vf*wg+wh+wg+wg+wg+xg+wf*wf*wf*wf*ve)ud(tc(tb&#x27;sb&#x27;sb(rb(rc)rc)re+rf,rg-rg-rg-rg-rg-rf,rf,re+re+qd*qc)qb(qa&#x27;q`&#x27;q`&amp;p_&amp;p^%q_&amp;q`&#x27;ra&#x27;sb(sb(sb(tb(uc(tb&#x27;`N <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Emergency <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Activate <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">?QR&quot;V\&#x27;Z`(Z`*[a,[d-[d,[d,[c,]e,[d-[b+Za+\b,Z`*X[%VX$VX#VX$VW#VY%WX%WZ%WZ$WY$W[&amp;W[&amp;WY$WY$X[&amp;XZ%X[&#x27;Y]&amp;Y^(Y\(Y\(Y\(Y\(Y^(Y]&#x27;Z_)Z`)Z_)Y^&#x27;Y^(Y]&amp;Y]&#x27;Y]&#x27;X]&amp;Z](X]&amp;X\&#x27;X\&#x27;X\&#x27;X\&#x27;X\&amp;X\&amp;X[&amp;Y_(Za+Zb*\b,Za)Z`*Y])X](X]&amp;X]&#x27;X]&#x27;X[&amp;X](X^)Y_(Y`)Za+Zb*Za,[b+[b+[b-[d,[d,[c,\e.\f-\e/\f-\e-[c.[d,[d,[d,[d,\d,\c,\e,\d.^d-\e,\c,\c+\d+[c*[`)Z_*Z^(Z^)Z`(Z`([_*[a)[`+[b*\c,\c+\d-\e,]f.]f.]f.]d.]f.]f-]e/^g.^h.^g0^g/^i/_h0_h0_i1_i1_i1_i1_h1_j0_j2_j0_j0_h1_i1_i1^i1^i1^i/^g/^g/^h0^h0^h0^h0^f.^f.^h0^g/^i1_j0_j0_j0_j0_j0_j0_j0_j0_j0_j0_j0_j0_j0_j0_j2_j2_j1_j1_j1_j1_j3_j3_j3_j3aj3_j3_j1_j2_j2_j2_j2_j0_j0_j0_j0_j0_j0_j0_j0_j0_j2_j0_j0_j0_j2_j2ep4r</span>
+<span class="s plain-str">Add Room</span>
+<span class="s plain-str">Send List <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CurDate</span>
+<span class="s plain-str">CurTime</span>
+<span class="s plain-str">Chat Room:</span>
+<span class="s plain-str">DestroyMenu</span>
+<span class="s plain-str">DeleteMenu</span>
+<span class="s plain-str">RemoveMenu</span>
+<span class="s plain-str">AppendMenuA</span>
+<span class="s plain-str">InsertMenuA</span>
+<span class="s plain-str">GetWindow</span>
+<span class="s plain-str">GetWindowTextA <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">SetFocus</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">GetTopWindow</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowsDirectoryA</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">CreatePopupMenu</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">ShellAboutA</span>
+<span class="s plain-str">DrawMenuBar</span>
+<span class="s plain-str">GetAsyncKeyState</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">EnumWindows</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">RegisterWindowMessageA</span>
+<span class="s plain-str">dwGetWndInstance</span>
+<span class="s plain-str">dwXCopyDataFrom</span>
+<span class="s plain-str">dwCopyData <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">dwGetAddressForObject</span>
+<span class="s plain-str">dwGetStringFromLPSTR</span>
+<span class="s plain-str">SetParent</span>
+<span class="s plain-str">SetRect</span>
+<span class="s plain-str">GetWindowRect</span>
+<span class="s plain-str">MoveWindow</span>
+<span class="s plain-str">RedrawWindow</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">IsWindowEnabled</span>
+<span class="s plain-str">ReleaseCapture <span style="color:#30363d;font-size:0.75em">×14</span></span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">GetNextWindow</span>
+<span class="s plain-str">CompObj</span>
+<span class="s plain-str">GetTypeInfoCount</span>
+<span class="s plain-str">GetTypeInfo</span>
+<span class="s plain-str">GetIDsOfNames</span>
+<span class="s plain-str">QueryInterface</span>
+<span class="s plain-str">Release</span>
+<span class="s plain-str">TYPELIB <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">0 0&amp;0,02080&gt;0D0J0P0V0\0b0h0n0t0z0</span>
+<span class="s plain-str">141D1d1t1</span>
+<span class="s plain-str">242D2H2L2P2X2`2h2l2p2t2x2|2</span>
+<span class="s plain-str">0(0,000T0h0</span>
+<span class="s plain-str">1 1&lt;1@1D1h1|1</span>
+<span class="s plain-str">1 242P2T2X2|2</span>
+<span class="s plain-str">343H3d3h3l3</span>
+<span class="s plain-str">4$4H4\4x4|4</span>
+<span class="s plain-str">6(6D6H6L6p6</span>
+<span class="s plain-str">9$9(9,9P9</span>
+<span class="s plain-str">;0;L;T;x;</span>
+<span class="s plain-str">081L1h1p1</span>
+<span class="s plain-str">2 2(2L2`2|2</span>
+<span class="s plain-str">343&lt;3`3t3</span>
+<span class="s plain-str">6@6T6p6t6x6</span>
+<span class="s plain-str">8 8&lt;8@8D8h8|8</span>
+<span class="s plain-str">8 949P9X9|9</span>
+<span class="s plain-str">; ;$;H;\;x;|;</span>
+<span class="s plain-str">0$0(0,0P0</span>
+<span class="s plain-str">202L2P2T2</span>
+<span class="s plain-str">; ;$;(;H;</span>
+<span class="s plain-str">2 2$2(2,20242T2</span>
+<span class="s plain-str">9 9$9(9,9094989&lt;9@9`9</span>
+<span class="s plain-str">0 0$0(0,0004080&lt;0@0D0H0L0P0T0X0x0(7,7074787&lt;7@7D7H7L7P7T7X7\7`7d7h7l7p7t7</span>
+<span class="s plain-str">7D&gt;H&gt;L&gt;P&gt;T&gt;X&gt;\&gt;`&gt;d&gt;h&gt;l&gt;p&gt;t&gt;x&gt;|&gt;</span>
+<span class="s plain-str">h5l5p5t5x5|5</span>
+<span class="s plain-str">4 4$4(4,4044484&lt;4@4D4H4L4P4T4X4\4`4d4</span>
+<span class="s plain-str">44;8;&lt;;@;D;H;L;P;T;X;\;`;d;h;l;p;t;x;|;</span>
+<span class="s plain-str">3 3$3(3,3034383&lt;3@3D3H3L3P3T3X3\3`3d3h3l3p3t3x3|3</span>
+<span class="s plain-str">1&quot;202:2Z2h2r2</span>
+<span class="s plain-str">808R8 9n9</span>
+<span class="s plain-str">51565J5O5c5h5|5</span>
+<span class="s plain-str">6-626F6K6_6d6x6}6</span>
+<span class="s plain-str">7&#x27;7,7B7G7[7`7t7y7</span>
+<span class="s plain-str">8#8(8&lt;8A8U8Z8n8s8</span>
+<span class="s plain-str">60656I6N6b6g6{6</span>
+<span class="s plain-str">7*7/7C7H7\7a7u7z7</span>
+<span class="s plain-str">8$8)8=8B8V8[8o8t8</span>
+<span class="s plain-str">9j:|:&amp;;P;p;</span>
+<span class="s plain-str">121D1T1n1</span>
+<span class="s plain-str">1,262N2b2</span>
+<span class="s plain-str">=B=O=Z=g=r=</span>
+<span class="s plain-str">1%1*1&gt;1C1W1\1p1u1</span>
+<span class="s plain-str">2$282=2Q2V2j2o2</span>
+<span class="s plain-str">7!757:7N7S7g7l7</span>
+<span class="s plain-str">8/848H8M8a8f8</span>
+<span class="s plain-str">161Z1h1z1</span>
+<span class="s plain-str">9*:N:z:.;|;</span>
+<span class="s plain-str">.0z0$1n1s1</span>
+<span class="s plain-str">2&quot;262;2O2T2h2m2</span>
+<span class="s plain-str">30353I3N3b3g3{3</span>
+<span class="s plain-str">4 44494M4R4f4k4</span>
+<span class="s plain-str">5.535G5L5`5e5y5~5</span>
+<span class="s plain-str">2&quot;2B2P2Z2</span>
+<span class="s plain-str">727@7J7j7x7</span>
+<span class="s plain-str">7&gt;7L7V7z7</span>
+<span class="s plain-str">343Z3h3z3</span>
+<span class="s plain-str">=6=\=j=|=</span>
+<span class="s plain-str">&gt;1&gt;6&gt;J&gt;O&gt;c&gt;h&gt;|&gt;</span>
+<span class="s plain-str">0%0*0&gt;0C0W0\0p0u0</span>
+<span class="s plain-str">3.434G4L4`4e4y4~4</span>
+<span class="s plain-str">5(5-5A5F5Z5_5s5x5</span>
+<span class="s plain-str">6&quot;6&#x27;6;6@6T6Y6m6r6</span>
+<span class="s plain-str">7!757:7N7S7|7</span>
+<span class="s plain-str">6$6(60646&lt;6@6H6L6T6X6`6d6l6p6x6|6</span>
+<span class="s plain-str">7 7$7,70787&lt;7D7H7P7T7\7`7h7l7t7x7</span>
+<span class="s plain-str">8 8(8,84888@8D8L8P8X8\8d8h8p8t8|8</span>
+<span class="s plain-str">9$9(90949&lt;9@9H9L9T9X9`9d9l9p9x9|9</span>
+<span class="s plain-str">: :%:9:&gt;:R:W:k:p:</span>
+<span class="s plain-str">;3;8;L;Q;e;j;~;</span>
+<span class="s plain-str">0,0:0L0^0l0z0</span>
+<span class="s plain-str">=J&gt;`&gt;&quot;?8?</span>
+<span class="s plain-str">6b7x7&amp;9V9</span>
+<span class="s plain-str">? ?4?9?M?R?f?k?</span>
+<span class="s plain-str">0.030G0L0`0e0y0~0</span>
+<span class="s plain-str">1(1-1A1F1Z1_1s1x1</span>
+<span class="s plain-str">2&quot;2&#x27;2;2@2T2Y2m2r2</span>
+<span class="s plain-str">3!353:3N3S3g3l3</span>
+<span class="s plain-str">4/444H4M4a4f4z4</span>
+<span class="s plain-str">5+565C5N5[5f5s5~5</span>
+<span class="s plain-str">6&amp;636&gt;6K6V6c6n6{6</span>
+<span class="s plain-str">7#7.7;7F7S7^7k7v7</span>
+<span class="s plain-str">8+868C8N8[8f8s8~8</span>
+<span class="s plain-str">9&amp;939&gt;9K9V9c9n9{9</span>
+<span class="s plain-str">8(8R8\8v8</span>
+<span class="s plain-str">8$9.9H9j9</span>
+<span class="s plain-str">=4=V=`=z=</span>
+<span class="s plain-str">0 1B1L1f1</span>
+<span class="s plain-str">3.383R3v3</span>
+<span class="s plain-str">6&amp;6N6r6|6</span>
+<span class="s plain-str">222&lt;2V2z2</span>
+<span class="s plain-str">7&amp;8J8T8n8</span>
+<span class="s plain-str">:6:@:Z:~:</span>
+<span class="s plain-str">7&quot;8D8f8p8</span>
+<span class="s plain-str">&lt;2&lt;&lt;&lt;V&lt;z&lt;</span>
+<span class="s plain-str">H7`7~76?p?</span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×80</span></span>
+<span class="s plain-str">Send Status</span>
+<span class="s plain-str">AOL Toolbar</span>
+<span class="s plain-str">XIIVIOPARX <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">XIIVIoPaRx <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Damn Lamer! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">Forward <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">Sign Off?</span>
+<span class="s plain-str">Subject: <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Address</span>
+<span class="s plain-str">New Mail</span>
+<span class="s plain-str">You have</span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">DeActivate <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aol://1391:41-9501</span>
+<span class="s plain-str">*Emergency* <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">M o P a R z <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">? M o P a R z</span>
+<span class="s plain-str">M o P a R z   T o o l z   1 . 2</span>
+<span class="s plain-str">Congratulations!</span>
+<span class="s plain-str">WRONG!!!!</span>
+<span class="s plain-str">FF!  \/\/|-|</span>
+<span class="s plain-str">M o P a R z  T o o l z  1 . 2 <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">ChronoShift Reflect&lt;font = 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888&gt;</span>
+<span class="s plain-str">aol://2719:2-2- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Deltree</span>
+<span class="s plain-str">Extract <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Digital <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Panther <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Demoness <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">Excuse me, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Dear User, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">DIE Damn LAMER!!! &lt;font = 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt; <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">&lt;font = 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555&gt; <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Sleep Tight! Bye! &lt;font = 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888&gt; <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Not Dead Yet?!?!? &lt;font = 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888&gt;</span>
+<span class="s plain-str">See You in HELL!! &lt;font = ################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################&gt;</span>
+<span class="s plain-str">DIE Devil Spawn!! &lt;font = 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999&gt;</span>
+<span class="s plain-str">_IID_FRMPUNTER</span>
+<span class="s plain-str">_IID_FRMSERVE</span>
+<span class="s plain-str">_IID_FRMATTENTION</span>
+<span class="s plain-str">_IID_FRMMCHAT</span>
+<span class="s plain-str">_IID_FRMSCAN</span>
+<span class="s plain-str">_IID_FRMMKROKILLA</span>
+<span class="s plain-str">_IID_FRMTERM</span>
+<span class="s plain-str">_IID_FRMAFK</span>
+<span class="s plain-str">_IID_GREETZ</span>
+<span class="s plain-str">_IID_FRMANTI</span>
+<span class="s plain-str">_IID_FRMISMOPAR</span>
+<span class="s plain-str">_IID_FRMMASSIM</span>
+<span class="s plain-str">_IID_FORM1</span>
+<span class="s plain-str">_IID_FRMRBUST</span>
+<span class="s plain-str">Copyright</span>
+<span class="s plain-str">1998 MoPaR</span>
+</details>
+<div class="stats">Total unique strings: 1405 · Interesting: 114 · Noise filtered: 1002</div>
+</div></body></html>

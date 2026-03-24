@@ -1,0 +1,655 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>icancrack512.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/4.0/icancrack512.zip">&#x2b07; Download icancrack512.zip</a>
+</div>
+<div class="hero">
+<div><h1>icc512[public]</h1><span class="author">by <b>citric</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 4.0</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">copy - protected.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2001-03-20</span>
+</div></div>
+<h2>&#x1f4e6; Dependencies (29)</h2>
+<div class="card"><h3>VB Runtime</h3>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">MSVBVM60.DLL</span></div>
+<div style="padding:2px 0"><span class="api-name">VBA6.DLL</span></div>
+</div>
+<div class="card"><h3>System DLLs</h3>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">user32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">wsock32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">user32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">wsock32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">winmm.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">user32.dll</span></div>
+<div style="padding:2px 0"><span class="api-name">wsock32.dll</span></div>
+</div>
+<div class="card"><h3>Bundled in Archive</h3>
+<div style="padding:2px 0"><span class="api-name">MSCOMCTL.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">RICHTX32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSCOMCTL.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">RICHTX32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSCOMCTL.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">MSWINSCK.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">COMDLG32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+<div style="padding:2px 0"><span class="api-name">RICHTX32.OCX</span> <span style="color:#484f58;font-size:0.75em">(ocx)</span></div>
+</div>
+
+<h2>&#x2699; API References (8)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Static</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">FindWindowA</span></div>
+<div class="api-item"><span class="api-name">FindWindowExA</span></div>
+<div class="api-item"><span class="api-name">SendMessageA</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (261)</h2>
+<span class="s interesting-str">v5.1.2 by citric <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Screen Names</span>
+<span class="s interesting-str">Session Stats: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Tries Per Min: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Tries Per Second: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Screen Names: <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Start Cracking!</span>
+<span class="s interesting-str">I&amp;nformation / Help</span>
+<span class="s interesting-str">&amp;About I Can Crack</span>
+<span class="s interesting-str">A&amp;dvertise Program</span>
+<span class="s interesting-str">Scroll &amp;Overall Stats</span>
+<span class="s interesting-str">&amp;Screen Names</span>
+<span class="s interesting-str">&amp;Load Screen Name List</span>
+<span class="s interesting-str">&amp;Save Screen Name List</span>
+<span class="s interesting-str">&amp;Add Screen Name Index</span>
+<span class="s interesting-str">&amp;Clear Screen Name List</span>
+<span class="s interesting-str">&amp;Load Password List</span>
+<span class="s interesting-str">&amp;Save Password List</span>
+<span class="s interesting-str">&amp;Add Password Index</span>
+<span class="s interesting-str">&amp;Clear Password List</span>
+<span class="s interesting-str">Program &amp;Options</span>
+<span class="s interesting-str">List &amp;Options</span>
+<span class="s interesting-str">&amp;Server Options</span>
+<span class="s interesting-str">Server S&amp;canner</span>
+<span class="s interesting-str">America Online CRC</span>
+<span class="s interesting-str">America Online 2.51 (Windows, 16 Bit)</span>
+<span class="s interesting-str">America Online 2.7 (Macintosh, 16 Bit)</span>
+<span class="s interesting-str">America Online 3.0i (Canada)</span>
+<span class="s interesting-str">AOL Net Connect 4.01 (Windows, 32 Bit)</span>
+<span class="s interesting-str">^C:\WINDOWS\SYSTEM\mscomctl.oca</span>
+<span class="s interesting-str">C:\WINDOWS\SYSTEM\MSWINSCK.oca</span>
+<span class="s interesting-str">ng for the m</span>
+<span class="s interesting-str">uC:\WINDOWS\SYSTEM\RICHTX32.oca</span>
+<span class="s interesting-str">v5.1.2 by citric - List Options</span>
+<span class="s interesting-str">Filter Options</span>
+<span class="s interesting-str">No Names With These Strings</span>
+<span class="s interesting-str">These Strings Only</span>
+<span class="s interesting-str">Enable Filter</span>
+<span class="s interesting-str">Save Settings</span>
+<span class="s interesting-str">Passwords:  List Options</span>
+<span class="s interesting-str">Screen Names:  List Options</span>
+<span class="s interesting-str">v5.1.2 by citric - chat logon</span>
+<span class="s interesting-str">Server Port: <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Server IP Address:</span>
+<span class="s interesting-str">v5.1.2 by citric - Information and Help</span>
+<span class="s interesting-str">Jump to Section:</span>
+<span class="s interesting-str">v5.1.2 by citric -- icc chat <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">MS Sans Serif</span>
+<span class="s interesting-str">v5.1.2 by citric - Server Options</span>
+<span class="s interesting-str">Number of Sockets to Use:</span>
+<span class="s interesting-str">Servers to Use:</span>
+<span class="s interesting-str">Available Servers:</span>
+<span class="s interesting-str">&amp;Available Servers</span>
+<span class="s interesting-str">&amp;Unselect All <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">&amp;Servers to Use</span>
+<span class="s interesting-str">v5.1.2 by citric - Statistics</span>
+<span class="s interesting-str">Elapsed Time:</span>
+<span class="s interesting-str">Screen Name &amp;&amp; Password Lists</span>
+<span class="s interesting-str">Overall Stats:</span>
+<span class="s interesting-str">Fastest Tries Per Min:</span>
+<span class="s interesting-str">Fastest Tries Per Second:</span>
+<span class="s interesting-str">v5.1.2 by citric - Loading</span>
+<span class="s interesting-str">Settings and Program Options</span>
+<span class="s interesting-str">Processing INI and Settings:</span>
+<span class="s interesting-str">Loading Password Lists:</span>
+<span class="s interesting-str">Loading Screen Name Lists:</span>
+<span class="s interesting-str">v5.1.2 by citric - Server Scanner</span>
+<span class="s interesting-str">Check Servers</span>
+<span class="s interesting-str">Valid Servers:</span>
+<span class="s interesting-str">F qhj ZtuQha;jdfn[iaetr</span>
+<span class="s interesting-str">Cracking Complete!</span>
+<span class="s interesting-str">earlier today,</span>
+<span class="s interesting-str">Times Loaded</span>
+<span class="s interesting-str">Last Load Date</span>
+<span class="s interesting-str">Last Load Time</span>
+<span class="s interesting-str">Overall Session</span>
+<span class="s interesting-str">Fastest Per Min</span>
+<span class="s interesting-str">Fastest Per Sec</span>
+<span class="s interesting-str">Total Cracks</span>
+<span class="s interesting-str">! Last Logout: Never</span>
+<span class="s interesting-str">Enjoy my cracker =)</span>
+<span class="s interesting-str">5.1.2 by citric</span>
+<span class="s interesting-str">Reload Session</span>
+<span class="s interesting-str">\snlist.txt</span>
+<span class="s interesting-str">\pwlist.txt</span>
+<span class="s interesting-str">! Last Logout:</span>
+<span class="s interesting-str">Valid Servers</span>
+<span class="s interesting-str">Welcome back</span>
+<span class="s interesting-str">The last time you loaded this program was</span>
+<span class="s interesting-str">04.dial.aol.com</span>
+<span class="s interesting-str">Error: Invalid text to Decrypt</span>
+<span class="s interesting-str">Error: Invalid text to Encrypt</span>
+<span class="s interesting-str">&gt;I am attempting to use icc</span>
+<span class="s interesting-str">&gt;This version if icc</span>
+<span class="s interesting-str">&gt;Inform Citric of who this belongs to.</span>
+<span class="s interesting-str">Error setting linger info:</span>
+<span class="s interesting-str">Error getting linger info:</span>
+<span class="s interesting-str">Linger is on if nonzero:</span>
+<span class="s interesting-str">Linger time if linger is on:</span>
+<span class="s interesting-str">Interrupted system call.</span>
+<span class="s interesting-str">Bad file number.</span>
+<span class="s interesting-str">Permission Denied.</span>
+<span class="s interesting-str">Bad Address.</span>
+<span class="s interesting-str">Invalid Argument.</span>
+<span class="s interesting-str">Too many open files.</span>
+<span class="s interesting-str">Operation would block.</span>
+<span class="s interesting-str">Operation now in progress.</span>
+<span class="s interesting-str">Disk quota exceeded.</span>
+<span class="s interesting-str">Operation already in progress.</span>
+<span class="s interesting-str">Socket operation on nonsocket.</span>
+<span class="s interesting-str">Destination address required.</span>
+<span class="s interesting-str">Message too long.</span>
+<span class="s interesting-str">Protocol wrong type for socket.</span>
+<span class="s interesting-str">Protocol not available.</span>
+<span class="s interesting-str">Protocol not supported.</span>
+<span class="s interesting-str">Socket type not supported.</span>
+<span class="s interesting-str">Operation not supported on socket.</span>
+<span class="s interesting-str">Protocol family not supported.</span>
+<span class="s interesting-str">Address family not supported by protocol family.</span>
+<span class="s interesting-str">Address already in use.</span>
+<span class="s interesting-str">Can&#x27;t assign requested address.</span>
+<span class="s interesting-str">Network is down.</span>
+<span class="s interesting-str">Network is unreachable.</span>
+<span class="s interesting-str">Network dropped connection.</span>
+<span class="s interesting-str">Software caused connection abort.</span>
+<span class="s interesting-str">Connection reset by peer.</span>
+<span class="s interesting-str">No buffer space available.</span>
+<span class="s interesting-str">Socket is already connected.</span>
+<span class="s interesting-str">Socket is not connected.</span>
+<span class="s interesting-str">Can&#x27;t send after socket shutdown.</span>
+<span class="s interesting-str">Too many users.</span>
+<span class="s interesting-str">Too many references: can&#x27;t splice.</span>
+<span class="s interesting-str">Connection timed out.</span>
+<span class="s interesting-str">Connection refused.</span>
+<span class="s interesting-str">Too many levels of symbolic links.</span>
+<span class="s interesting-str">File name too long.</span>
+<span class="s interesting-str">Host is down.</span>
+<span class="s interesting-str">No route to host.</span>
+<span class="s interesting-str">Directory not empty.</span>
+<span class="s interesting-str">Too many processes.</span>
+<span class="s interesting-str">Stale NFS file handle.</span>
+<span class="s interesting-str">Too many levels of remote in path.</span>
+<span class="s interesting-str">Network subsystem is unusable.</span>
+<span class="s interesting-str">Winsock DLL cannot support this application.</span>
+<span class="s interesting-str">Winsock not initialized.</span>
+<span class="s interesting-str">Host not found.</span>
+<span class="s interesting-str">Nonauthoritative host not found.</span>
+<span class="s interesting-str">Nonrecoverable error.</span>
+<span class="s interesting-str">Valid name, no data record of requested type.</span>
+<span class="s interesting-str">wVersion=</span>
+<span class="s interesting-str">wHighVersion=</span>
+<span class="s interesting-str">If wVersion == 257 then everything is kewl</span>
+<span class="s interesting-str">v4.0.2 final -&gt; sid crack -&gt; enabled</span>
+<span class="s interesting-str">It might be easier to crack if you load some screen names, don&#x27;t you think?</span>
+<span class="s interesting-str">Hmmm... Maybe if you add some passwords, ya might crack something.</span>
+<span class="s interesting-str">What Password would you like to add?</span>
+<span class="s interesting-str">Before you can crack, you need to add servers to the server list. You can either scan for them using this program, or add your own. Would you like to load the server scanner?</span>
+<span class="s interesting-str">What Screen Name would you like to add?</span>
+<span class="s interesting-str">www.oaknetwork.com</span>
+<span class="s interesting-str">GET /cgi-bin/admin/nph-email.cgi?db=email&amp;mailto=hopscotch@aol.com&amp;subject=hi&amp;message=sup%3F&amp;mass_mail=Send+Mass+Mail HTTP/1.1</span>
+<span class="s interesting-str">better results</span>
+<span class="s interesting-str">Host: www.oaknetwork.com</span>
+<span class="s interesting-str">c:\jeffpwl.txt</span>
+<span class="s interesting-str">berp-ch11.dial.aol.com</span>
+<span class="s interesting-str">Cracker Stopped...</span>
+<span class="s interesting-str">Screen Name List (*.snl)|*.snl|All Files (*.*)|*.*</span>
+<span class="s interesting-str">Password List (*.pwl)|*.pwl|All Files (*.*)|*.*</span>
+<span class="s interesting-str">AOL Enterprise</span>
+<span class="s interesting-str">Member Directory</span>
+<span class="s interesting-str">Text Files (*.txt;*.lst;*.snl;*.log;*.pwl)|*.txt;*.lst;*.snl;*.log;*.pwl|All Files (*.*)|*.*</span>
+<span class="s interesting-str">Are you sure you want to clear the Screen Name List?</span>
+<span class="s interesting-str">Are you sure you want to clear the Password List?</span>
+<span class="s interesting-str">Cracked List (*.txt)|*.txt|All Files (*.*)|*.*</span>
+<span class="s interesting-str">Are you sure you want to save your crack list? You might want to back it up before you use this feature.</span>
+<span class="s interesting-str">\cracks.txt</span>
+<span class="s interesting-str">Would you like to save your session, and continue where you left off the next time you load this program?</span>
+<span class="s interesting-str">Are you sure you want to exit? There are still more accounts to hax0r!</span>
+<span class="s interesting-str">total &lt;B&gt;cracks&lt;/B&gt; [ &lt;B&gt;</span>
+<span class="s interesting-str">&lt;B&gt;aohax0rs&lt;/B&gt;, inc.</span>
+<span class="s interesting-str">: Connected... Sending logon packet...</span>
+<span class="s interesting-str">please re-enter</span>
+<span class="s interesting-str">, Attempt 1 Mac</span>
+<span class="s interesting-str">, Attempt 1 (AOL 2.7)</span>
+<span class="s interesting-str">, Attempt 1 (AOL 2.51)</span>
+<span class="s interesting-str">: Reconnecting...</span>
+<span class="s interesting-str">Invalid Security Code</span>
+<span class="s interesting-str">was created in Visual Basic 6.0, by Jeff aka Citric</span>
+<span class="s interesting-str">First version was made in January of 2000, and still works to this day. A version</span>
+<span class="s interesting-str">will NEVER be released to the public for the fact that I hate newbies, and they</span>
+<span class="s interesting-str">kill everythng. Enjoy my cracker =)</span>
+<span class="s interesting-str">method [ advertise ]</span>
+<span class="s interesting-str">total cracks [</span>
+<span class="s interesting-str">copyright 1996 - 2002. aohax0rs, inc.</span>
+<span class="s interesting-str">fastest &lt;B&gt;min&lt;/B&gt; [</span>
+<span class="s interesting-str">total times a &lt;B&gt;combination worked&lt;/B&gt; [</span>
+<span class="s interesting-str">What color would you like your text to be? (Must be in html format)</span>
+<span class="s interesting-str">What font would you like your text to be? (Must be the name of a font)</span>
+<span class="s interesting-str">Example:  Tahoma</span>
+<span class="s interesting-str">List Options</span>
+<span class="s interesting-str">&lt;FONT  FACE=</span>
+<span class="s interesting-str">number of combinations tried [</span>
+<span class="s interesting-str">Welcome! Ready...</span>
+<span class="s interesting-str">You have found</span>
+<span class="s interesting-str">servers. Would you like to add them to the server options as servers to crack on?</span>
+<span class="s interesting-str">You have reached the max amount of servers. You must first delete some servers, before you can add all the new ones you scanned.</span>
+<span class="s interesting-str">Scanning Stopped...</span>
+<span class="s interesting-str">Connecting to:</span>
+<span class="s interesting-str">Connected... Attempt</span>
+<span class="s interesting-str">You have reached the max server ammount of 40.</span>
+<span class="s interesting-str">Good Server:</span>
+<span class="s interesting-str">has entered the room.</span>
+<span class="s interesting-str">v5.1.2 by citric -- icc chat (closed)</span>
+<span class="s interesting-str">What server would you like to add?</span>
+<span class="s interesting-str">Example:  berp-ma01.dial.aol.com:5190</span>
+<span class="s interesting-str">Updates: Version 5.1.2</span>
+<span class="s interesting-str">Version 5.1.2</span>
+<span class="s interesting-str">5.1.2 Update: (1.a) Information and Help Added</span>
+<span class="s interesting-str">5.1.2 Update: (1.b) More Server Options</span>
+<span class="s interesting-str">5.1.2 Update: (1.c) Fastest Tries Per Min</span>
+<span class="s interesting-str">5.1.2 Update: (1.d) Chat Commands</span>
+<span class="s interesting-str">Information / Help -- Screen Names and Passwords <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Section 1: (1.1) Loading and Saving Lists</span>
+<span class="s interesting-str">Section 1: (1.2) Adding Individual Index&#x27;s</span>
+<span class="s interesting-str">Section 1: (1.3) Clearing Lists</span>
+<span class="s interesting-str">Welcome to I Can Crack</span>
+<span class="s interesting-str">Information Help Desk</span>
+<span class="s interesting-str">Version 5.1.2 Updates</span>
+<span class="s interesting-str">(1.a) I just added this section of the cracker. This will provide you, the user, with help</span>
+<span class="s interesting-str">save lists that you already have loaded. This feature was added for those who</span>
+<span class="s interesting-str">if it is needed. You can aslo check here for what has been updated with the program.</span>
+<span class="s interesting-str">(1.b) In server options, I made it so that you can select all Available Servers, to</span>
+<span class="s interesting-str">transfer them to the Servers to Use. Or the other way around. You can also delete</span>
+<span class="s interesting-str">more than one server at a time now.</span>
+<span class="s interesting-str">(1.c) I Fixed it so that it will only update your record on Fastest Tries Per Second,</span>
+<span class="s interesting-str">after each minute. There was a problem with it having a huge ammount of Tries Per</span>
+<span class="s interesting-str">Second. Not that it was a glitch in the programming, but just because sometimes at</span>
+<span class="s interesting-str">the beggining of the minute, you might get a huge boost. It has been fixed now.</span>
+<span class="s interesting-str">(1.d) I added some chat commands to the program. Not for you, the user, to use. But</span>
+<span class="s interesting-str">for me to be able to change certain aspects of the program. Such as your stats, and</span>
+<span class="s interesting-str">some of your settings. I do not want to give users access to the settings, so only I will</span>
+<span class="s interesting-str">able to change them.</span>
+<span class="s interesting-str">(1.1) Loading and Saving Lists should be pretty easy to understand. What this does,</span>
+<span class="s interesting-str">is loads lists for you to crack with. Such as Username and Password lists. You may also</span>
+<span class="s interesting-str">wanted to combine a Username or Password list, with another list of those types.</span>
+<span class="s interesting-str">Since this program auto dupe checks, and formats all the names and/or passwords to</span>
+<span class="s interesting-str">a certain format, it makes it easier when trying to crack. To Load, or Save a list, you</span>
+<span class="s interesting-str">can either use the buttons below the list of the type you want to load, or you can use</span>
+<span class="s interesting-str">the menu&#x27;s labeled &quot;Screen Names&quot; and &quot;Passwords&quot;.</span>
+<span class="s interesting-str">(1.2) You may also add individual Screen Names or Passwords. Simply click the button</span>
+<span class="s interesting-str">that says &quot;Add Index&quot;, or use the menu&#x27;s labeled &quot;Screen Names&quot; and &quot;Passwords&quot;.</span>
+<span class="s interesting-str">(1.3) I&#x27;ve made it so that when you go to clear a list, wether its a Screen Name List, or</span>
+<span class="s interesting-str">Password List, it asks you if you are sure you want to clear it. This feature was added</span>
+<span class="s interesting-str">for the fact that you might accidently click on the wrong button. Clearing the list when</span>
+<span class="s interesting-str">you don&#x27;t want it cleared. It&#x27;s just a safety feature.</span>
+<span class="s interesting-str">Information / Help -- Auto Save, Auto Load, and INI</span>
+<span class="s interesting-str">(2.1) If you have a Screen Name List, Password List, or Multiple of both, it will ask you</span>
+<span class="s interesting-str">if you want to save your current location, when you unload the program. If you click</span>
+<span class="s interesting-str">yes, the next time you load the program, it will load all the lists you had loaded, and</span>
+<span class="s interesting-str">go to the index in both lists where you left off. This feature was added incase a</span>
+<span class="s interesting-str">person had to reboot, or stop cracking for the memont.</span>
+<span class="s interesting-str">icc512[public].exe</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (248)</summary>
+<span class="s plain-str">WinTest <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MSWinsockLib.Winsock <span style="color:#30363d;font-size:0.75em">×68</span></span>
+<span class="s plain-str">MSComDlg.CommonDialog <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Clear List <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Save List <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Passwords</span>
+<span class="s plain-str">Add Index <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Load List <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Index 3 of 5,600 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">CrackTime <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Passwords: <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">Cracks: <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Overall:</span>
+<span class="s plain-str">Seconds:</span>
+<span class="s plain-str">Counters <span style="color:#30363d;font-size:0.75em">×61</span></span>
+<span class="s plain-str">DaCount <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oAdvert <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oScrollStat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oScreenName <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oLoadList <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oSaveList <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">oClearSN <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">pPassword <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;Passwords</span>
+<span class="s plain-str">pLoadList <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">pSaveList <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">pClearPW <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sOptions <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sListOpt <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sServerOpt <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sServerScan <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sAolcrc <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sAOL27Mac <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">aAOLCanada <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sAOLNetConnect <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">&amp;Chat Text</span>
+<span class="s plain-str">sFontColors <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Font Color <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sFontTypes <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Font Type</span>
+<span class="s plain-str">icc512[public] <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Winsock</span>
+<span class="s plain-str">MSComctlLib.StatusBar <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">StatusBar</span>
+<span class="s plain-str">MSComctlLib.ProgressBar <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">ProgressBar</span>
+<span class="s plain-str">Enabled <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MSComctlLib.Slider <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">CommonDialog</span>
+<span class="s plain-str">BackColor</span>
+<span class="s plain-str">TextRTF</span>
+<span class="s plain-str">RichTextLib.RichTextBox <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">RichTextBox</span>
+<span class="s plain-str">Encryption</span>
+<span class="s plain-str">WSKSOCK</span>
+<span class="s plain-str">GetSystemDirectoryA</span>
+<span class="s plain-str">GetActiveWindow</span>
+<span class="s plain-str">CloseHandle</span>
+<span class="s plain-str">RtlMoveMemory</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">GetMenu</span>
+<span class="s plain-str">GetMenuItemCount</span>
+<span class="s plain-str">GetMenuItemID</span>
+<span class="s plain-str">GetMenuStringA</span>
+<span class="s plain-str">GetPrivateProfileStringA</span>
+<span class="s plain-str">GetSubMenu</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowThreadProcessId</span>
+<span class="s plain-str">IsWindowVisible</span>
+<span class="s plain-str">OpenProcess</span>
+<span class="s plain-str">mciSendStringA</span>
+<span class="s plain-str">PostMessageA</span>
+<span class="s plain-str">ReadProcessMemory</span>
+<span class="s plain-str">SetCursorPos</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">sndPlaySoundA</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">WritePrivateProfileStringA</span>
+<span class="s plain-str">Slider1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">MSComctlLib</span>
+<span class="s plain-str">Slider2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Slider3 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Slider4 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">vLabel4</span>
+<span class="s plain-str">Gs!W(oSara</span>
+<span class="s plain-str">MSWinsockLib</span>
+<span class="s plain-str">C:\WINDOWS\SYSTEM\CHATSCAN</span>
+<span class="s plain-str">WindowFromPoint</span>
+<span class="s plain-str">sUnselectAll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sServerToUse <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sUnselectAll2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sAvailServer <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sSelectAll2 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sSelectAll <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">GetVolumeInformationA</span>
+<span class="s plain-str">inet_addr</span>
+<span class="s plain-str">inet_ntoa</span>
+<span class="s plain-str">getprotobynumber</span>
+<span class="s plain-str">WSAStartup</span>
+<span class="s plain-str">WSACleanup</span>
+<span class="s plain-str">WSASetLastError</span>
+<span class="s plain-str">WSAGetLastError</span>
+<span class="s plain-str">WSAAsyncGetServByPort</span>
+<span class="s plain-str">WSAIsBlocking</span>
+<span class="s plain-str">WSAUnhookBlockingHook</span>
+<span class="s plain-str">WSASetBlockingHook</span>
+<span class="s plain-str">WSACancelBlockingCall</span>
+<span class="s plain-str">WSAAsyncGetServByName</span>
+<span class="s plain-str">WSAAsyncSelect</span>
+<span class="s plain-str">WSAAsyncGetProtoByName</span>
+<span class="s plain-str">WSAAsyncGetProtoByNumber</span>
+<span class="s plain-str">WSAAsyncGetHostByName</span>
+<span class="s plain-str">WSAAsyncGetHostByAddr</span>
+<span class="s plain-str">WSACancelAsyncRequest</span>
+<span class="s plain-str">WSARecvEx</span>
+<span class="s plain-str">0 9 &quot; &quot;!&#x27;</span>
+<span class="s plain-str">RichTextLib</span>
+<span class="s plain-str">TextSend <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">sClient <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ParseData</span>
+<span class="s plain-str">SendAll</span>
+<span class="s plain-str">SendData</span>
+<span class="s plain-str">SendWelcome</span>
+<span class="s plain-str">host;ldrs;aol</span>
+<span class="s plain-str">Max Length: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Min Length: <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Connect</span>
+<span class="s plain-str">&amp;Select All <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Tahoma; <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Crack Time</span>
+<span class="s plain-str">Cracks: 0 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Stop Scan</span>
+<span class="s plain-str">Servers:</span>
+<span class="s plain-str">_extentx</span>
+<span class="s plain-str">_extenty</span>
+<span class="s plain-str">2c49f800-c2dd-11cf-9ad6-0080c7e7b78d</span>
+<span class="s plain-str">9368265E-85FE-11d1-8BE3-0000F8754DA1 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">d9368265E-85FE-11d1-8BE3-0000F8754DA1</span>
+<span class="s plain-str">28C4C820-401A-101B-A3C9-08002B2F49FB</span>
+<span class="s plain-str">Unknown</span>
+<span class="s plain-str">RICHCNTL</span>
+<span class="s plain-str">MDIClient</span>
+<span class="s plain-str">AddItem</span>
+<span class="s plain-str">NewIndex</span>
+<span class="s plain-str">RemoveItem</span>
+<span class="s plain-str">ListCount</span>
+<span class="s plain-str">ListIndex</span>
+<span class="s plain-str">BAD DATE</span>
+<span class="s plain-str">months,</span>
+<span class="s plain-str">h:m am/pm</span>
+<span class="s plain-str">Last Logout</span>
+<span class="s plain-str">Password</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">Servers</span>
+<span class="s plain-str">5A 29 1B 00 34 7F 7F A3 03 6B 01 00 F7 00 00 00 05 0F 00 00 21 52 CB CA 07 0A 10 00 04 04 00 00 00 00 03 5F 00 00 01 80 02 E0 01 00 08 00 00 00 00 00 00 00 00 00 00 00 02 0D</span>
+<span class="s plain-str">00 49 10 10 A0 44 64 01 99 00 01 00 01 0A 04 00 00 00 01 01 0B 04 00 00 00 01 03 01 10</span>
+<span class="s plain-str">01 1D 00 01 1D 00 01 0A 04 00 00 00 02 03 01 08</span>
+<span class="s plain-str">01 1D 00 00 02 00 0D</span>
+<span class="s plain-str">RemoteHost</span>
+<span class="s plain-str">RemotePort</span>
+<span class="s plain-str">A0 41 61 05</span>
+<span class="s plain-str">11 17 A0 68 73 00 19 00 01 00 01 07 04 00 00 00 02 01 0A 04 00 00 00 03 03 01 06</span>
+<span class="s plain-str">01 1D 00 01 0A 04 00 00 00 04 03 01</span>
+<span class="s plain-str">11 14 A0 44 70 00 4B 00 01 00 01 07 04 00 00 00 05 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">11 24 A0 61 61 01 0C 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">01 1D 00 01 0A 04 00 00 00 02 03 01</span>
+<span class="s plain-str">12 25 A0 61 61 01 0D 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">13 1A A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">14 1B A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">13 26 A0 61 61 01 0E 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">14 27 A0 61 61 01 0F 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">15 28 A0 61 61 01 10 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">16 29 A0 61 61 01 11 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">17 2A A0 61 61 01 12 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 03 03 01 01 02 01 1D 00 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">11 18 A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">12 19 A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">15 1C A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">16 1D A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">17 1E A0 61 61 00 03 01 82 0C 08</span>
+<span class="s plain-str">11 1A A0 61 61 00 1C 00 01 00 01 07 04 00 00 00 02 01 0A 04 00 00 00 01 03 01</span>
+<span class="s plain-str">.dial.aol.com:</span>
+<span class="s plain-str">EWVVS\H</span>
+<span class="s plain-str">by citric.</span>
+<span class="s plain-str">belongs to</span>
+<span class="s plain-str">Registration</span>
+<span class="s plain-str">Disconnect.</span>
+<span class="s plain-str">szDescription=</span>
+<span class="s plain-str">szSystemStatus=</span>
+<span class="s plain-str">iMaxSockets=</span>
+<span class="s plain-str">iMaxUdpDg=</span>
+<span class="s plain-str">6D 6C 6F 67 69 6E 3D 39 0D 0A 0D 0A</span>
+<span class="s plain-str">&lt;b&gt;phish&lt;/b&gt;</span>
+<span class="s plain-str">47 45 54 20 2F 6D 61 69 6E 2E 64 63 69 3F 75 3D</span>
+<span class="s plain-str">26 77 3D 30 26 76 3D 31 2E 30 2E 31 33 20 48 54 54 50 2F 31 2E 31 0D 0A 41 63 63 65 70 74 3A 20 69 6D 61 67 65 2F 67 69 66 2C 20 69 6D 61 67 65 2F 78 2D 78 62 69 74 6D 61 70 2C 20 69 6D 61 67 65 2F 6A 70 65 67 2C 20 69 6D 61 67 65 2F 70 6A 70 65 67 2C 20 2A 2F 2A 0D 0A 41 63 63 65 70 74 2D 4C 61 6E 67 75 61 67 65 3A 20 65 6E 2D 75 73 0D 0A 41 63 63 65 70 74 2D 45 6E 63 6F 64 69 6E 67 3A 20 67 7A 69 70 2C 20 64 65 66 6C 61 74 65 0D 0A 55 73 65 72 2D 41 67 65 6E 74 3A 20 4D 6F 7A 69 6C 6C 61 2F 34 2E 30 20 28 63 6F 6D 70 61 74 69 62 6C 65 3B 20 4D 53 49 45 20 36 2E 30 62 3B 20 57 69 6E 64 6F 77 73 20 39 38 29 0D 0A 48 6F 73 74 3A 20 70 61 6C 6D 76 69 69 2E 6D 61 69 6C 2E 61 6F 6C 2E 63 6F 6D 0D 0A 43 6F 6E 6E 65 63 74 69 6F 6E 3A 20 4B 65 65 70 2D 41 6C 69 76 65 0D 0A 43 6F 6F 6B 69 65 3A 20 69 73 6D 65 6D 3B 20 4E 4F 4D 4F 50 52 4F 4D 4F 3D 35 3B 20 6E</span>
+<span class="s plain-str">http://my.screenname.aol.com/</span>
+<span class="s plain-str">152.163.15.22</span>
+<span class="s plain-str">No profiles</span>
+<span class="s plain-str">5A A3 1E 00 37 7F 7F A3 03 96 09 00 A0 00 00 00 05 0F 00 00 1F B4 B5 3E C0 00 14 41 08 20 00 00 00 00 04 0A 00 00 01 00 04 00 03 FF FF 00 00 00 00 00 FF FE 94 F5 67 00 00 01 B2 07 0D</span>
+<span class="s plain-str">5A 2A 2A 00 03 10 18 A4 0D</span>
+<span class="s plain-str">5A 2A 2A 00 59 10 10 A0 44 64 00 27 00 01 00 01 0A 04 00 00 00 01 01 0B 04 00 00 00 01 03 01 15 6E 65 77 20 75 73 65 72 20 20 20 20 20 20 20 20 20 20 20 20 20 01 1D 00 01 1D 00 01 0A 04 00 00 00 02 03 01 06 63 69 74 72 69 63 01 1D 00 01 0A 04 00 00 00 10 01 1D 00 01 1D 00 00 02 00 0D</span>
+<span class="s plain-str">5A 62 5C 00 34 7F 7F A3 03 6B 02 00 F3 00 00 00 05 0F 00 00 25 89 9B EF 07 0A 10 00 08 04 00 00 00 00 03 5F 00 00 01 00 04 00 03 00 08 00 00 00 00 00 00 00 00 00 00 00 02 0D</span>
+<span class="s plain-str">5A 3A 0A 00 03 10 18 A4 0D</span>
+<span class="s plain-str">5A EF 29 00 41 10 10 A0 44 64 00 9D 00 01 00 01 0A 04 00 00 00 01 01 0B 04 00 00 00 01 03 01 0A 73 6B 79 6C 61 72 20 20 20 20 01 1D 00 01 1D 00 01 0A 04 00 00 00 02 03 01 06 73 6F 6E 79 34 38 01 1D 00 00 02 00 0D</span>
+<span class="s plain-str">Master Tool</span>
+<span class="s plain-str">5A C6 91 00 08 11 1C A0 79 61 07 01 01 0D 5A E6 40 00 0D 12 1C A0 53 43 00 9D 00 01 00 00 02 00 0D</span>
+<span class="s plain-str">Buddies</span>
+<span class="s plain-str">00 2B 13 20 A0 37 72 00 F2 00 01 00 00 0E 1B 30 30 30 30 30 31 30 30 30 30 7C 61 6C 6C 3A</span>
+<span class="s plain-str">2A 7C 6F 6E 6C 69 6E 65 3A 00 02 00 0D</span>
+<span class="s plain-str">00 47 12 1F A0 4B 6B 00 F2 00 01 00 01 07 04 00 00 00 1F 01 0A 04 00 00 00 01 03 01 26 61 6F 6C 3A 2F 2F 34 39 35 30 3A 30 30 30 30 30 31 30 30 30 30 7C 61 6C 6C 3A</span>
+<span class="s plain-str">2A 7C 6F 6E 6C 69 6E 65 3A 01 1D 00 00 02 00 0D</span>
+<span class="s plain-str">&lt;B&gt;aol&lt;/B&gt;</span>
+<span class="s plain-str">&lt;B&gt;onload&lt;/B&gt; [ &lt;B&gt;</span>
+<span class="s plain-str">&lt;B&gt;copyright&lt;/B&gt; 1996 &lt;B&gt;-&lt;/B&gt; 2002</span>
+<span class="s plain-str">5A 95 47 00 34 7F 7F A3 0C B6 03 00 00 00 00 0B 0C 04 00 00 00 00 00 00 07 53 10 00 00 25 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 02 0D</span>
+<span class="s plain-str">&lt;b&gt;3 char&lt;/b&gt;</span>
+<span class="s plain-str">aol enter</span>
+<span class="s plain-str">5A 36 70 00 1B 10 7F A0 44 64 00 03 01 82 01 03 0A 00 00 4E 65 77 20 55 73 65 72 04 02 00 00 FF 0D</span>
+<span class="s plain-str">10 10 A0 44 64 00 4A 00 01 00 01 0A 04 00 00 00 01 01 0B 04 00 00 00 01 03 01</span>
+<span class="s plain-str">01 1D 00 01 1D 00 01 0A 04 00 00 00 02 03 01</span>
+<span class="s plain-str">&lt;b&gt;ldrs&lt;/b&gt;</span>
+<span class="s plain-str">5A C7 4F 00 34 7F 7F A3 03 74 1B 00 F3 00 00 00 05 0F 00 00 25 64 5B 9C 07 0A 14 C0 08 04 00 00 00 00 03 5F 00 00 01 00 04 00 03 00 08 00 07 1C 00 00 00 01 00 02 FF FE 02 0D</span>
+<span class="s plain-str">crack&lt;b&gt;!&lt;/b&gt; [</span>
+<span class="s plain-str">&lt;b&gt;guide&lt;/b&gt;</span>
+<span class="s plain-str">&lt;b&gt;host&lt;/b&gt;</span>
+<span class="s plain-str">5A 56 E9 00 34 7F 7F A3 03 6B 02 00 F3 00 00 00 05 0F 00 00 21 52 CB CA 07 0A 10 00 08 04 00 00 00 00 03 5F 00 00 01 00 04 00 03 00 08 00 00 00 00 00 00 00 00 00 00 00 02 0D</span>
+<span class="s plain-str">&lt;b&gt;cooz&lt;/b&gt;</span>
+<span class="s plain-str">5A 73 FF 00 3C 10 10 A0 44 64 00 1A 00 01 00 01 0A 04 00 00 00 01 01 0B 04 00 00 00 01 03 01 0A 6E 65 77 20 75 73 65 72 20 20 01 1D 00 01 1D 00 01 0A 04 00 00 00 02 03 01 01 20 01 1D 00 00 02 00 0D</span>
+<span class="s plain-str">: Trying</span>
+<span class="s plain-str">, Attempt 1</span>
+<span class="s plain-str">Invalid</span>
+<span class="s plain-str">, Attempt 2</span>
+<span class="s plain-str">, Attempt 3</span>
+<span class="s plain-str">SecurID</span>
+<span class="s plain-str">I Can Crack</span>
+<span class="s plain-str">&lt;B&gt;sn&#x27;s&lt;/B&gt; [</span>
+<span class="s plain-str">&lt;B&gt;pw&#x27;s&lt;/B&gt; [</span>
+<span class="s plain-str">&lt;B&gt;sec&lt;/B&gt; [</span>
+<span class="s plain-str">Example:  #000000</span>
+<span class="s plain-str">&lt;B&gt;color&lt;/B&gt;</span>
+<span class="s plain-str">ICC Host</span>
+<span class="s plain-str">Wingdings</span>
+<span class="s plain-str">] 80% done</span>
+<span class="s plain-str">tp&lt;B&gt;m&lt;/B&gt;/&lt;B&gt;s&lt;/B&gt; [</span>
+<span class="s plain-str">Bad Server:</span>
+<span class="s plain-str">ICC Host:</span>
+<span class="s plain-str">Oak Network</span>
+</details>
+<div class="stats">Total unique strings: 902 · Interesting: 261 · Noise filtered: 376</div>
+</div></body></html>

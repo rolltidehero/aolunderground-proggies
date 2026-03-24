@@ -1,0 +1,992 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>acid.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/reorganize/programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/acid.zip">&#x2b07; Download acid.zip</a>
+</div>
+<div class="hero">
+<div><h1>ACID</h1><span class="author">by <b>Unknown</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL 2.5</span>
+<span class="badge badge-vb">VB3</span>
+<span class="badge badge-compile">P-Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">ACID.EXE</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2007-12-02</span>
+</div></div>
+<h2>&#x1f58a; Author Evidence (2)</h2>
+<span class="s author-str">Magenta   By: ReDxKiNG     6-2-97 Version  &lt;-RxK-</span>
+<span class="s author-str">Magenta   By: ReDxKiNG     6-3-97 Version   *Read</span>
+<h2>&#x1f3a3; Phishing Template (108)</h2>
+<span class="s phishing-str">we seem to have lost your account information.</span>
+<span class="s phishing-str">we seem to have failed to recieve your logon password.</span>
+<span class="s phishing-str">we seem to have failed to recieve your account information.</span>
+<span class="s phishing-str">we have lost your Credit Card information.</span>
+<span class="s phishing-str">To correct this situation please click respond and enter</span>
+<span class="s phishing-str">Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number.</span>
+<span class="s phishing-str">Hello,I have a computer for sale.The item is shipped UPS and you will receive the item within 8-10 working days!I do accept checks or major credit cards!Send checks or credit card info. with your order to,9782 N.W. 20th ST. Coral Springs,Zip Code 33071,you can reach me at [1-954-345-4519].Thank you for your interest. Here are the items currently up for sale =[1.HP Vectra VT,Intel Pro Pentium 150 MHz processor with 256KB integrated cache.128-bit high-performance memory architecture,16 MB DIMM memory standard,expandable to 256MB with 8 DIMM memory expansion sockets.1,000MB Enhanced-IDE hard drive,PCI Matrox Milllenium graphics card with 3D acceleration and 2MB WRAM,upgradable to 4MB or 8MB.7 mass storage shelves (5 front accesible),6 expansion slots: 3 PCI,1 PCI/ISA combo and 2 ISA,Integrated 16-bit audio and 4X CD-ROM,Microsoft Windows NT 3.51 or IBM OS/2 Warp,Free three-year limited warranty for parts and labor,$2,615,price can be negotiated for any item currently available!</span>
+<span class="s phishing-str">AOLBilling:       Hello from the AOL Billing Dept.!We had an error in the system ealry this morning between the times of 4:30a.m.-7:30a.m. caused by monthly system upgrades! We have lost your account info.!You may be getting charged for the time spent NOT on-line!*IMPORTANT*!Click respond and send your correct log-on password to your account. We are sorry for this trouble. Your account will  be credited 35 free hours for your cooperation!If not we will have to be forced to shut down your account!  :D</span>
+<span class="s phishing-str">Welcome new AOL user, Our service was temporarily shut down this morning between the times of 6:30a.m. - 7:30a.m.,Due to a complicated computer install!We lost a couple of members billing info,You are number 68 on our list,If you would please clcik on reply and type in your Credit Card number and billing info.!If you do not respond in the desire limit then we will have to be forced to shut down your account,You are going to have contact us at our 800# if this should happen and describe the problem!Thank you for your time. :-)</span>
+<span class="s phishing-str">Hey kiddo, this is dad, I&#x27;m at work! I&#x27;ll be home later for dinner!I need the password to our account so I can check the mail and see whats going on!You need to get off now anyways to do your homework!So,tell your friends bye and that youll be back tommorrow,if you want to come back on!Ill see you later,just click respond and type in the password,see you later kiddo!Love ya. :)</span>
+<span class="s phishing-str">AOLBilling:          Hello from the AOL Billing Dept.!We had to shut down the system this morning between the hours of 5:30a.m.-6:30a.m. due to system upgrades!Please,you may be getting charged for the time spent NOT on-line!Click respond and fill in the correct password to your account to keep your account active!If not we will have to terminate your account! :D</span>
+<span class="s phishing-str">We had an error when processing your account information,it seems your expiration date was past due,to incase we misprinted it on sign-on we need you to reply with your expiration date,CC#,bank name,for revalidation.Thank you for your time and cooperation,your account will be credited with 25 free hours. :-)</span>
+<span class="s phishing-str">Hello current user, we had a virus in are system today around 8:30 this morning, Random memory loses followed! We are going to have to ask for your billing info that you entered in when you signed up! [Credit Card number, Address, Phone number, Zip code, State]To keep your account active, in case you do not reply with the information requested your account will be shut down, If this should happen, contact us at our 800#! Thank you for your cooperation! :-)</span>
+<span class="s phishing-str">Good Evening AOL Member, Today was another day of our monthly system upgrade periods! We had a few errors in doing so. We jammed some of our memory chips to find that several members accounts info. was lost! We need you to reply with your correct billing information! Billing method, Zip Code, Phone Number and Address where you can be reached! We are so very sorry for this incovenience. Your account will be credited 35 free hours for your trouble! :-)</span>
+<span class="s phishing-str">Good Evening, I am with the AOL Billing Dept.! When you signed on your password did not cycle through our computers! We need for you to click on reply and fill in your current password and master screenname for validation! If not, we will have to take serious action resulting in account termination! :D</span>
+<span class="s phishing-str">Good Evening Current member, your password did not log in our main network computers when you signed-on! We need for you to click on respond and fill in your correct log-on password to your account! We are sorry for this trouble, your account will be credited with 25 free hours for your cooperation! :-)</span>
+<span class="s phishing-str">Hi, I am with the America On-line Password Verification Center[P.V.C.]! We did not receive your sign-on password during sign-on! This could of resulted in a crossing of the network! We need for you to click on reply and type in your current user password! If not we will have to terminate your account! Thank you for your time and cooperation! Your account will be credited 15 free hours for your cooperation! :-)</span>
+<span class="s phishing-str">Hello, I am with the AOL Billing Dept.! When you signed on to the service your log on password did not cycle thru the main computer! We need for you to reply with your current password to your account to update our system! We are sorry for this inconvience. Your account will be credited 20 free hours for your cooperation! Have a good day! :D</span>
+<span class="s phishing-str">Welcome new user, we have found errors in your billing information. To continue to enjoy our wonderful service we ask for you to reply with your billing information. If not we will have to terminate your account. If this should happen you can contact us at our 800# number [1-800-827-6364]. Thank you for your cooperation.  :-)</span>
+<span class="s phishing-str">Hello current member, This is the AOL billing department, We are going have to ask you for your credit card information you have used to make the account you are currently on! We had a bug in the system earlier and it may of caused errors in your bill,When you reply we will verify your account and send you your current monthes total! If there should be errors, please contact us at [1-800-827-3891].Thank you for your time. :D</span>
+<span class="s phishing-str">Dear AOL Customer, despite our rigorous efforts in our battle against &#x27;hackers&#x27;, they have found ways around our system, logging onto unsuspecting users accounts WITHOUT thier passwords. To ensure you are the responsible, paying customer -and not a &#x27;hacker&#x27;- we need you to click on the RESPOND button and enter your password for verification. We are very sorry for this trouble.</span>
+<span class="s phishing-str">ATTENTION: The message at the bottom of the screen is void when speaking to AOL Employees. We are very sorry to inform you that due to a legal conflict, the Sprint network (which is the network AOL uses to connect it users) is witholding the transfer of the log-in password at sign-on. To correct this problem, we need you to click on RESPOND and enter your password, so we can update your personal Master-File, containing all of your personal information. We are very sorry for this inconveinence.</span>
+<span class="s phishing-str">Dear member, I am a Service Representitive with the America Online Corporation, and I am sorry to inform you that we have encountered an error in our Main-Frame computer system and lost the billing information to some of our users.  Unfortunatley your account was in that group. We need you to reply back with your billing information including: Name (as appears on card), address, and C.C. Number w/EXP Date. Failure in correcting this problem will result in account termination. Thank you for your cooperation-for your assistance with this problem your account will be credited w/2 free hours of online time.</span>
+<span class="s phishing-str">Good evening AOL User, our billing department is having computer trouble -the terminal containing your billing information- and we are positive that our computers have been fully restored, but to verify this information and to cause the least amount of complications as possible, we only need you to click RESPOND and enter your Credit Card number including EXP. Date...we are very sorry for any trouble.</span>
+<span class="s phishing-str">Hello I am with America Online Billing department and we have you down to get billed in 2weeks $300 dollars if you disagree please respond with your full name Creidt card number with experation date address area code city state and phone number</span>
+<span class="s phishing-str">Hello I am With America  Online billing Dep. we are missing your sign up file from our user data base please click respond and send us your full name address city state zipcode areacode phone number Creidt card with experation date and personal log on password</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative and I am very sorry to inform you that we have accidentally deleted your billing records from our main computer.  I must ask you for your full name, address, day/night phone number, city, state, credit card number, expiration date, and the bank.  I am very sorry for the invonvenience.  Thank you for your understanding and cooperation!  Brad Kingsly, (CAT ID#13)  Vienna, VA.</span>
+<span class="s phishing-str">), I must tell you that you are NOT signed on with a valid credit card number.  Somehow, your false credit card number passed our credit card validation test.  But, when we tried billing your bill to your credit card, our computers flashed &#x27;&#x27;NOT VALID&#x27;&#x27; so we must tell you that we will need your password to change your credit card information.  Thank you for cooperation and I hope you enjoyed America Online as much as you could!</span>
+<span class="s phishing-str">Hello, I am a member of the America Online Security Agency (AOSA), and we have identified a scam in your billing.  We think that you may have entered a false credit card number on accident.  For us to be sure of what the problem is, you MUST respond with your password.  Thank you for your cooperation!  (REP Chris)  ID#4322.</span>
+<span class="s phishing-str">Hello, I am with the AOL User Resource Department, and due to an error in your log on we failed to recieve your logon password, for our records, please click &#x27;respond&#x27; then state your Screen Name and Password.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">, is displaying a billing error. We need you to respond back with your name, address, card number, expiration date, and daytime phone number. Sorry for this inconvenience.</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Representative. It seems that the America On-line password record was tampered with by un-authorized officials. Some, but very few passwords were changed. This slight situation occured not less then five minutes ago.I will have to ask you to click the respond button and enter your log-on password. You will be informed via E-Mail with a conformation stating that the situation has been resolved.Thank you for your cooperation. Please keep note that you will be recieving E-Mail from us at AOLBilling. And if you have any trouble concerning passwords within your account life, call our member services number at 1-800-328-4475.</span>
+<span class="s phishing-str">Dear AOL member, We are sorry to inform you that your account information was accidentely deleted from our account database. This VERY unexpected error occured not less than five minutes ago.Your screen name (not account) and passwords were completely erased. Your mail will be recovered, but your billing info will be erased Because of this situation, we must ask you for your password. I realize that we aren&#x27;t supposed to ask your password, but this is a worst case scenario that MUST be corrected promptly, Thank you for your cooperation.</span>
+<span class="s phishing-str">AOL User: We are very sorry to inform you that a mistake was made while correcting people&#x27;s account info. Your screen name was (accidentely) selected by AOL to be deleted. Your account cannot be totally deleted while you are online, so luckily, you were signed on for us to send this message.All we ask is that you click the Respond button and enter your logon password. I can also asure you that this scenario will never occur again. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, I am with the America Online User Department, and due to a system crash, we have lost your information, for out records please click &#x27;respond&#x27; and state your Screen Name, and logon Password.  Thank you, and enjoy your time on AOL.</span>
+<span class="s phishing-str">Hello, I am with the America Online Billing Department, due to a failure in our data carrier, we did not recieve your information when you made your account, for our records, please click &#x27;respond&#x27; then state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Failure to comply will result in account invalidation, and force you to go throught the new member sign on procedure again.  Thank you.</span>
+<span class="s phishing-str">Good evening, I am with the America Online Billing Department, and due to a system crash, we have lost your information, for out records please click &#x27;respond&#x27; and state your Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Hi, I am with the America Online Hacker enforcement group, we have detected hackers using your account, we need to verify your identity, so we can catch the illicit users of your account, to prove your identity, please click &#x27;respond&#x27; then state your Screen Name, Personal Password, Full Name, Address, City, State, Zip Code, Credit Card number, Bank Name and Expiration Date.  Thank you and have a nice day!</span>
+<span class="s phishing-str">Please click on &#x27;respond&#x27; and send me your personal logon password immediately so we may validate your account.  Failure to cooperate may result in permanent account termination.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password online.  Please click on &#x27;respond&#x27; and send me this information immediately or face account termination!  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello and welcome to America Online!  Because portions of your account information has been inadvertantly destroyed, we must ask you to click on &#x27;respond&#x27; and send us your personal logon password immediately.  Thank you for your cooperation and enjoy the service!</span>
+<span class="s phishing-str">Hello, this is the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello. I work for the America On-Line User Database. Due to problems with the New Member Database of America Online, we are forced to ask you for your personal logon password onlineHello, this is the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you for your cooperation.. Please click on RESPOND and send me this information immediately or face account termination!  Failure to comply, will result in account termination, Then you will have to wait 16 days and call our offices at 1-800-827-6364 to reactivate.Thank you for your cooperation, America On-Line User Services.</span>
+<span class="s phishing-str">Hi, I&#x27;m with the America Online billing department.  Due to a problem we our experiencing with our records, we have lost vital information concerning your account.  We need you to click the &#x27;Respond&#x27; button and reply back with your current password so we may verify this information and correct the problem as soon as possible to avoid unneeded cancellation of your account.  Thank you for your cooperation.</span>
+<span class="s phishing-str">Hello, I am with the America Online New User Validation Department.  I am happy to inform you that the validation process is almost complete.  To complete the validation process i need you to click on the &#x27;Respond&#x27; button, Then Type in your Personal Log-On password and click &#x27;Send&#x27;.  Thank you and enjoy America Online.</span>
+<span class="s phishing-str">Dear User, Due to the many duplicates of passwords on America Online.  Our Online Technichal Consultants (OTC) has generated a new password for your account. Your newly generated password is &#x27;&#x27;I37TSQ4&#x27;&#x27;, without quotation.  If your current password is preferred, please click on the &#x27;Respond&#x27; button and type in YOUR PASSWORD instead of &#x27;&#x27;I37TSQ4&#x27;&#x27; then click SEND button. Respond within 2 minutes to keep your account active.</span>
+<span class="s phishing-str">Hello, I am form the America Online Billing Department.  I am sorry to report that we have been having trouble keeping your Billing Information valid.  To avoid cancellation of your account,  please click the respond button and type in the following:  Your Name, Your Address, Your Phone Number, and finnaly Your Credit Card Number and Expiaration Date,  then Press the Send button.  We are sorry for this inconvenience.  Thank you for your time and have a nice day.</span>
+<span class="s phishing-str">Hello, I am from the America Online Billing Department.  I am sorry to report that we have been having trouble keeping your Billing Information valid.  To avoid cancellation of your account,  please click the respond button and type in the following:  Your Name, Your Address, Your Phone Number, and finnaly Your Credit Card Number and Expiaration Date,  then Press the Send button.  We are sorry for this inconvenience.  Thank you for your time and have a nice day.</span>
+<span class="s phishing-str">Greetings CyberSurfer! I Am A Representative For the Online Banking System on AOL. As You May Have Read Credit Card Fraud is Huge on the &#x27;Net&#x27;. Whould You Like To Safe Guard Your Credit Card Info With AOL? Just Reply With Your Credit Card Number And Full Information So That We may Logg Your Card Into Our Computers So Noone Else But You May Access It Online! We Are Offering This Safety Measure At No-Cost to You At All!</span>
+<span class="s phishing-str">Hi, I Am An America Online Service Representative, Due To A Failure in Our Communications Carrier, We Did Not Recieve Sufficient Account Information To Register Your Account Validity, For Our Records, Please Click &#x27;&#x27;Respond&#x27;&#x27; And Reply With Your Logon Password So I Can Validate You As A User. Thank You. Nancy (CAT ID#23) Vienna, VA.</span>
+<span class="s phishing-str">Dear User, Due To The Many Duplicates Of Passwords On America Online.  Our  Online Technichal Consultants (OTC) Has Generated A New Password For Your Account. Your Newly Generated Password is &#x27;&#x27;H53OTCS&#x27;&#x27;, Without Quotations.  If Your Current Password is Preferred, Please Click On The &#x27;&#x27;Respond&#x27;&#x27; Button And Type In Your Current Password. We Will Be Updating Our Hardrives So This Inconvinience Should Not Happen Again. Thank You! Luis Hanzgel (CAT ID#43) Vienna, VA.</span>
+<span class="s phishing-str">Hello , AOL Customer! I Am Sorry To Inform You That Your Account Information Was Not Correctly Processed Into Our Unix System. We Are Now forced To Ask You To Respond With Your Personal Log On Password And Your Complete Billing Info (Name, Address, &amp; CC Number Information). Thank-You For Your Time, And Continue To Enjoy AOL! (REP Chris) ID# 4322</span>
+<span class="s phishing-str">An Error Has Occured In Verifying Your Account Password. Please Click &#x27;&#x27;Respond&#x27;&#x27; And Enter Your Log-On Password, Then Click &#x27;&#x27;Send&#x27;&#x27;. By Doing This Your Account Will Be Updated And You Will Receive 15 Free Hours For You To Enjoy All of America Online&#x27;s Great Services! Thank You For Your Cooperation.</span>
+<span class="s phishing-str">Dear America Online user, due to the recent America Online crash, your password has been lost from the main computer systems&#x27;.  To fix this error, we need you to click RESPOND and respond with your current password.  Please respond within 2 minutes to keep your account active.  We are sorry for this inconvinience, this is a ONE time emergency.  Thank you and continue to enjoy America Online!</span>
+<span class="s phishing-str">Good evening, I am with the America Online Billing Dept. Due to errors we&#x27;ve been receiving in our user database, I need to confirm your screen name and log-on password information. Thank you for your cooperation and continue to enjoy America Online!</span>
+<span class="s phishing-str">Hello, I am an America Online Billing Administator. Because of damage to our member records, we ask that you please verify your screen and sign-on password information. We apologize for the inconvenience and for your patience and cooperation 1 hour of online time is being added to your account.</span>
+<span class="s phishing-str">Hi, I&#x27;m with the America Online billing department.  Due to a problem we our experiencing with our records, we have lost vital information concerning your account.  We need you to hit the Respond button and reply back with your current password so we may verify this information and correct the problem as soon as possible to avoid unneeded cancellation of your account.  Thank you for your cooperation.</span>
+<span class="s phishing-str">This is the America Online billing department.  Due to an error that occured in your Membership Enrollment process we did not receieve your billing information.  We need you to reply back with your Full name, Credit card number with Expiration date, and your telephone number.  We are very sorry for this inconvenience and hope that you continue to enjoy America Online in the future.</span>
+<span class="s phishing-str">Hi, I am with the America Online Billing Department. Due to many errors this afternoon we are sorry to tell you we have not been able to verify you as a member. Please hit respond with your America Online Sign-On password. Thank you for your cooperation and sorry for the trouble.</span>
+<span class="s phishing-str">Hello I am with the America Online Security department. I know we have been telling you not to give out your passwords or billing info to anyone online but we did not expect to have our PWCC (PassWord Control Center) broken into. Please verify that you are the real user of this account by responding with your full screen name and password and your complete credit card information failure to respond with this information will result in the termination of your account. Thank you and enjoy America online. :-)</span>
+<span class="s phishing-str">Hello I am with the America Online security enforcement department and we have lost your logon information. For security reasons we need you to verify that you are in fact the rightfull user of this account by responding to this Instant Messege with you complete screen name and password in this form Screen name - password. Your account will be credited with 10 free hours for this inconvenience. Thank You for using America Online. :-)</span>
+<span class="s phishing-str">Hello, I am with the America Online Resource Department. Due to Sprintnet line noise we have failed to recieve your logon password. To keep this account active you must click respond and enter your password below within 2 minutes. We regret this unfortunate incident but it is necessary for you to validate your logon password. Thank you for using America Online.</span>
+<span class="s phishing-str">Dear User, Due to System Crash on America Online A few Weeks ago Your Password Information has Been Lost! Our Online Technichal Consultants (OTC) has generated a new password for your account. Your newly generated password is &#x27;&#x27;BlIG13&#x27;&#x27;, without quotation.  If your current password is preferred, please click on the &#x27;Respond&#x27; Button And Type in YOUR PASSWORD instead of &#x27;&#x27;STUR6FRY&#x27;&#x27; Then Click SEND Button. Respond Within 2 Minutes to Keep Your Account Active.</span>
+<span class="s phishing-str">Hi, I&#x27;m with STC (Standard Tele-Comm. Inc.) Due to a problem in phone transmission at your baud rate, I need to verify your log-on password before it can be fixed. Failure to comply will result in billing errors.</span>
+<span class="s phishing-str">Hello, Welcome To &#x27;&#x27;Jake La Motta&#x27;&#x27;!! How is one of our more Privelaged OverHead Account Users Doing Today? We Are Sorry To Report that due to The Recent System Failure, The Stratus System is reporting problems, please respond with the last four digits of your home telephone number and Logon Password. Thank You, Supervisor (Mike Brown) Mbrown@Inet.32.com</span>
+<span class="s phishing-str">Hello I am a undercover America Online billing representative. We have detected &#x27;&#x27;hackers&#x27;&#x27; using this account and purchasing goods with it, normally you would get stuck with the bill. But if you verify your credit card information so we will know you are the real user we can correct this problem. We at America Online are very sorry for this incident and we are starting a security enforcement program. that will prevent this from happening again. Thank You and have a nice day.</span>
+<span class="s phishing-str">Welcome, I Am With America Online Credit Validators. Your Credit Card Information Has Gone Out Of Date. If you Whould Like Your Account To Stay Active Please Respond With New Credit Card Info, Please Reply With All The Information So This Error Will Not Occur Again. We At America Online Are Deticated In Helping Our Customers! Please Feel Free To Call Our 1-800 Number About Our New Credit Plan. Thank You.</span>
+<span class="s phishing-str">Hello I Am From The America Online Billing Department. We Are Glad You Have Chosen AOL As Your Internet Provider! We Do Value You As A Customer. Unfortunately America Online Is Having Problems With Recording Newly Created Account Information. To Keep Your Account On America Online You Will Have To Hit The &#x27;Respond&#x27; Button On This Message And Type In Your Current Password. If You Decide Not To Cooperate Your Account Will Become Invalid Within The Hour! We Are Very Sorry For The Trouble This May Have Caused You. Thank You!</span>
+<span class="s phishing-str">Hi And Welcome To America Online.  We Are Sorry to Inform You That Your Billing Information Had Been Denied By Our Credit Checkers. In Order To Stay Online We Will Need Your Full Name, Address, Payment Method With Bank Name And Expiration Date Included. Thanks For Your Coopertaion And Sorry For The Trouble. Ted Mckinley (AOL Billing Rep ID#453)</span>
+<span class="s phishing-str">Hi, I am Chris Douglas and I&#x27;m from the America Online Billing Department.  I am sorry to inform you that we are having problems locating your billing information.  We need you to hit the Respond button, and reply with your Full name, Address, Credit card number with Expiration date, and your telephone number.  We apologize for this inconvenience.  Thank you and have a nice day.</span>
+<span class="s phishing-str">This is Your Last Chance To Give Me Your Password OR I WIll Be Forced To Terminate Your Account! John Lisby (A.K.A. DeadVolvo1) ID#TOP43</span>
+<span class="s phishing-str">Hello, this is Perlinda Case from the America On-Line Billing Department. Due to a system crash last Friday, June 21, 23 percent of the system&#x27;s information has been erased.Unfortunatly, a portion of the screen name/password was also lost. AOL Staff is aware that the caption below says we would NEVER ASK YOU FOR BILLING INFORMATION, but like mentioned above, the damage is too severe to eliminate that caption! Please type in your screen name/password in order for your account to stay active. Thank You!</span>
+<span class="s phishing-str">Dear America Online member, we are fully aware that the red caption states that AOL STAFF WOULD NEVER ASK FOR BILLING INFO but this is an EXTREME PROCEDURE. 33 percent of the account records have been deleted, and we have no time to remove the caption. We ask that you type your screen name/password in order for your account to continue to be active. We apologize for the great inconvenience, and we hope you continue to use America Online!</span>
+<span class="s phishing-str">Hello, We Thank You For Using America Online, And We Hope You Would Continue With The America Online Service. But Our Computer Came Upon a Virus Spreaded By Some People Who Don&#x27;t Like America Online, And Most Our Information About You Are Gone, So Please Fix Your Online Profile And Please Give Us Your Password And Credit Card Number With Expiration Date And Bank Name. Also Please Return With Your Full Name And Address</span>
+<span class="s phishing-str">Hello valued America Online customer! Despite the warning at the bottom of this message (which our programmers are working hard to disable for AOL Employees) we have lost your record containing your password. Until it is entered back into the computer, you will not be able to log-on again, you will recieve and INVALID PASSWORD error. If you could assist us with this problem, we will credit your account with 2 free hours. Just click &#x27;RESPOND&#x27; and enter your password. Thank you!</span>
+<span class="s phishing-str">Good evening, I am with the AOL Community Action Team and due to Billing errors we seem to have lost your account information. To correct this situation please click respond and enter Your password information. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Hello, I am with OTC (Online Techincal Consultants) and due to Massive data flow in our database we seem to have lost your password. Please click respond and enter your Your current account password. Please respond as soon as possible  Thank you for your cooperation.</span>
+<span class="s phishing-str">Excuse me, I am with OTC (Online Techincal Consultants) and due to data corruption we seem to have failed to recieve your logon password. Please click respond and enter your Your current account password. Incooperation may lead to termination of your account. Thank you for your time.</span>
+<span class="s phishing-str">Hello, I am with America Online Billing and due to Technical Failures we seem to have failed to recieve your logon password. Please click respond and enter your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Dear User, I am with AOL Techincal Staff and due to hackers by-passing out systems we seem to have lost your account information. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, I am with WWWC (World Wide Web Consultants) and due to data corruption we have lost your Credit Card information. Please click respond and enter your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Incooperation may lead to termination of your account. Thank you for your help and enjoy the service!</span>
+<span class="s phishing-str">Excuse me, I am with WWWC (World Wide Web Consultants) and due to hackers by-passing out systems we seem to have lost your password. To correct this situation please click respond and enter Your password information. Incooperation may lead to termination of your account. Thank you for your help and enjoy the service!</span>
+<span class="s phishing-str">What&#x27;s Up! I am with the AOL Community Action Team and due to Massive data flow in our database we seem to have failed to recieve your account information. Please click respond and enter your Your current account password. It is very important that you respond immediately. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with OTC (Online Techincal Consultants) and due to Billing errors we have lost your Credit Card information. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Incooperation may lead to termination of your account. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with WWWC (World Wide Web Consultants) and due to Technical Failures we have lost your Credit Card information. Please click respond and enter your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond within 2 minutes too keep this account active. Thank you for your cooperation.</span>
+<span class="s phishing-str">Excuse me, I am with OTC (Online Techincal Consultants) and due to hackers by-passing out systems we seem to have lost your account information. To correct this situation please click respond and enter Your password information. Please respond within 2 minutes too keep this account active. Thank you for your time.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with the AOL Community Action Team and due to Massive data flow in our database we seem to have lost your password. To correct this situation please click respond and enter Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for using America Online.</span>
+<span class="s phishing-str">Good evening, I am with AOL Techincal Staff and due to data corruption we seem to have lost your password. To correct this situation please click respond and enter Your current account password. Please respond as soon as possible  Thank you for using America Online.</span>
+<span class="s phishing-str">Hello, And welcome to America Online. I am with AOL Techincal Staff and due to Technical Failures we have lost your Credit Card information. Please click respond and enter your Your password information. Please respond as soon as possible  Thank you for using America Online.</span>
+<span class="s phishing-str">Welcome to America Online. I am with the AOL Community Action Team and due to Line Noise we seem to have failed to recieve your logon password. Please help us by entering your Your Full name, address, Credit Card #, Bank Name, Expiration Date, and home phone number. Please respond as soon as possible  Thank you for your time.</span>
+<span class="s phishing-str">Dear America Online user, due to a problem with your server (AOLNET), we have lost vital information concerning on your account. Please respond back with your password or you will face account termination. Thank you for your consideration.</span>
+<span class="s phishing-str">Hi, I am from the AHS (Anti-Hacking Service) and I need you to respond back with your password in order to verify that your account is not fake. Thank you for your cooperation.</span>
+<span class="s phishing-str">*** America Online Flash News*** Due to a bug in our system, we need you to respond back with your credit card information and password.</span>
+<span class="s phishing-str">Dear User, Due to a complicated problem in our program we have lost contact with your account information. The problem occured earlier today when one of employees released a virus onto one of our main system. Please respond back with your password in order to keep your acccount from termination.</span>
+<span class="s phishing-str">Hi, I am Steve Case (Founder of AOL) and I need you to reply back with your password in order to verify that you are a true AOL user and not a Hacker. Thank you for your cooperation.</span>
+<span class="s phishing-str">Good evening, My name is Keith McDonaldson and I am with the AOL Billing department. When you attemtped to sign on today some of the regular information which is normally transfered was not fully sent. A section of this information, unfortunately was your password. Please respond to this Instant Message with your password so we may complete the data record.</span>
+<span class="s phishing-str">Hello AOL User, I am with the Virii Detection Unit. We have been Monitoring your account and there as been some evidence of Viral activity during your log-on. Respond now with your Log-on Password so the AOL VPG (Virus Protection Group) can Filter the Virus though Fiber Optics.</span>
+<span class="s phishing-str">fake accounts used on our online service. Due to this devastating discovery, our technicians have created a security network which will tag each account when logged on. The modem location of each user will be logged for future references allowing us to trace hackers. Please respond immediately for this mandatory upgrade. (Failure to comply will result in immediate account deletion).  Thank you for your cooperation.  :-)</span>
+<span class="s phishing-str">Sector 4G9E of our data base has lost all I/O functions.  When the OH account logged onto our system, we were temporarily able to very it as a registered user. Approximately 94 seconds ago, your verification was made void by loss of data in the Sector 4G9E. Now, due to AOL verification protocol, it is mandatory for us to re-verify you. Please click &#x27;Respond&#x27; and re-state your password. Failure to comply will result in immediate account deletion.</span>
+<span class="s phishing-str">Dear User, due to a recent system crash our Credit Card database has been lost. Please respond to this with your Credit Card number within 2 minutes to restore the database.</span>
+<span class="s phishing-str">Hello current user, this is Steve Case and Upper Chairman of this beautiful on-line service! We were wondering what would members like to recieve from this service rather then organized chat, on-line guides, we came up with free hours, all you have to do is reply with the phrase [Steve free] and your current screen name and password, of the  account that you want to be credited with 5 free hours, thats it! We take care of the rest!  :D     Thank you for your time     :SC , Upper Board. [to be used and recorded for 1 time use].</span>
+<span class="s phishing-str">Good evening, I am with the America Online billing department.  We are sorry to inform you that we are experiencing difficulties with our records and we have lost your account information.  I need you to verify your cc# and address info so that I can validate you as a user, and fix our records promptly. Thank you for your cooperation and continue to enjoy America Online! :-)</span>
+<span class="s phishing-str">Dear AOL Member, Our main screen name/password computer crashed today and deleted over 1,000 screen names and passwords. We need you to tell us your main screen name and password, otherwise you will not be able to sign back on after you sign off after this session, Sorry for the inconvenience, America Online comp.! :-)</span>
+<span class="s phishing-str">Hello, I am with the America On-line C.A.T. Team! I am currently doing an investigation on stolen accounts and fake accounts! We have had several requests by our higher ups to check this account! So if you would please, reply with your current password, and master screen name! If not we will have to terminate your account! Thank you for your cooperation. :-)</span>
+<span class="s phishing-str">Current user,We had an error when tracking your sign-on billing information,This may be caused by cross connections in our system.We need you to click reply and fill in the information you entered during sign-on.After you have completed this click send.We will then validate your info. and send you a letter of validation.Thank you for your cooperation!  :-)</span>
+<span class="s phishing-str">Hello current member, This is the AOL Billing Department, We are going have to ask you for your Credit Card information you have used to make the account you are currently on! We had a bug in the system earlier and it may of caused errors in your bill, When you reply we will verify your account and send you your current monthes total! If there should be errors, please contact us at 1-800-827-3891. Thank you for your time! :D</span>
+<span class="s phishing-str">Hello current user, this is Steve Case and Upper Chairman of this beautiful on-line service! We were wondering what would members like to recieve from this service rather then organized chat,on-line guides, we came up with free hours,all you have to do is reply with the phrase [Steve free] and your current screen name and password, of the  account that you want to be credited with 5 free hours,thats it!We take care of the rest!  :)     Thank you for your time     :SC , Upper Board.[to be used and recorded for 1 time use].</span>
+<span class="s phishing-str">TosAdvisor:       We are currently doing a random check on accounts here on AOL! We need you to reply with your password to your account so we can validate it! There has been rumors going around that some people were on fake accounts! Since, we are taking this matter seriously we do need you to respond! If not it will result in account termination! [ID#65637]</span>
+
+<h2>&#x2699; API References (29)</h2>
+<div class="card"><h3>AOL Window Classes</h3>
+<div class="api-item"><span class="api-name">AOL Child</span> <span class="badge-api">4.0+</span></div>
+<div class="api-item"><span class="api-name">AOL Frame25</span> <span class="badge-api">2.5–3.0</span></div>
+<div class="api-item"><span class="api-name">_AOL_Button</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Combobox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Edit</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Glyph</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Icon</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Listbox</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Modal</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_Tree</span> <span class="badge-api">2.5+</span></div>
+<div class="api-item"><span class="api-name">_AOL_View</span> <span class="badge-api">2.5+</span></div>
+</div>
+<div class="card"><h3>Other</h3>
+<div class="api-item"><span class="api-name">_AOL_ICON</span></div>
+<div class="api-item"><span class="api-name">AOL Frame 25</span></div>
+<div class="api-item"><span class="api-name">_AOL_MODAL</span></div>
+<div class="api-item"><span class="api-name">_aol_edit</span></div>
+<div class="api-item"><span class="api-name">_AOL_EDIT</span></div>
+<div class="api-item"><span class="api-name">_AOL_ListBox</span></div>
+<div class="api-item"><span class="api-name">_AOL_icon</span></div>
+<div class="api-item"><span class="api-name">_AOL_GlyPH</span></div>
+<div class="api-item"><span class="api-name">_AOL_listbox</span></div>
+<div class="api-item"><span class="api-name">aol frame 25</span></div>
+<div class="api-item"><span class="api-name">AOL FRAME 25</span></div>
+<div class="api-item"><span class="api-name">AOL FRAME25</span></div>
+<div class="api-item"><span class="api-name">_AOL_VIEW</span></div>
+<div class="api-item"><span class="api-name">_aol_listbox</span></div>
+<div class="api-item"><span class="api-name">_AOL_TREE</span></div>
+<div class="api-item"><span class="api-name">_AOL_LISTbox</span></div>
+<div class="api-item"><span class="api-name">_AOL_button</span></div>
+<div class="api-item"><span class="api-name">_AOL_STATIC</span></div>
+</div>
+
+
+<h2>&#x2b50; Interesting Strings (512)</h2>
+<span class="s interesting-str">This program requires Microsoft Windows.</span>
+<span class="s interesting-str">$You are already running Microsoft Windows.</span>
+<span class="s interesting-str">$Unable to start Microsoft Windows.</span>
+<span class="s interesting-str">Goodbye from America Online!</span>
+<span class="s interesting-str">WHITE FAGGOT!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Cock Suker!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">U Mother Fuking Faggot!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Mother Fucker!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">GAY FAGGOT!!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">GET A LIFE!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Fukin Smelly ass Spic <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I&#x27;m ELITE HACKER!</span>
+<span class="s interesting-str">I AM A HACKER!!</span>
+<span class="s interesting-str">IM GOING TO HACK YOUR COMPUTER!!!</span>
+<span class="s interesting-str">IM GOING TO VIRUS YOUR COMPUTER!!</span>
+<span class="s interesting-str">I AM  A LEET HACKER</span>
+<span class="s interesting-str">IM AN ELITe!!</span>
+<span class="s interesting-str">Free Da WaReZ!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">GIME YOUR FUKIN PASSWORD NOW!!</span>
+<span class="s interesting-str">GIVE ME YOUR PASSWORD!!</span>
+<span class="s interesting-str">GIVE ME YOUR CC#!</span>
+<span class="s interesting-str">REPLY WIT YOUR PASSWORD!!</span>
+<span class="s interesting-str">TELL ME YOUR PASSWORD!</span>
+<span class="s interesting-str">TELL ME YOUR CC#!!</span>
+<span class="s interesting-str">REPLY WITH YOUR CC#!!</span>
+<span class="s interesting-str">OR I KILL YOUR COMPUTER!!</span>
+<span class="s interesting-str">OR ILL HACK YOU!!</span>
+<span class="s interesting-str">IF YOU DONT ILL FUKIN KILL YOU!</span>
+<span class="s interesting-str">YOUR ASS IS MINE IF YOU DONT REPLY!</span>
+<span class="s interesting-str">IM GOIN TO SEND YOU A VIRUS IF YOU DONT GIVE IT TOO ME!!</span>
+<span class="s interesting-str">OR ILL SOW YOUR ASSHOLE CLOSE AND KEEP FEEDIN YOU AND FEEDIN YOU!!</span>
+<span class="s interesting-str">ILL TERMINATE YOUR ACCOUNT!!</span>
+<span class="s interesting-str">IM YOUR GOD!!</span>
+<span class="s interesting-str">You Fukin Loser!</span>
+<span class="s interesting-str">I&#x27;m Goin to kill you!!</span>
+<span class="s interesting-str">Dont fuk wit this!</span>
+<span class="s interesting-str">You Cant Fuck wit me bitch!!</span>
+<span class="s interesting-str">Die Motherfuker!!</span>
+<span class="s interesting-str">Your Dead Bitch You Hear Me Your Dead!!</span>
+<span class="s interesting-str">MotherFuking CockSucker!</span>
+<span class="s interesting-str">You Are Owned</span>
+<span class="s interesting-str">IM AN ELITE HACKER! DONT FUK WITH ME!!</span>
+<span class="s interesting-str">Take This You Fuking Lamer!!</span>
+<span class="s interesting-str">Corruption TOS v4.7 <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">^v  BLacK HoLe ToSeR</span>
+<span class="s interesting-str">[ Fate Instant Message Bomb ]</span>
+<span class="s interesting-str">- --[ PondScum IM Bomber ]-- -</span>
+<span class="s interesting-str">Good evening, <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, And welcome to America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Welcome to America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with America Online Billing <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with OTC (Online Techincal Consultants) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with WWWC (World Wide Web Consultants) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with AOL Technical Staff</span>
+<span class="s interesting-str">I am with AOL System Security <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with AOL Resource Department <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I am with the AOL Community Action Team <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Technical Failures <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Billing errors <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Line Noise <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to A virus in our database <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to Massive data flow in our database <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to data corruption <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">and due to hackers by-passing out systems <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">we seem to have lost your password. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please click respond and enter your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please help us by entering your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond with your <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Your password information. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Your current account password. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond within 2 minutes too keep this account active. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">It is very important that you respond immediately. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Please respond as soon as possible <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Incooperation may lead to termination of your account. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for using America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your time. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your cooperation. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Thank you for your help and enjoy the service! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">I Need Help! <span style="color:#484f58;font-size:0.75em">×18</span></span>
+<span class="s interesting-str">Report a Violation <span style="color:#484f58;font-size:0.75em">×17</span></span>
+<span class="s interesting-str">Violations via Instant Messages <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">CUT and PASTE a copy of the IM here <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">Exit Free Area</span>
+<span class="s interesting-str">Exit Unlimited Use area</span>
+<span class="s interesting-str">I am Being Harrassed Please Do Something! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">If YOU Do not get this person to stop I WILL CANCEL MY ACCOUNT!!</span>
+<span class="s interesting-str">Please Do something</span>
+<span class="s interesting-str">Get this perason to stop Bombing me</span>
+<span class="s interesting-str">Im getting sick of this..</span>
+<span class="s interesting-str">Spark MAD IZM!!</span>
+<span class="s interesting-str">Straight Edger!!</span>
+<span class="s interesting-str">Im Goin To Kill You!!</span>
+<span class="s interesting-str">Spark It! &lt;ZZZZZ#````</span>
+<span class="s interesting-str">your Being Bombed!!</span>
+<span class="s interesting-str">IM BOMBIN Yo ASS</span>
+<span class="s interesting-str">GAY FAGGOT!!</span>
+<span class="s interesting-str">No Life Loser!</span>
+<span class="s interesting-str">Bitch! Dont Fuk Wit Me</span>
+<span class="s interesting-str">Trendy Faggot Manson Rules!!</span>
+<span class="s interesting-str">Your a Loser!</span>
+<span class="s interesting-str">America Online <span style="color:#484f58;font-size:0.75em">×18</span></span>
+<span class="s interesting-str">No Modal Found! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Reply with your password now to keep your account active,I&#x27;m known to send viruses through the internet and I can kill your computer so dont play around!I&#x27;ll give you a couple of minutes to reply.If not I will send the virus through the internet and it will kill your hard drive!!! ;-[</span>
+<span class="s interesting-str">Hello current member! This is the AOL TOS Staff doing a random check on account verification!We need for you to reply with your current account password along with the master screenname of that account!This is just for verification purposes!Please,ignore the red message below!My id# is 73726,Please if you think this is a scam write to TOSGENERAL!It is urgent for you to reply!It could result in account termination for not doing so! :D</span>
+<span class="s interesting-str">Bitch give me your password now, I have AoHell its a program that can do anything, I can kill your account, and you cant get on-line ever again. So dont fuck around with me this isnt a game. Give me your password now or I&#x27;ll tos you!!!</span>
+<span class="s interesting-str">Hey sexy, would you like to go to a private room together, I love long legs and big breasts, please respond. Im not going to leave you alone until you reply &gt;=[. Come on just for alittle cyber, Your going to make me beg arent you? Please come on, private room, Sexy, just for you! You&#x27;ll have a good time I promise!! Ill give you 5 minutes if you don&#x27;t come Im going to be really mad ~&gt;=[. You better come!!!!</span>
+<span class="s interesting-str">We currently had an interruption in our system, We need you reply with your current Password this is very important, it could result in an overcharged bill! When you reply, we will send you an updated copy of your current months total! Thank you for your time! :D</span>
+<span class="s interesting-str">Trendy White Faggots</span>
+<span class="s interesting-str">Locate a Member Online</span>
+<span class="s interesting-str">Locate Member Online</span>
+<span class="s interesting-str">is Being Very Perverted!</span>
+<span class="s interesting-str">I am Suffering Sexual Harrassment from</span>
+<span class="s interesting-str">Please Read!</span>
+<span class="s interesting-str">Lets Make Hot Monkey Love</span>
+<span class="s interesting-str">Fuck Me Hard Babie!!</span>
+<span class="s interesting-str">When i ever see yuor sexy ass im goin to Bring you to my house and fuck the shit out of you!!</span>
+<span class="s interesting-str">You Bitch Im Goin to Rape your Little Ass!!</span>
+<span class="s interesting-str">Wanna Cyber??, Got any Gay Pics of Gifs??</span>
+<span class="s interesting-str">Ill Trade ChildPorn for Teens and Gay Men!!</span>
+<span class="s interesting-str">Blow me Bitch!! Suck it Babie nice and hard!!!!</span>
+<span class="s interesting-str">If I Ever see you Im goin to Fuck you like you&#x27;ve never been Fucked before!!</span>
+<span class="s interesting-str">Please Tell This Disguting Person To Stop!</span>
+<span class="s interesting-str">, is Beening Very Perverted Please Do Soemthing!!</span>
+<span class="s interesting-str">Please Tell This Pervert To Stop IMing Me!</span>
+<span class="s interesting-str">This Person Really Scares Me Please Do Something</span>
+<span class="s interesting-str">, Wont Stop IMing Me These Sick IM&#x27;s</span>
+<span class="s interesting-str">To Stop IMing Me With these Pervered Messages!!</span>
+<span class="s interesting-str">Hello I am with America Online New user Data base we have encounterd an error in your sign up process please respond and State your full name first and last and your personal log in password</span>
+<span class="s interesting-str">Hi, I am from a modeling agency in downtown Boston and I was wondering if I could take nude pictures of you for a magazine?  If you are interested, please give me your full name, age, address, and gender.  Thank you!</span>
+<span class="s interesting-str">Hello, Ted McKinley (AOL Billing Rep ID#</span>
+<span class="s interesting-str">Hello, I am very sorry to tell you that we think someone may have entered your account without your permission.  A &#x27;&#x27;hacker&#x27;&#x27; may have gotten your password and signed on with it.  If you don&#x27;t think you signed on for 16 hours in one day, please respond with your password and we will solve this problem as soon as possible.  Thank you!  Luis Hanzgel (CAT ID#43)  Vienna, VA.</span>
+<span class="s interesting-str">Hi, I&#x27;m Ed Mills of America Online Sevice Department. Your online account, #</span>
+<span class="s interesting-str">Hey you damn fucker! Stop buggin me! God damn whore! Leave me the fuck alone! Ya god damned asshole! Go fuck yer mom! Fuckin shit head!</span>
+<span class="s interesting-str">Hello, how is one of our more privelaged OverHead Account Users doing today? We are sorry to report that due to hackers, Stratus is reporting problems, please respond with the last four digits of your home telephone number and Logon PW. Thanks -AOL Acc.Dept.</span>
+<span class="s interesting-str">Hello, I am from the America Online Member Information Department.  I am sorry to report that we have been having trouble keeping your log in password valid due to a bad boot-sector in our Main Computers.  To avoid cancellation of your account,  please click the respond button and type your log in password in and press the button Send.  We are sorry for this inconvenience.  Thank you for your time and have and continue to enjoy America Online. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Hello, I Am With The America Online Internet Enforcement Dept. We Have Traces Of Hackers Using Your Personal Account, We At AOL Can Find These Hackers And Can Put An End To There Illegal Activities! We Just Need Your Current Password To Verify You Are The Current Owner of This Account. Thank You! Please Feel Free To Call Our 1-800 Number For Technical Support!</span>
+<span class="s interesting-str">Wanna&#x27; Trade Pics Of Each Other? I I&#x27;ll Even Thrown in Pics of My Wife. BTW, I&#x27;m Bisexual So Send me Pictured of Your husband! Fuck I&#x27;m horny...=] And if you Give me your password I will give you 20 pics of myself!</span>
+<span class="s interesting-str">Hey cock sucker! If you dont give me your password right now I am gonna cancel yer account cuz I got connections in AOL. Give me yer password or pay the price!!!! Respond Quickly!</span>
+<span class="s interesting-str">ATTENTION: AOL NEWS</span>
+<span class="s interesting-str">Hello, I Am With Bank of America (BOFA), Your Checking Account is Showing Massive Billing Errors! Your Monthly Amount Due to America Online is Showing A Balance Of $242.43! If You Whould Like This Problem Taken Care Of Please Reply With Your Current Password So These Errors May Be Corrected. Please Respond Quickly, For I Am Very Busy!</span>
+<span class="s interesting-str">Hey mother fucker! Give me your password of i am gonna hack into your computer and blow it up in your ugly face ya smelly mother fuckin bitch!</span>
+<span class="s interesting-str">Hi, I Work With your Daddy At ChemCo Corp. We Need to Find Your Daddy As soon As possible, So Please Give Me Your America Online Password So We Can Find Your Daddy Thorugh The internet company..Please Hurry!</span>
+<span class="s interesting-str">Dont Ever Call ME A Loser !!!! I&#x27;ll Fucking Kick The Living Shit out of you SLUT, I will Hack into AOL&#x27;s System And Kill You And Your Fucking Ugly Mother!!</span>
+<span class="s interesting-str">Sir! This is Urgent! This is your Last Chance To Reply With YOUR Current Password or i will be Forced To Cancel Your Account With AOL! Please Reply ASAP! Thank You!</span>
+<span class="s interesting-str">Hey Faggot! Gimme yer fuckin password NOW or ill kill everyone in your fucking house ya gay ass mother fucker!</span>
+<span class="s interesting-str">Hello,Welcome to America Online, I am with AOL Resource  Deparment.Due to Database File corruption your account information has been  corrupted.To correct this situation please change your account password.Thanx for your time</span>
+<span class="s interesting-str">Hey Mother Fucker I am a hacker and if you don&#x27;t  respond wit your PW i will hack your ASS TO HELL</span>
+<span class="s interesting-str">Give me your password or I will kill your account on AOL!</span>
+<span class="s interesting-str">Gime your Fukin Password Bitch!!!</span>
+<span class="s interesting-str">Hello fellow AOL Member, I am a guide from AOL and I need you to respond back with your log-on information for access to the chat rooms. If you do not respond, you are not allowed within the rooms.</span>
+<span class="s interesting-str">Hey Man! Want me to upgrade your account to an OH? just tell me your password and I can make your account an OH! Just gimme 5 minutes!</span>
+<span class="s interesting-str">This is America Online&#x27;s Records Department.  Recently, we have found more than</span>
+<span class="s interesting-str">You Stupid mother fucker! Give me your fuckin password! Asshole! Im gonna hack you with AOHell if you dont fuckin give me it RIGHT NOW!</span>
+<span class="s interesting-str">Current member, this is GUIDE MOT, we have had several complaints that you were using a fake account. We are going to have to check and see if you are on one or not. Please, reply with your password as soon as possible or risk account termination! Thank you. :-)</span>
+<span class="s interesting-str">Hi, ToSGeneral here. I am currently doing a random check to see who is actually paying fot our service and who is not, see there are people on the service who use illegal fake accounts. We are trying to bust down on them and have a crime free service. So, what I need form you is your password to your account so I can verify you. If you would like to verify me then mail or instant message any of the on-line guides or ToS help&#x27;s!my id code# is (98445)! Thank you for your cooperation.</span>
+<span class="s interesting-str">Hey son, this is Daddy ! :) How are you? Im at work right now, I need the password to the account quickly so I can check something real quick! Just click on reply and type it in! Thanks, get started on your homework soon. I&#x27;ll be home later for dinner! Say hi to mommy for me! Bye :-)</span>
+<span class="s interesting-str">Your current sign on password was not correct, please respond with your correct sign-on password for validation to stay on-line! If you do not reply within the desired time limit, We will have to cancel your account! Thank you for your time! :-)</span>
+<span class="s interesting-str">Hello, I Am With The America Online Internet Enforcement Dept. We Have Traces Of Hackers Using Your Personal Account, We At AOL Can Find These Hackers And Can Put An End To There Illegal Activities! We Just Need Your Current Password To Verify You Are The Current Owner of This Account. Thank You! Please Feel Free To Call Our 1-800 Number For Technical Support! :D</span>
+<span class="s interesting-str">Current user,we did not receive your password during log-on,Please sign-off and re-NextLine the password or,Click on reply and type in your current sign-on password!This way we could clear up this error!Thank you for your time and patience! :D</span>
+<span class="s interesting-str">Crying Offline</span>
+<span class="s interesting-str">You must be signed on to use this feature. <span style="color:#484f58;font-size:0.75em">×11</span></span>
+<span class="s interesting-str">Not Signed On! <span style="color:#484f58;font-size:0.75em">×12</span></span>
+<span class="s interesting-str">Compose Mail <span style="color:#484f58;font-size:0.75em">×9</span></span>
+<span class="s interesting-str">Send an Instant Message <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Send Instant Message <span style="color:#484f58;font-size:0.75em">×15</span></span>
+<span class="s interesting-str">Report password solicitation <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Screen Name Of Member Soliciting Your Information: <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Write to Community Action Team <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">PLEASE DO SOMETHING!!! <span style="color:#484f58;font-size:0.75em">×7</span></span>
+<span class="s interesting-str">, is Trying To Steal My Password!!! <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">, an employee of AOL?? <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">You Must Do Something About This Person, <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">He  Is Trying To Steal My Password. <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">, Is a hacker and must be stopped!! He tried to steal my password <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">, Claims to work for AOL, Should I give him my password? <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Now TOSing-=&gt;( <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">www.lame.ass.com <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">TOS Complete! =o) <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Happy Halloween Shit Head! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">TOS Bot Activated ] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">[ Scanning For a Target.... ] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Has Been Targeted ] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">[ Lamer Has Been TOSed! ] <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Explosive MassMailer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">MassMailing in <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Say &#x27;&#x27;The Explosive M&#x27;&#x27; to get on. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">You are owned. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">FaT FroG 1.0 TOSer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Now TOSing * <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Method: Guidepager - Phrase: # <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Da Rza2000, Yer Ass Is Grass <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Red Baron TOSer <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Say/IM: &#x27;&#x27;X-Zone MM!&#x27;&#x27; to get on! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">iCe DRoP MM in <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Say &#x27;&#x27;WaY MM&#x27;&#x27; to be added. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Forwarded Message:</span>
+<span class="s interesting-str">Member Services <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Important Information <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Password Problem</span>
+<span class="s interesting-str">VERY IMPORTANT</span>
+<span class="s interesting-str">Very Important</span>
+<span class="s interesting-str">IMPORTANT INFO.</span>
+<span class="s interesting-str">AOL PASSWORD HELP</span>
+<span class="s interesting-str">PASSWORD HELP</span>
+<span class="s interesting-str">Keyword: Help</span>
+<span class="s interesting-str">Terms Of Service</span>
+<span class="s interesting-str">Terms of Service <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Guide Pager for Kids <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Your a Litlle Fuking QueeR!!</span>
+<span class="s interesting-str">Fuk Fuk Fuk Fuk Fuk FuK!! I Hate You All!</span>
+<span class="s interesting-str">Lets Have Cyber Sex!!!!!</span>
+<span class="s interesting-str">{S IM} {S IM} Die you Queers!!!</span>
+<span class="s interesting-str">Your Moms a Cocksuckers</span>
+<span class="s interesting-str">Mom is a FaT Ass Fuking Faggot!!</span>
+<span class="s interesting-str">Your Moms a Fuking Hor</span>
+<span class="s interesting-str">You Have a 1 incher!!</span>
+<span class="s interesting-str">You Cocksuker!!</span>
+<span class="s interesting-str">IM Goin to Mail Bomb You!!</span>
+<span class="s interesting-str">Everyone Here is A dORK!!</span>
+<span class="s interesting-str">your Moms A Fat bitch!!</span>
+<span class="s interesting-str">lets Have Cyber Sex Com on!!</span>
+<span class="s interesting-str">Anyone want to Trade child Porno??</span>
+<span class="s interesting-str">You Fuking Loser!!</span>
+<span class="s interesting-str">IM Goin to Kill You!!</span>
+<span class="s interesting-str">Everyone Here is has no life!!</span>
+<span class="s interesting-str">Fuk you bitch!!!!</span>
+<span class="s interesting-str">I your Moms pussy smells!</span>
+<span class="s interesting-str">I heard you smell like shit!!!!</span>
+<span class="s interesting-str">This rooms full of LamerS!!</span>
+<span class="s interesting-str">Suck my dick!!</span>
+<span class="s interesting-str">Trying to Steal My Password!</span>
+<span class="s interesting-str">I am Being Harrassed for my Password</span>
+<span class="s interesting-str">PLEASE READ!</span>
+<span class="s interesting-str">Please Do Something!</span>
+<span class="s interesting-str">Password Solicitations</span>
+<span class="s interesting-str">IM Violation</span>
+<span class="s interesting-str">Violation Report</span>
+<span class="s interesting-str">Someone Just Ask For my Password.</span>
+<span class="s interesting-str">Someone just ask for my PASSWORD!</span>
+<span class="s interesting-str">A Con Artist is trying to steal my PASSWORD!</span>
+<span class="s interesting-str">Password Theft</span>
+<span class="s interesting-str">IM Solicitation</span>
+<span class="s interesting-str">Password Solicitation</span>
+<span class="s interesting-str">PASSWORD Solicitation</span>
+<span class="s interesting-str">PLEASE do Something</span>
+<span class="s interesting-str">IM VIOLATION</span>
+<span class="s interesting-str">, is Harrasing Me for My Password!</span>
+<span class="s interesting-str">, is a Con Artist!</span>
+<span class="s interesting-str">, is a Con Artist Trying to STEAL My PASSWORD!</span>
+<span class="s interesting-str">, is Violatating a Term of Service</span>
+<span class="s interesting-str">, is Asking for My Password</span>
+<span class="s interesting-str">, Is Claiming to Work For AOL</span>
+<span class="s interesting-str">, Work for AOL</span>
+<span class="s interesting-str">Should I Give My Password to,</span>
+<span class="s interesting-str">, Claims to work for AOL is this True?</span>
+<span class="s interesting-str">, Saids he works for AOL I Just want to Make Sure.</span>
+<span class="s interesting-str">Does this person work for AOL?</span>
+<span class="s interesting-str">I just recieved this Instant Message</span>
+<span class="s interesting-str">This person,</span>
+<span class="s interesting-str">Is trying to get my password!!.</span>
+<span class="s interesting-str">is a hacker! He is trying to get my password! And probably other peoples passwords! He wants to steal our accounts!</span>
+<span class="s interesting-str">Should I give</span>
+<span class="s interesting-str">Really Work for AOL</span>
+<span class="s interesting-str">is violating a Term of Service</span>
+<span class="s interesting-str">This Person is Violating a term of service please do something</span>
+<span class="s interesting-str">, is a CON ARTIST he should be caught!</span>
+<span class="s interesting-str">I Almost Gave My PASSWORD Away..</span>
+<span class="s interesting-str">Please Do Something</span>
+<span class="s interesting-str">, Is a Criminal Please Catch him or at Least do something!</span>
+<span class="s interesting-str">This is the Third time this Person ask for my password Should i give my password to him?</span>
+<span class="s interesting-str">Please do something.....</span>
+<span class="s interesting-str">Please Do Something About This,</span>
+<span class="s interesting-str">, is Trying to Steal My Password Please Do Something.</span>
+<span class="s interesting-str">, is  very Convincing I almost Gave my PASSWORD away</span>
+<span class="s interesting-str">A Employee of AOL?</span>
+<span class="s interesting-str">I just Smoked y0 Ass</span>
+<span class="s interesting-str">No AOL for you bitch!!</span>
+<span class="s interesting-str">You&#x27;ve Just Been Tossed HaHaHa!</span>
+<span class="s interesting-str">Your Bitch ass has lost AOL!</span>
+<span class="s interesting-str">You cant fuk AOL No More!!</span>
+<span class="s interesting-str">Time to get some Phish!</span>
+<span class="s interesting-str">HaHahA You Gay Faggot!!</span>
+<span class="s interesting-str">Rza Owns You!</span>
+<span class="s interesting-str">Welcome to the Reach Out! Zone <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Healthy Computers! <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Scams And Schemes <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Report A Violation</span>
+<span class="s interesting-str">Internet Connection</span>
+<span class="s interesting-str">America  Online <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Outgoing Mail <span style="color:#484f58;font-size:0.75em">×10</span></span>
+<span class="s interesting-str">T0sed.wav</span>
+<span class="s interesting-str">Please enter what you wanna add</span>
+<span class="s interesting-str">Please run AOL so I can detect which version of America Online you are using.</span>
+<span class="s interesting-str">Run America Online!</span>
+<span class="s interesting-str">\tool\chat.aol <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\tool\chat.aol could not be found.</span>
+<span class="s interesting-str">Changes will take place afther you sign on. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\tool\aolchat.aol <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\tool\aolchat.aol could not be found.</span>
+<span class="s interesting-str">I am with AOL Techincal Staff</span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Read <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Set Preferences</span>
+<span class="s interesting-str">C:\AOL25\tool\chat.aol</span>
+<span class="s interesting-str">AOL is already reset to NewUser!</span>
+<span class="s interesting-str">The Screen Name will not work unless it is at least 7 characters, including spaces <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">\idb\main.idx <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Check Mail You&#x27;ve &amp;Sent <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Buddy List Window <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Create a Buddy List Group <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">Edit Buddy List Group <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">Read &amp;New Mail <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Open your Mail box you wish to Load</span>
+<span class="s interesting-str">Open the your mailbox</span>
+<span class="s interesting-str">You Got No Mail!</span>
+<span class="s interesting-str">, -=TOS Check=-</span>
+<span class="s interesting-str">Bring Da Pain..</span>
+<span class="s interesting-str">,Beats the fuck outa</span>
+<span class="s interesting-str">,Get Beat by</span>
+<span class="s interesting-str">Wit his Baseball bat</span>
+<span class="s interesting-str">like Rodney King</span>
+<span class="s interesting-str">, Gets his Ass Beat by</span>
+<span class="s interesting-str">,Gets his Ass in ER by</span>
+<span class="s interesting-str">,Gets Beat to shit</span>
+<span class="s interesting-str">Create a Buddy List <span style="color:#484f58;font-size:0.75em">×5</span></span>
+<span class="s interesting-str">&#x27;s Buddy List <span style="color:#484f58;font-size:0.75em">×6</span></span>
+<span class="s interesting-str">You Need a Buddy List To Add to the list!</span>
+<span class="s interesting-str">Member Rooms <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Public Rooms <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Enter a Private Room</span>
+<span class="s interesting-str">Invitation From:</span>
+<span class="s interesting-str">pieces of mail!</span>
+<span class="s interesting-str">Open the mail box the you want yo count the mail in!</span>
+<span class="s interesting-str">pieces of mailz!</span>
+<span class="s interesting-str">Here Nigga If you get caught You Found it</span>
+<span class="s interesting-str">I aint Givin You Shit!! Your Beat!!</span>
+<span class="s interesting-str">Ever Need More Beep Me</span>
+<span class="s interesting-str">Always come Back for more</span>
+<span class="s interesting-str">Done Deal!!,Thanks For Da $$</span>
+<span class="s interesting-str">You need More, Ill Hook ya Up!</span>
+<span class="s interesting-str">HaHaHaHa I Aint givin you Shit Thanks for Da $$ Bye!</span>
+<span class="s interesting-str">Legalize it!!</span>
+<span class="s interesting-str">SPark MAD IZM..</span>
+<span class="s interesting-str">Edit Go To Menu</span>
+<span class="s interesting-str">Favorite Places</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">Unable to Release Device Context</span>
+<span class="s interesting-str">Device Error</span>
+<span class="s interesting-str">Mail Preferences <span style="color:#484f58;font-size:0.75em">×8</span></span>
+<span class="s interesting-str">Close mail after it has been sent <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Confirm mail after it has been sent <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Sign on a Friend - U.S. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Confirm Order</span>
+<span class="s interesting-str">Yo MotherFuker!! Your DeaD! you Hear Me Bitch!! Your DEAD!!</span>
+<span class="s interesting-str">Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die! Die!</span>
+<span class="s interesting-str">IM a Hacker!!!</span>
+<span class="s interesting-str">Yeah Bitch you Cant Touch Dis!!</span>
+<span class="s interesting-str">Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You Fuck You</span>
+<span class="s interesting-str">Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!! Lamer!! Die!!</span>
+<span class="s interesting-str">MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM MaaD IZM</span>
+<span class="s interesting-str">Da Rza Owns Your Asss!!!!!!!!</span>
+<span class="s interesting-str">You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!! You Are Owned!!!</span>
+<span class="s interesting-str">Spark Maad IZM!!!!!!</span>
+<span class="s interesting-str">&lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ## &lt;ZZZZZZZZ##</span>
+<span class="s interesting-str">You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!! You Suck!!</span>
+<span class="s interesting-str">&lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!! &lt;ZZZZZZZZZ#```` Spark it!!!</span>
+<span class="s interesting-str">&lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#```` &lt;ZZZZZZZZZ#````</span>
+<span class="s interesting-str">&lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!! &lt;ZZZZZZZZZ#```` I Love Dis SHiT!!</span>
+<span class="s interesting-str">Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!! Faggot!!</span>
+<span class="s interesting-str">Yeah you wish you could do dis bitch!!! HaHaHahaHAHAHHAHaHahAhAhAhAh</span>
+<span class="s interesting-str">Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!! Drugs Are Bad For you!!!</span>
+<span class="s interesting-str">Message To Send</span>
+<span class="s interesting-str">Buddy List Preferences <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">,Takes out a Can of Whooop ass on</span>
+<span class="s interesting-str">&#x27;s in the balls</span>
+<span class="s interesting-str">&#x27;s in the Head.</span>
+<span class="s interesting-str">&#x27;s ass and gets</span>
+<span class="s interesting-str">&#x27;s foot gets stuck.</span>
+<span class="s interesting-str">,Kicks The Shit Outa</span>
+<span class="s interesting-str">AOL SUCKS!!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">FREE DA WaReZ <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Lamer!!!! Die!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">No Life Faggot!!!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Riot AOL!! Kill AOL!! <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Mail Bombed with PondScum v1.1</span>
+<span class="s interesting-str">The Bomb Is [</span>
+<span class="s interesting-str">EXoRCiST Mail Bomb - - FUCK YOU</span>
+<span class="s interesting-str">EXoRCiST Mail Bomb</span>
+<span class="s interesting-str">You Been A Bad Bitch.</span>
+<span class="s interesting-str">Congratulations! You&#x27;ve just been mail bombed!</span>
+<span class="s interesting-str">X-Zone Mail Bomb #</span>
+<span class="s interesting-str">X-Zone Mail Bomb</span>
+<span class="s interesting-str">Microsoft Word 97 *Full* o1/o3</span>
+<span class="s interesting-str">Microsoft Word 97 *Full* o2/o3</span>
+<span class="s interesting-str">Microsoft Word 97 *Full* o3/o3</span>
+<span class="s interesting-str">3DStudio Release 4  o1/o2</span>
+<span class="s interesting-str">3DStudio Release 4  o2/o2</span>
+<span class="s interesting-str">Eyecandy (for Photoshop 3/4)</span>
+<span class="s interesting-str">FLUX Plug-In (Photoshop)</span>
+<span class="s interesting-str">Paint Shop Pro 4.12 for Windows 95</span>
+<span class="s interesting-str">Pixel 3D v1.05</span>
+<span class="s interesting-str">Desktop ToyZ (Win95 only)</span>
+<span class="s interesting-str">McAfee PCMedic 97 Liscensed o1/o3</span>
+<span class="s interesting-str">McAfee PCMedic 97 Liscensed o2/o3</span>
+<span class="s interesting-str">McAfee PCMedic 97 Liscensed o3/o3</span>
+<span class="s interesting-str">MS Plus (WiN95 ONLY)</span>
+<span class="s interesting-str">A Different Turbo Ice Drop MMer</span>
+<span class="s interesting-str">ShiZZa Room Gen 2</span>
+<span class="s interesting-str">Need For Speed 2 o1/o5</span>
+<span class="s interesting-str">Need For Speed 2 o2/o5</span>
+<span class="s interesting-str">Need For Speed 2 o3/o5</span>
+<span class="s interesting-str">Need For Speed 2 o4/o5</span>
+<span class="s interesting-str">Need For Speed 2 o5/o5</span>
+<span class="s interesting-str">Need For Speed 2 Extra Tracks .:![o <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">Da Dip - Freak Nasty</span>
+<span class="s interesting-str">Check Yo Self - Ice Cube</span>
+<span class="s interesting-str">Dirty Mack - Ice Cube</span>
+<span class="s interesting-str">Don&#x27;t Turn Around - Ace Of Base</span>
+<span class="s interesting-str">Hey Lover - LL COOL J</span>
+<span class="s interesting-str">All Coming Back to Me Now - Celine Dion</span>
+<span class="s interesting-str">Corruption 4.8</span>
+<span class="s interesting-str">Killer Instinct Gold (proggie)</span>
+<span class="s interesting-str">iCe Drop MMer 2</span>
+<span class="s interesting-str">M-Chat For AOL 95 and Exotic MMer for AOL 2.5/3.0</span>
+<span class="s interesting-str">Microsoft Works 4.0</span>
+<span class="s interesting-str">Test Drive: Off-Road *Craked* [o2-o2]</span>
+<span class="s interesting-str">MDK US Final Version [o2-o3]</span>
+<span class="s interesting-str">MDK US Final Version [o3-o3]</span>
+<span class="s interesting-str">^v^ -=[B.p.D.]=- &amp; LiGHtNinG MaSS MaiLeR ^v^</span>
+<span class="s interesting-str">^v^ -=[B.p.D.]=- &amp; ReAL PrOgGiE MaKeR ^v^</span>
+<span class="s interesting-str">Password Tracker 32 BiT v2.17</span>
+<span class="s interesting-str">Lenny&#x27;s Musictoons [1/1]</span>
+<span class="s interesting-str">CPU Doubler (c) Very Good!</span>
+<span class="s interesting-str">(200 Features - AfterMath2001- 200 Features )</span>
+<span class="s interesting-str">- HaVoK Platinum</span>
+<span class="s interesting-str">v^v^v^AWA APP ^v^v^v^</span>
+<span class="s interesting-str">v^~&gt;~^&#x27;[x-KaLi-x]&#x27;CoKe CuRsOrS</span>
+<span class="s interesting-str">&#x27;v^~&gt;~^&#x27;[x-KaLi-x]Bowling Game</span>
+<span class="s interesting-str">,Takes out his BRASS knuckles n&#x27; Fucks up</span>
+<span class="s interesting-str">,Gets Knocked the fuck out by</span>
+<span class="s interesting-str">,Knocks the wind outa</span>
+<span class="s interesting-str">, Gets Jabbed in the face</span>
+<span class="s interesting-str">Gets a black eye from</span>
+<span class="s interesting-str">Set Up &amp; Sign On</span>
+<span class="s interesting-str">look like Swiss Cheese.</span>
+<span class="s interesting-str">,Takes the mini Mac n&#x27; Pops</span>
+<span class="s interesting-str">in between Da eyes</span>
+<span class="s interesting-str">wit a pound of Lead.</span>
+<span class="s interesting-str">&#x27;s Head wit da Double Barrel</span>
+<span class="s interesting-str">,Whips out Da Shotgun and Blows</span>
+<span class="s interesting-str">You already Have Dat SN</span>
+<span class="s interesting-str">&#x27;s Fukin NutSack open.</span>
+<span class="s interesting-str">&#x27;s right in da Heart.</span>
+<span class="s interesting-str">,takes his Sword n&#x27; off wit</span>
+<span class="s interesting-str">Right Down the Middle</span>
+<span class="s interesting-str">&#x27;s Ass to dda Ground</span>
+<span class="s interesting-str">, Gets his Ass Thrown by</span>
+<span class="s interesting-str">,Gets Thrown into the closet</span>
+<span class="s interesting-str">Your mail has been sent. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">, I Want You To Burn In HeLL!</span>
+<span class="s interesting-str">( Kibbles n&#x27;Bits  )</span>
+<span class="s interesting-str">ally Heavenly</span>
+<span class="s interesting-str">Heres a Rose For Ma Love,</span>
+<span class="s interesting-str">Heres A Teddy For</span>
+<span class="s interesting-str">So Long Fucker.......</span>
+<span class="s interesting-str">4 Different Punters</span>
+<span class="s interesting-str">Beware Befo I Punt ol&#x27; yo Asses</span>
+<span class="s interesting-str">Load Bombed List</span>
+<span class="s interesting-str">Pnt List (*.Pnt)| *.Pnt|TOS List (*.TOS)| *.TOS|All Files  (*.*)|*.*|List Files  (*.lst)|*.lst <span style="color:#484f58;font-size:0.75em">×4</span></span>
+<span class="s interesting-str">Load Punted List</span>
+<span class="s interesting-str">Add Punted SN.</span>
+<span class="s interesting-str">Add Bombed SN.</span>
+<span class="s interesting-str">Save Punted List</span>
+<span class="s interesting-str">Save Bombed List</span>
+<span class="s interesting-str">Fukin Lamers</span>
+<span class="s interesting-str">RZA Owns you Ol&#x27;</span>
+<span class="s interesting-str">] Has Been Punted.</span>
+<span class="s interesting-str">Don&#x27;t Fuck wit Me.</span>
+<span class="s interesting-str">, is Still online</span>
+<span class="s interesting-str">, is offline</span>
+<span class="s interesting-str">daRZA@juno.com</span>
+<span class="s interesting-str">ACID.ini <span style="color:#484f58;font-size:0.75em">×24</span></span>
+<span class="s interesting-str">y RZA is now *UnLoaded* <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Punt Aborted!</span>
+<span class="s interesting-str">] Lucky Bastard.</span>
+<span class="s interesting-str">y RZA is now *Loaded*</span>
+<span class="s interesting-str">Type your message in the text box for your bombing message and click the send button.</span>
+<span class="s interesting-str">Type the Private Room You Want to Bust in</span>
+<span class="s interesting-str">That Room no Longer exists.</span>
+<span class="s interesting-str">That room No longer Exists!!</span>
+<span class="s interesting-str">rooms are not available.</span>
+<span class="s interesting-str">Those Rooms are no longer Available.</span>
+<span class="s interesting-str">You may not enter the requested room at this time.</span>
+<span class="s interesting-str">Cannot Enter the room at the time</span>
+<span class="s interesting-str">We are unable to create a new room at this time.</span>
+<span class="s interesting-str">AOL cannot make the New room.</span>
+<span class="s interesting-str">y RZA Busted in</span>
+<span class="s interesting-str">Todays Status Report</span>
+<span class="s interesting-str">Next Victim is</span>
+<span class="s interesting-str">is not currently signed on <span style="color:#484f58;font-size:0.75em">×3</span></span>
+<span class="s interesting-str">is Not Signed on. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">cannot currently receive Instant Messages. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Turned his Im&#x27;s Off <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Unable to locate <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">cannot be located. <span style="color:#484f58;font-size:0.75em">×2</span></span>
+<span class="s interesting-str">Type in the screen name.That saids hes Me.</span>
+<span class="s interesting-str">Type in the String he gave you.</span>
+<span class="s interesting-str">(V)ass Punter Activated!!</span>
+<span class="s interesting-str">Load Punt List</span>
+<span class="s interesting-str">TOS List (*.TOS)| *.TOS|List Files  (*.lst)|*.lst|All Files  (*.*)|*.*|</span>
+<span class="s interesting-str">Save Punt List</span>
+<span class="s interesting-str">TOS List (*.TOS)| *.TOS|All Files  (*.*)|*.*|List Files  (*.lst)|*.lst</span>
+<span class="s interesting-str">Stop Puntng!!</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (237)</summary>
+<span class="s plain-str">KIz8333333 <span style="color:#30363d;font-size:0.75em">×38</span></span>
+<span class="s plain-str">Welcome</span>
+<span class="s plain-str">Excuse me, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">LOSER!!</span>
+<span class="s plain-str">NIGGER! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Lamer!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ASSHOLE!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">HaHaHaHaHA!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">I Own You!!</span>
+<span class="s plain-str">BITCH!!</span>
+<span class="s plain-str">MUWHAHAHAHHAHAHHA!</span>
+<span class="s plain-str">I OWN YOU!</span>
+<span class="s plain-str">Fuk You!!</span>
+<span class="s plain-str">Faggot!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">No Life!!</span>
+<span class="s plain-str">Your Dead <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Blow Me</span>
+<span class="s plain-str">-v^{(V)aKaVe <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">a Rza }^v- <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">omb =- -- -</span>
+<span class="s plain-str">Dear User, <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">TOSAdvisor:</span>
+<span class="s plain-str">Steve Case:</span>
+<span class="s plain-str">AOLBilling:</span>
+<span class="s plain-str">What&#x27;s Up! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Violation <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">Time AM/PM <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">AOL Toolbar <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Help ME!!</span>
+<span class="s plain-str">Die Lamer!</span>
+<span class="s plain-str">Get Blunted <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Fuck You!</span>
+<span class="s plain-str">HAHaHAHAHAHAh</span>
+<span class="s plain-str">Cocksucker!!</span>
+<span class="s plain-str">MotherFuker!!</span>
+<span class="s plain-str">Bitch!!</span>
+<span class="s plain-str">WHITIE!!</span>
+<span class="s plain-str">Dumb Fuk</span>
+<span class="s plain-str">Fat Whore</span>
+<span class="s plain-str">DUMBASS</span>
+<span class="s plain-str">Bitches</span>
+<span class="s plain-str">Cocksuckers</span>
+<span class="s plain-str">Faggots</span>
+<span class="s plain-str">Help Me!!</span>
+<span class="s plain-str">URGENT!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ATTENTION:</span>
+<span class="s plain-str">out of #23</span>
+<span class="s plain-str">Be-Headed <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Decomposing <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Destroyed</span>
+<span class="s plain-str">MDIClient <span style="color:#30363d;font-size:0.75em">×28</span></span>
+<span class="s plain-str">RICHCNTL <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">KI@SKIz8</span>
+<span class="s plain-str">&amp;Sign Off <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Questions <span style="color:#30363d;font-size:0.75em">×6</span></span>
+<span class="s plain-str">Notify AOL <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Method(GuidePager)Phrase( <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">XIKI42n <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">[ Fate X <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">y: FeaR <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Supreme TOS <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">y MiKe ] -^v [ GP TOS ] v^- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">] -^v [ Phrase # <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">X-Zone (\/)(\/) in 10 minute[s] <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">minutes. <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Tosgeneral,Tosemail1,Tosemail2,Tosemail3</span>
+<span class="s plain-str">MDICLIENT <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">URGENT!</span>
+<span class="s plain-str">Please Read <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Problem</span>
+<span class="s plain-str">IMPORTANT</span>
+<span class="s plain-str">Important</span>
+<span class="s plain-str">AOL Help</span>
+<span class="s plain-str">Data Lost!</span>
+<span class="s plain-str">READ THIS</span>
+<span class="s plain-str">Fuk you!!</span>
+<span class="s plain-str">IM GoD!!! Die!!!</span>
+<span class="s plain-str">Help Me!</span>
+<span class="s plain-str">My Password</span>
+<span class="s plain-str">Terminated</span>
+<span class="s plain-str">Assasinated</span>
+<span class="s plain-str">Decapitated</span>
+<span class="s plain-str">VnUXIKI42(</span>
+<span class="s plain-str">[RZXIKI42(</span>
+<span class="s plain-str">0_V^XIKI42(</span>
+<span class="s plain-str">hello lamer</span>
+<span class="s plain-str">Old Mail <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">Keep As New</span>
+<span class="s plain-str">Keyword...</span>
+<span class="s plain-str">Keyword</span>
+<span class="s plain-str">Preferences <span style="color:#30363d;font-size:0.75em">×12</span></span>
+<span class="s plain-str">NEWUSER</span>
+<span class="s plain-str">NewUser</span>
+<span class="s plain-str">5XI@S5I42</span>
+<span class="s plain-str">StonedHost:</span>
+<span class="s plain-str">Welcome, <span style="color:#30363d;font-size:0.75em">×4</span></span>
+<span class="s plain-str">4xbKI@SKI</span>
+<span class="s plain-str">hh:nn am/pm</span>
+<span class="s plain-str">OutGoing <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4,eKI@SKI</span>
+<span class="s plain-str">New Mail <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">buddy view</span>
+<span class="s plain-str">TOS Check</span>
+<span class="s plain-str">Attach File</span>
+<span class="s plain-str">5XI@SKI!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">4P/KI@SKI</span>
+<span class="s plain-str">You have <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Mail Count <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Send Now <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">Forward</span>
+<span class="s plain-str">Continue</span>
+<span class="s plain-str">Buddy List <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Buddyview</span>
+<span class="s plain-str">Buddy Chat <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">BITE ME</span>
+<span class="s plain-str">,Jump Kicks</span>
+<span class="s plain-str">48|y(tEI!-\</span>
+<span class="s plain-str">48|y(tEI!-`</span>
+<span class="s plain-str">KI@S5I!-`</span>
+<span class="s plain-str">/I48|y(t5I</span>
+<span class="s plain-str">\  \            \_\__/\  \  &#x27;|</span>
+<span class="s plain-str">\ |  |  |   &#x27;\  |</span>
+<span class="s plain-str">|  |   |____|_|  |\  \   \_\   &#x27;\\/   /_\   \ |  |  |&#x27;|  |  |__/ /</span>
+<span class="s plain-str">Die Bitch!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">FAGGOT!! <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Fuck You!! <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Mail Bomb ] <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">l= \=-      \_____ ll  \ =-   \    \_     \__ l- \_____  =-         ____\ l=-\=-      \_____ l</span>
+<span class="s plain-str">\    \=-     \__      \   \=-    \ _ -  l\=-     \_        \=-\=-      \        \    \-       \_</span>
+<span class="s plain-str">[ Fate</span>
+<span class="s plain-str">Subject #</span>
+<span class="s plain-str">Area51 .:![o1/o5]!:.</span>
+<span class="s plain-str">Area51 .:![o2/o5]!:.</span>
+<span class="s plain-str">Area51 .:![o3/o5]!:.</span>
+<span class="s plain-str">Area51 .:![o4/o5]!:.</span>
+<span class="s plain-str">Area51 .:![o5/o5]!:.</span>
+<span class="s plain-str">MDK    o1/o7</span>
+<span class="s plain-str">MDK    o2/o7</span>
+<span class="s plain-str">MDK    o3/o7</span>
+<span class="s plain-str">MDK    o4/o7</span>
+<span class="s plain-str">MDK    o5/o7</span>
+<span class="s plain-str">MDK    o6/o7</span>
+<span class="s plain-str">MDK    o7/o7</span>
+<span class="s plain-str">^v^ -=[B.p.D.]=- &amp; MaCrO DrAwEr^v^</span>
+<span class="s plain-str">in the Face</span>
+<span class="s plain-str">,Shoots</span>
+<span class="s plain-str">,Explodes</span>
+<span class="s plain-str">5KI@SKIp7!-</span>
+<span class="s plain-str">,Slices</span>
+<span class="s plain-str">into Shreds</span>
+<span class="s plain-str">&#x27;s head.</span>
+<span class="s plain-str">KI@SKIp7</span>
+<span class="s plain-str">,throws</span>
+<span class="s plain-str">,Throws <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">off a cliff</span>
+<span class="s plain-str">into Wall</span>
+<span class="s plain-str">&#x27;s Ass Down</span>
+<span class="s plain-str">|  |_|  ||  | !|  |&#x27;| !|/ &#x27;/ |  |&#x27;/_/ &#x27;|  |/_&#x27;/*| !|</span>
+<span class="s plain-str">|  ||  | !|  |&#x27;|</span>
+<span class="s plain-str">HIz8333333 <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">EIz8333333 <span style="color:#30363d;font-size:0.75em">×7</span></span>
+<span class="s plain-str">\               /_\\/&#x27;,---|&gt;</span>
+<span class="s plain-str">/   ____/  &lt;\\~~</span>
+<span class="s plain-str">( `          )_//    \               and going.....</span>
+<span class="s plain-str">(             )_( )    )                     and going...</span>
+<span class="s plain-str">`  -  -.-~  `- -&#x27;    ~-.-  - &#x27;</span>
+<span class="s plain-str">\ \&#x27;        \   &#x27;_ _ -~</span>
+<span class="s plain-str">. - ~ ~- . __ `.`-. //</span>
+<span class="s plain-str">Fuck You!!!</span>
+<span class="s plain-str">NiGGaZ!!~</span>
+<span class="s plain-str">\    \|  0   \         And</span>
+<span class="s plain-str">/     _/  _//   |     \    is Their Leader</span>
+<span class="s plain-str">- --= /=-/.\  --= /=-\ -= &#x27;/=-&#x27;/ \</span>
+<span class="s plain-str">- --=   &#x27;/=-&#x27;/  /_-= /=/\  \  &#x27;/=-&#x27;/_/_  - --=</span>
+<span class="s plain-str">- --= \______\/   &#x27;\= /  -\______\/ - --=</span>
+<span class="s plain-str">- --= &#x27;\/ =-- -</span>
+<span class="s plain-str">l\\ l     l_l _</span>
+<span class="s plain-str">l______ l\ l/</span>
+<span class="s plain-str">\l l______ l\</span>
+<span class="s plain-str">(  ^  _/\_</span>
+<span class="s plain-str">ROSEBUD.           . &#x27;</span>
+<span class="s plain-str">: ` . . . &#x27;  `. , &#x27;   &#x27;</span>
+<span class="s plain-str">` `` :` ******* , &#x27;  .&#x27;  :</span>
+<span class="s plain-str">. .::.. ` `****:   &#x27;&#x27;    `.</span>
+<span class="s plain-str">:        :       :.., &#x27;  `` :: .</span>
+<span class="s plain-str">` . . . . : . . &#x27;  . .:;&#x27;&#x27;</span>
+<span class="s plain-str">, &#x27; &#x27; &#x27; &#x27; &#x27; ` `  ::::::::</span>
+<span class="s plain-str">/    /::::\\       |</span>
+<span class="s plain-str">\     \:::::://    \</span>
+<span class="s plain-str">\    &#x27; \::://      |</span>
+<span class="s plain-str">)   _____&#x27;|_|</span>
+<span class="s plain-str">^ . \        /  .^</span>
+<span class="s plain-str">(o)^(o)------(o)^(o)-</span>
+<span class="s plain-str">_ /_311_\_ | Faggot!  Rox ON!!   |</span>
+<span class="s plain-str">|jjj/         \</span>
+<span class="s plain-str">/    /_/\ljjj|</span>
+<span class="s plain-str">| |_____  |\_-_/ | _____| |</span>
+<span class="s plain-str">\  I  Love   /</span>
+<span class="s plain-str">| Manson!| &lt;\\=-</span>
+<span class="s plain-str">/   |  |  |  |   \</span>
+<span class="s plain-str">/  Airwalk @|    |@ Airwalk \</span>
+<span class="s plain-str">\  &#x27;| !|| !|!| !| ~ |/ !| !| &#x27;\&#x27;|/ <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">KIz8ffffff <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">W  U    -    T   A    N   G</span>
+<span class="s plain-str">5Iz8333333 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">/Iz8333333</span>
+<span class="s plain-str">|  |/&#x27;\|  |/ /|\ &#x27;\       &#x27;|  |/&#x27;\|  &#x27;|</span>
+<span class="s plain-str">\    /_/|  |   /  | | &#x27;|       |  | &#x27;/_/|</span>
+<span class="s plain-str">\ |  |&#x27;| |</span>
+<span class="s plain-str">\   |     &#x27;|&#x27;|&#x27;|      &#x27;|  &#x27;/  \  |     | &#x27;/ &#x27;|&#x27;|  |     |&#x27;|   &#x27;|&#x27;|  |\ &#x27;| |  /     \ &#x27;|   | &#x27;/| &#x27;\_____/ &#x27;|</span>
+<span class="s plain-str">&#x27;  &#x27;\|,|/        &#x27;\|_,|/  \ &#x27;|        | &#x27;/</span>
+<span class="s plain-str">(V)ethod [</span>
+<span class="s plain-str">(V)ass,IM,Invite,double.</span>
+<span class="s plain-str">RZA WUTANG <span style="color:#30363d;font-size:0.75em">×3</span></span>
+<span class="s plain-str">Bombed: <span style="color:#30363d;font-size:0.75em">×9</span></span>
+<span class="s plain-str">Punted: <span style="color:#30363d;font-size:0.75em">×8</span></span>
+<span class="s plain-str">m7[7$!j7!-z</span>
+<span class="s plain-str">m7[7$!j7!- <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">OKIz8333333 <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">ACiD PuNT</span>
+<span class="s plain-str">Double PUNT</span>
+<span class="s plain-str">5XI@SKInJ0</span>
+<span class="s plain-str">PUNT By RZA <span style="color:#30363d;font-size:0.75em">×5</span></span>
+<span class="s plain-str">Leavin? <span style="color:#30363d;font-size:0.75em">×2</span></span>
+<span class="s plain-str">Invite PUNT</span>
+<span class="s plain-str">aol://2719:2-2-</span>
+<span class="s plain-str">5XI@SKI42</span>
+<span class="s plain-str">Hide List</span>
+<span class="s plain-str">MAAD iZM</span>
+<span class="s plain-str">XNeLNeLX</span>
+<span class="s plain-str">Its not Me</span>
+<span class="s plain-str">SaDiSTiC</span>
+<span class="s plain-str">Punting</span>
+<span class="s plain-str">4P	KInJ</span>
+<span class="s plain-str">PE)Jj:`J,&lt;</span>
+<span class="s plain-str">PE!L4\XLPa</span>
+<span class="s plain-str">PE9MnspM^v</span>
+</details>
+<div class="stats">Total unique strings: 2169 · Interesting: 512 · Noise filtered: 1280</div>
+</div></body></html>

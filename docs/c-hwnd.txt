@@ -1,0 +1,1530 @@
+/*
+ * vb_automator.c
+ *
+ * Comprehensive VB3-VB6 application automation tool.
+ * Finds a running VB app by exe name, enumerates every window, control,
+ * menu item, reads all text, and provides functions to click/interact.
+ *
+ * Compile with:
+ *   cl.exe vb_automator.c user32.lib kernel32.lib psapi.lib ole32.lib oleaut32.lib oleacc.lib /Fe:vb_automator.exe
+ * Or with MinGW:
+ *   gcc vb_automator.c -o vb_automator.exe -luser32 -lkernel32 -lpsapi -lole32 -loleaut32 -loleacc -luuid
+ */
+
+#define UNICODE
+#define _UNICODE
+#define WIN32_LEAN_AND_MEAN
+#define COBJMACROS
+#define _WIN32_WINNT 0x0600
+
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
+#include <psapi.h>
+#include <commctrl.h>
+#include <oleacc.h>
+
+/* ------------------------------------------------------------------ */
+/* Configuration / limits                                              */
+/* ------------------------------------------------------------------ */
+#define MAX_CONTROLS     4096
+#define MAX_TEXT         2048
+#define MAX_CLASS         256
+#define MAX_MENUS        1024
+
+/* ------------------------------------------------------------------ */
+/* Data structures                                                     */
+/* ------------------------------------------------------------------ */
+typedef struct {
+    HWND   hwnd;
+    HWND   parent;
+    DWORD  controlId;
+    int    depth;
+    wchar_t className[MAX_CLASS];
+    wchar_t text[MAX_TEXT];
+    RECT   rect;
+    BOOL   visible;
+    BOOL   enabled;
+    DWORD  style;
+    DWORD  exStyle;
+    wchar_t inferredType[64];
+} ControlInfo;
+
+typedef struct {
+    HMENU   hMenu;
+    UINT    menuId;
+    int     depth;
+    int     position;
+    wchar_t text[MAX_TEXT];
+    BOOL    enabled;
+    BOOL    checked;
+    BOOL    isSeparator;
+    BOOL    isSubmenu;
+    HMENU   hSubMenu;
+} MenuItemInfo_Custom;
+
+typedef struct {
+    HWND             mainWindow;
+    DWORD            processId;
+    wchar_t          exeName[MAX_PATH];
+    wchar_t          windowTitle[MAX_TEXT];
+    wchar_t          windowClass[MAX_CLASS];
+    ControlInfo      controls[MAX_CONTROLS];
+    int              controlCount;
+    MenuItemInfo_Custom menus[MAX_MENUS];
+    int              menuCount;
+} VBAppInfo;
+
+/* ------------------------------------------------------------------ */
+/* Globals for enumeration callbacks                                    */
+/* ------------------------------------------------------------------ */
+static VBAppInfo g_app;
+static wchar_t   g_targetExe[MAX_PATH];
+static HWND      g_foundWindows[256];
+static int       g_foundWindowCount = 0;
+
+/* ------------------------------------------------------------------ */
+/* Forward declarations                                                */
+/* ------------------------------------------------------------------ */
+void   InferControlType(ControlInfo *ci);
+void   EnumerateAllChildren(HWND parent, int depth);
+void   EnumerateMenuRecursive(HMENU hMenu, int depth, int parentPos);
+BOOL   ClickControlByText(const wchar_t *text);
+BOOL   ClickControlByIndex(int index);
+BOOL   ClickMenuByText(const wchar_t *text);
+BOOL   ClickMenuById(UINT menuId);
+BOOL   SetTextByIndex(int index, const wchar_t *newText);
+BOOL   SetTextByName(const wchar_t *labelText, const wchar_t *newText);
+void   PrintAllControls(void);
+void   PrintAllMenus(void);
+void   PrintFullReport(void);
+BOOL   FindVBApp(const wchar_t *exeName);
+void   RefreshControls(void);
+void   RefreshMenus(void);
+BOOL   UseAccessibility(HWND hwnd);
+
+/* ------------------------------------------------------------------ */
+/* Utility: get process exe name from pid                              */
+/* ------------------------------------------------------------------ */
+static BOOL GetProcessExeName(DWORD pid, wchar_t *buf, int bufLen)
+{
+    HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (!hProc) {
+        hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    }
+    if (!hProc) return FALSE;
+
+    BOOL ok = FALSE;
+    HMODULE hMod;
+    DWORD needed;
+    if (EnumProcessModules(hProc, &hMod, sizeof(hMod), &needed)) {
+        if (GetModuleBaseNameW(hProc, hMod, buf, bufLen)) {
+            ok = TRUE;
+        }
+    }
+    /* fallback */
+    if (!ok) {
+        DWORD sz = (DWORD)bufLen;
+        if (QueryFullProcessImageNameW(hProc, 0, buf, &sz)) {
+            wchar_t *slash = wcsrchr(buf, L'\\');
+            if (slash) {
+                wmemmove(buf, slash + 1, wcslen(slash + 1) + 1);
+            }
+            ok = TRUE;
+        }
+    }
+    CloseHandle(hProc);
+    return ok;
+}
+
+/* ------------------------------------------------------------------ */
+/* Callback: find all top-level windows belonging to target exe        */
+/* ------------------------------------------------------------------ */
+static BOOL CALLBACK EnumWindowsCallback(HWND hwnd, LPARAM lParam)
+{
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid == 0) return TRUE;
+
+    wchar_t exeName[MAX_PATH] = {0};
+    if (!GetProcessExeName(pid, exeName, MAX_PATH)) return TRUE;
+
+    if (_wcsicmp(exeName, g_targetExe) == 0) {
+        if (g_foundWindowCount < 256) {
+            g_foundWindows[g_foundWindowCount++] = hwnd;
+        }
+    }
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Callback: enumerate child windows                                   */
+/* ------------------------------------------------------------------ */
+typedef struct {
+    HWND parent;
+    int  depth;
+} EnumChildCtx;
+
+static BOOL CALLBACK EnumChildCallback(HWND hwnd, LPARAM lParam)
+{
+    EnumChildCtx *ctx = (EnumChildCtx *)lParam;
+
+    /* Only process direct children at this level */
+    if (GetParent(hwnd) != ctx->parent) return TRUE;
+
+    if (g_app.controlCount >= MAX_CONTROLS) return FALSE;
+
+    ControlInfo *ci = &g_app.controls[g_app.controlCount];
+    memset(ci, 0, sizeof(ControlInfo));
+
+    ci->hwnd   = hwnd;
+    ci->parent = ctx->parent;
+    ci->depth  = ctx->depth;
+    ci->controlId = GetDlgCtrlID(hwnd);
+    ci->style  = (DWORD)GetWindowLongW(hwnd, GWL_STYLE);
+    ci->exStyle = (DWORD)GetWindowLongW(hwnd, GWL_EXSTYLE);
+    ci->visible = IsWindowVisible(hwnd);
+    ci->enabled = IsWindowEnabled(hwnd);
+
+    GetClassNameW(hwnd, ci->className, MAX_CLASS);
+
+    /* Get text via WM_GETTEXT (works for most controls) */
+    SendMessageTimeoutW(hwnd, WM_GETTEXT, MAX_TEXT, (LPARAM)ci->text,
+                        SMTO_ABORTIFHUNG, 500, NULL);
+
+    /* If WM_GETTEXT returned nothing, try GetWindowText */
+    if (ci->text[0] == L'\0') {
+        GetWindowTextW(hwnd, ci->text, MAX_TEXT);
+    }
+
+    GetWindowRect(hwnd, &ci->rect);
+
+    InferControlType(ci);
+
+    g_app.controlCount++;
+
+    /* Recurse into children of this control */
+    EnumerateAllChildren(hwnd, ctx->depth + 1);
+
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Enumerate all children recursively                                  */
+/* ------------------------------------------------------------------ */
+void EnumerateAllChildren(HWND parent, int depth)
+{
+    EnumChildCtx ctx;
+    ctx.parent = parent;
+    ctx.depth  = depth;
+    EnumChildWindows(parent, EnumChildCallback, (LPARAM)&ctx);
+}
+
+/* ------------------------------------------------------------------ */
+/* Infer the control type from class name (VB3 through VB6)            */
+/* ------------------------------------------------------------------ */
+void InferControlType(ControlInfo *ci)
+{
+    const wchar_t *cls = ci->className;
+
+    /* VB6 runtime controls (ThunderRT6*) */
+    if (wcsstr(cls, L"ThunderRT6CommandButton") || wcsstr(cls, L"ThunderRT5CommandButton") ||
+        wcsstr(cls, L"ThunderCommandButton"))
+    {
+        wcscpy(ci->inferredType, L"Button");
+    }
+    else if (wcsstr(cls, L"ThunderRT6TextBox") || wcsstr(cls, L"ThunderRT5TextBox") ||
+             wcsstr(cls, L"ThunderTextBox"))
+    {
+        wcscpy(ci->inferredType, L"TextBox");
+    }
+    else if (wcsstr(cls, L"ThunderRT6Label") || wcsstr(cls, L"ThunderRT5Label") ||
+             wcsstr(cls, L"ThunderLabel"))
+    {
+        /* VB Labels are often lightweight (drawn on form, no HWND).
+           If we see one here it is a heavyweight label. */
+        wcscpy(ci->inferredType, L"Label");
+    }
+    else if (wcsstr(cls, L"ThunderRT6ComboBox") || wcsstr(cls, L"ThunderRT5ComboBox") ||
+             wcsstr(cls, L"ThunderComboBox"))
+    {
+        wcscpy(ci->inferredType, L"ComboBox");
+    }
+    else if (wcsstr(cls, L"ThunderRT6ListBox") || wcsstr(cls, L"ThunderRT5ListBox") ||
+             wcsstr(cls, L"ThunderListBox"))
+    {
+        wcscpy(ci->inferredType, L"ListBox");
+    }
+    else if (wcsstr(cls, L"ThunderRT6CheckBox") || wcsstr(cls, L"ThunderRT5CheckBox") ||
+             wcsstr(cls, L"ThunderCheckBox"))
+    {
+        wcscpy(ci->inferredType, L"CheckBox");
+    }
+    else if (wcsstr(cls, L"ThunderRT6OptionButton") || wcsstr(cls, L"ThunderRT5OptionButton") ||
+             wcsstr(cls, L"ThunderOptionButton"))
+    {
+        wcscpy(ci->inferredType, L"OptionButton");
+    }
+    else if (wcsstr(cls, L"ThunderRT6Frame") || wcsstr(cls, L"ThunderRT5Frame") ||
+             wcsstr(cls, L"ThunderFrame"))
+    {
+        wcscpy(ci->inferredType, L"Frame");
+    }
+    else if (wcsstr(cls, L"ThunderRT6PictureBox") || wcsstr(cls, L"ThunderRT5PictureBox") ||
+             wcsstr(cls, L"ThunderPictureBox"))
+    {
+        wcscpy(ci->inferredType, L"PictureBox");
+    }
+    else if (wcsstr(cls, L"ThunderRT6Timer") || wcsstr(cls, L"ThunderRT5Timer") ||
+             wcsstr(cls, L"ThunderTimer"))
+    {
+        wcscpy(ci->inferredType, L"Timer");
+    }
+    else if (wcsstr(cls, L"ThunderRT6UserControl") || wcsstr(cls, L"ThunderRT5UserControl"))
+    {
+        wcscpy(ci->inferredType, L"UserControl");
+    }
+    else if (wcsstr(cls, L"ThunderRT6ScrollBar") || wcsstr(cls, L"ThunderRT5ScrollBar") ||
+             wcsstr(cls, L"ThunderHScrollBar") || wcsstr(cls, L"ThunderVScrollBar"))
+    {
+        wcscpy(ci->inferredType, L"ScrollBar");
+    }
+    else if (wcsstr(cls, L"ThunderRT6Form") || wcsstr(cls, L"ThunderRT5Form") ||
+             wcsstr(cls, L"ThunderForm") || wcsstr(cls, L"ThunderMDIForm") ||
+             wcsstr(cls, L"ThunderRT6MDIForm") || wcsstr(cls, L"ThunderRT6FormDC"))
+    {
+        wcscpy(ci->inferredType, L"Form");
+    }
+    /* Standard Win32 controls that VB apps sometimes use */
+    else if (_wcsicmp(cls, L"Button") == 0)
+    {
+        DWORD bs = ci->style & 0x0F;
+        if (bs == BS_CHECKBOX || bs == BS_AUTOCHECKBOX || bs == BS_3STATE || bs == BS_AUTO3STATE)
+            wcscpy(ci->inferredType, L"CheckBox");
+        else if (bs == BS_RADIOBUTTON || bs == BS_AUTORADIOBUTTON)
+            wcscpy(ci->inferredType, L"RadioButton");
+        else if (bs == BS_GROUPBOX)
+            wcscpy(ci->inferredType, L"GroupBox");
+        else
+            wcscpy(ci->inferredType, L"Button");
+    }
+    else if (_wcsicmp(cls, L"Edit") == 0 || _wcsicmp(cls, L"RichEdit") == 0 ||
+             _wcsicmp(cls, L"RichEdit20W") == 0 || _wcsicmp(cls, L"RichEdit20A") == 0 ||
+             wcsstr(cls, L"RICHEDIT") != NULL)
+    {
+        wcscpy(ci->inferredType, L"TextBox");
+    }
+    else if (_wcsicmp(cls, L"Static") == 0)
+    {
+        wcscpy(ci->inferredType, L"Label");
+    }
+    else if (_wcsicmp(cls, L"ComboBox") == 0 || _wcsicmp(cls, L"ComboBoxEx32") == 0)
+    {
+        wcscpy(ci->inferredType, L"ComboBox");
+    }
+    else if (_wcsicmp(cls, L"ListBox") == 0)
+    {
+        wcscpy(ci->inferredType, L"ListBox");
+    }
+    else if (_wcsicmp(cls, L"SysListView32") == 0)
+    {
+        wcscpy(ci->inferredType, L"ListView");
+    }
+    else if (_wcsicmp(cls, L"SysTreeView32") == 0)
+    {
+        wcscpy(ci->inferredType, L"TreeView");
+    }
+    else if (_wcsicmp(cls, L"SysTabControl32") == 0)
+    {
+        wcscpy(ci->inferredType, L"TabControl");
+    }
+    else if (_wcsicmp(cls, L"msctls_statusbar32") == 0 || _wcsicmp(cls, L"StatusBar") == 0)
+    {
+        wcscpy(ci->inferredType, L"StatusBar");
+    }
+    else if (_wcsicmp(cls, L"ToolbarWindow32") == 0)
+    {
+        wcscpy(ci->inferredType, L"Toolbar");
+    }
+    else if (_wcsicmp(cls, L"msctls_progress32") == 0)
+    {
+        wcscpy(ci->inferredType, L"ProgressBar");
+    }
+    else if (_wcsicmp(cls, L"msctls_trackbar32") == 0)
+    {
+        wcscpy(ci->inferredType, L"Slider");
+    }
+    else if (_wcsicmp(cls, L"SysDateTimePick32") == 0)
+    {
+        wcscpy(ci->inferredType, L"DateTimePicker");
+    }
+    else if (_wcsicmp(cls, L"SysMonthCal32") == 0)
+    {
+        wcscpy(ci->inferredType, L"MonthCalendar");
+    }
+    else if (_wcsicmp(cls, L"ScrollBar") == 0)
+    {
+        wcscpy(ci->inferredType, L"ScrollBar");
+    }
+    else if (wcsstr(cls, L"Thunder") != NULL)
+    {
+        /* Catch-all for other VB controls */
+        swprintf(ci->inferredType, 64, L"VBControl(%ls)", cls);
+    }
+    else
+    {
+        wcscpy(ci->inferredType, L"Unknown");
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Enumerate menus recursively                                         */
+/* ------------------------------------------------------------------ */
+void EnumerateMenuRecursive(HMENU hMenu, int depth, int parentPos)
+{
+    if (!hMenu) return;
+
+    int count = GetMenuItemCount(hMenu);
+    for (int i = 0; i < count; i++) {
+        if (g_app.menuCount >= MAX_MENUS) return;
+
+        MenuItemInfo_Custom *mi = &g_app.menus[g_app.menuCount];
+        memset(mi, 0, sizeof(MenuItemInfo_Custom));
+
+        MENUITEMINFOW mii;
+        memset(&mii, 0, sizeof(mii));
+        mii.cbSize = sizeof(mii);
+        mii.fMask  = MIIM_ID | MIIM_STATE | MIIM_TYPE | MIIM_SUBMENU | MIIM_STRING;
+        mii.dwTypeData = mi->text;
+        mii.cch = MAX_TEXT;
+
+        if (GetMenuItemInfoW(hMenu, i, TRUE, &mii)) {
+            mi->hMenu     = hMenu;
+            mi->menuId    = mii.wID;
+            mi->depth     = depth;
+            mi->position  = i;
+            mi->enabled   = !(mii.fState & MFS_DISABLED);
+            mi->checked   = !!(mii.fState & MFS_CHECKED);
+            mi->isSeparator = !!(mii.fType & MFT_SEPARATOR);
+            mi->isSubmenu = (mii.hSubMenu != NULL);
+            mi->hSubMenu  = mii.hSubMenu;
+
+            g_app.menuCount++;
+
+            if (mii.hSubMenu) {
+                EnumerateMenuRecursive(mii.hSubMenu, depth + 1, i);
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* MSAA / IAccessible fallback for lightweight VB controls             */
+/* VB Labels and some other controls are windowless (lightweight).     */
+/* We use Active Accessibility to find them.                           */
+/* ------------------------------------------------------------------ */
+static void WalkAccessibleChildren(IAccessible *pAcc, int depth);
+
+static void ProcessAccessibleChild(IAccessible *pAcc, VARIANT varChild, int depth)
+{
+    BSTR bstrName = NULL;
+    BSTR bstrValue = NULL;
+    BSTR bstrRole = NULL;
+    VARIANT varRole;
+    VariantInit(&varRole);
+
+    IAccessible_get_accName(pAcc, varChild, &bstrName);
+    IAccessible_get_accValue(pAcc, varChild, &bstrValue);
+    IAccessible_get_accRole(pAcc, varChild, &varRole);
+
+    wchar_t roleStr[128] = L"";
+    if (varRole.vt == VT_I4) {
+        GetRoleTextW(varRole.lVal, roleStr, 128);
+    }
+
+    /* Print accessible element info */
+    if (bstrName || bstrValue || roleStr[0]) {
+        for (int d = 0; d < depth; d++) wprintf(L"  ");
+        wprintf(L"[ACC] Role: %-20ls  Name: %-30ls  Value: %ls\n",
+                roleStr,
+                bstrName ? bstrName : L"(none)",
+                bstrValue ? bstrValue : L"(none)");
+    }
+
+    /* Also store as a control entry if we have room */
+    if (g_app.controlCount < MAX_CONTROLS && (bstrName || bstrValue)) {
+        ControlInfo *ci = &g_app.controls[g_app.controlCount];
+        memset(ci, 0, sizeof(ControlInfo));
+        ci->hwnd = NULL; /* lightweight, no HWND */
+        ci->depth = depth;
+        ci->visible = TRUE;
+        ci->enabled = TRUE;
+
+        if (bstrName) wcsncpy(ci->text, bstrName, MAX_TEXT - 1);
+        else if (bstrValue) wcsncpy(ci->text, bstrValue, MAX_TEXT - 1);
+
+        wcsncpy(ci->className, roleStr, MAX_CLASS - 1);
+
+        /* Map MSAA roles to our types */
+        if (varRole.vt == VT_I4) {
+            switch (varRole.lVal) {
+                case ROLE_SYSTEM_PUSHBUTTON:  wcscpy(ci->inferredType, L"Button"); break;
+                case ROLE_SYSTEM_TEXT:         wcscpy(ci->inferredType, L"TextBox"); break;
+                case ROLE_SYSTEM_STATICTEXT:   wcscpy(ci->inferredType, L"Label"); break;
+                case ROLE_SYSTEM_CHECKBUTTON:  wcscpy(ci->inferredType, L"CheckBox"); break;
+                case ROLE_SYSTEM_RADIOBUTTON:  wcscpy(ci->inferredType, L"OptionButton"); break;
+                case ROLE_SYSTEM_COMBOBOX:     wcscpy(ci->inferredType, L"ComboBox"); break;
+                case ROLE_SYSTEM_LIST:         wcscpy(ci->inferredType, L"ListBox"); break;
+                case ROLE_SYSTEM_MENUITEM:     wcscpy(ci->inferredType, L"MenuItem"); break;
+                case ROLE_SYSTEM_MENUPOPUP:    wcscpy(ci->inferredType, L"MenuPopup"); break;
+                case ROLE_SYSTEM_MENUBAR:      wcscpy(ci->inferredType, L"MenuBar"); break;
+                case ROLE_SYSTEM_GROUPING:     wcscpy(ci->inferredType, L"Frame"); break;
+                case ROLE_SYSTEM_GRAPHIC:      wcscpy(ci->inferredType, L"Image"); break;
+                case ROLE_SYSTEM_PROGRESSBAR:  wcscpy(ci->inferredType, L"ProgressBar"); break;
+                case ROLE_SYSTEM_SLIDER:       wcscpy(ci->inferredType, L"Slider"); break;
+                case ROLE_SYSTEM_STATUSBAR:    wcscpy(ci->inferredType, L"StatusBar"); break;
+                case ROLE_SYSTEM_PAGETAB:      wcscpy(ci->inferredType, L"Tab"); break;
+                case ROLE_SYSTEM_TABLE:        wcscpy(ci->inferredType, L"Grid"); break;
+                case ROLE_SYSTEM_LINK:         wcscpy(ci->inferredType, L"Link"); break;
+                default: wcscpy(ci->inferredType, L"AccObject"); break;
+            }
+        }
+
+        /* Get bounding rect via MSAA */
+        long ax, ay, aw, ah;
+        if (SUCCEEDED(IAccessible_accLocation(pAcc, &ax, &ay, &aw, &ah, varChild))) {
+            ci->rect.left   = ax;
+            ci->rect.top    = ay;
+            ci->rect.right  = ax + aw;
+            ci->rect.bottom = ay + ah;
+        }
+
+        g_app.controlCount++;
+    }
+
+    /* If this child itself is an IAccessible, recurse */
+    if (varChild.vt == VT_I4 && varChild.lVal == CHILDID_SELF) {
+        /* already handled */
+    }
+
+    SysFreeString(bstrName);
+    SysFreeString(bstrValue);
+    VariantClear(&varRole);
+}
+
+static void WalkAccessibleChildren(IAccessible *pAcc, int depth)
+{
+    long childCount = 0;
+    IAccessible_get_accChildCount(pAcc, &childCount);
+    if (childCount <= 0) return;
+
+    long obtained = 0;
+    VARIANT *children = (VARIANT *)calloc(childCount, sizeof(VARIANT));
+    if (!children) return;
+
+    HRESULT hr = AccessibleChildren(pAcc, 0, childCount, children, &obtained);
+    if (SUCCEEDED(hr)) {
+        for (long i = 0; i < obtained; i++) {
+            if (children[i].vt == VT_DISPATCH) {
+                IAccessible *pChild = NULL;
+                hr = IDispatch_QueryInterface(children[i].pdispVal, &IID_IAccessible, (void **)&pChild);
+                if (SUCCEEDED(hr) && pChild) {
+                    VARIANT varSelf;
+                    varSelf.vt = VT_I4;
+                    varSelf.lVal = CHILDID_SELF;
+                    ProcessAccessibleChild(pChild, varSelf, depth);
+                    WalkAccessibleChildren(pChild, depth + 1);
+                    IAccessible_Release(pChild);
+                }
+            }
+            else if (children[i].vt == VT_I4) {
+                ProcessAccessibleChild(pAcc, children[i], depth);
+            }
+            VariantClear(&children[i]);
+        }
+    }
+    free(children);
+}
+
+BOOL UseAccessibility(HWND hwnd)
+{
+    CoInitialize(NULL);
+
+    IAccessible *pAcc = NULL;
+    HRESULT hr = AccessibleObjectFromWindow(hwnd, OBJID_WINDOW, &IID_IAccessible, (void **)&pAcc);
+    if (SUCCEEDED(hr) && pAcc) {
+        wprintf(L"\n=== MSAA Accessible Object Tree ===\n");
+        VARIANT varSelf;
+        varSelf.vt = VT_I4;
+        varSelf.lVal = CHILDID_SELF;
+        ProcessAccessibleChild(pAcc, varSelf, 0);
+        WalkAccessibleChildren(pAcc, 1);
+        IAccessible_Release(pAcc);
+        return TRUE;
+    }
+
+    CoUninitialize();
+    return FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Click a control by matching its text (partial match)                */
+/* ------------------------------------------------------------------ */
+BOOL ClickControlByText(const wchar_t *text)
+{
+    for (int i = 0; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+        if (wcsstr(ci->text, text) != NULL) {
+            wprintf(L"Clicking control [%d]: %ls '%ls'\n", i, ci->inferredType, ci->text);
+
+            if (ci->hwnd) {
+                /* For buttons: send BM_CLICK */
+                if (wcscmp(ci->inferredType, L"Button") == 0 ||
+                    wcscmp(ci->inferredType, L"CheckBox") == 0 ||
+                    wcscmp(ci->inferredType, L"OptionButton") == 0 ||
+                    wcscmp(ci->inferredType, L"RadioButton") == 0)
+                {
+                    SendMessageW(ci->hwnd, BM_CLICK, 0, 0);
+                    return TRUE;
+                }
+
+                /* Generic: simulate WM_LBUTTONDOWN + WM_LBUTTONUP */
+                SendMessageW(ci->hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(5, 5));
+                SendMessageW(ci->hwnd, WM_LBUTTONUP, 0, MAKELPARAM(5, 5));
+                return TRUE;
+            }
+            else {
+                /* Lightweight control: click by screen coords */
+                int cx = (ci->rect.left + ci->rect.right) / 2;
+                int cy = (ci->rect.top + ci->rect.bottom) / 2;
+
+                /* Save and restore cursor pos */
+                POINT oldPos;
+                GetCursorPos(&oldPos);
+                SetCursorPos(cx, cy);
+                Sleep(50);
+
+                INPUT inputs[2] = {0};
+                inputs[0].type = INPUT_MOUSE;
+                inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                inputs[1].type = INPUT_MOUSE;
+                inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                SendInput(2, inputs, sizeof(INPUT));
+
+                Sleep(50);
+                SetCursorPos(oldPos.x, oldPos.y);
+                return TRUE;
+            }
+        }
+    }
+    wprintf(L"Control with text '%ls' not found.\n", text);
+    return FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Click a control by its index in the control array                   */
+/* ------------------------------------------------------------------ */
+BOOL ClickControlByIndex(int index)
+{
+    if (index < 0 || index >= g_app.controlCount) {
+        wprintf(L"Invalid control index %d\n", index);
+        return FALSE;
+    }
+    ControlInfo *ci = &g_app.controls[index];
+    wprintf(L"Clicking control [%d]: %ls '%ls'\n", index, ci->inferredType, ci->text);
+
+    if (ci->hwnd) {
+        if (wcscmp(ci->inferredType, L"Button") == 0 ||
+            wcscmp(ci->inferredType, L"CheckBox") == 0 ||
+            wcscmp(ci->inferredType, L"OptionButton") == 0 ||
+            wcscmp(ci->inferredType, L"RadioButton") == 0)
+        {
+            SendMessageW(ci->hwnd, BM_CLICK, 0, 0);
+            return TRUE;
+        }
+        SendMessageW(ci->hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(5, 5));
+        SendMessageW(ci->hwnd, WM_LBUTTONUP, 0, MAKELPARAM(5, 5));
+        return TRUE;
+    }
+    else {
+        int cx = (ci->rect.left + ci->rect.right) / 2;
+        int cy = (ci->rect.top + ci->rect.bottom) / 2;
+        POINT oldPos;
+        GetCursorPos(&oldPos);
+        SetCursorPos(cx, cy);
+        Sleep(50);
+        INPUT inputs[2] = {0};
+        inputs[0].type = INPUT_MOUSE;
+        inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        inputs[1].type = INPUT_MOUSE;
+        inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(2, inputs, sizeof(INPUT));
+        Sleep(50);
+        SetCursorPos(oldPos.x, oldPos.y);
+        return TRUE;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Click a menu item by text (partial match, navigates submenus)       */
+/* ------------------------------------------------------------------ */
+BOOL ClickMenuByText(const wchar_t *text)
+{
+    for (int i = 0; i < g_app.menuCount; i++) {
+        MenuItemInfo_Custom *mi = &g_app.menus[i];
+        if (mi->isSeparator) continue;
+
+        /* Strip & accelerator chars for comparison */
+        wchar_t clean[MAX_TEXT];
+        int ci = 0;
+        for (int j = 0; mi->text[j] && ci < MAX_TEXT - 1; j++) {
+            if (mi->text[j] != L'&') clean[ci++] = mi->text[j];
+        }
+        clean[ci] = L'\0';
+
+        if (wcsstr(clean, text) != NULL) {
+            wprintf(L"Clicking menu: '%ls' (ID=%u)\n", mi->text, mi->menuId);
+
+            if (mi->isSubmenu) {
+                /* For submenu headings, we need to send WM_MENUSELECT then navigate */
+                /* Best approach: use WM_COMMAND if leaf, or simulate mouse for submenu */
+            }
+
+            /* Send WM_COMMAND for leaf menu items */
+            if (!mi->isSubmenu) {
+                PostMessageW(g_app.mainWindow, WM_COMMAND, MAKEWPARAM(mi->menuId, 0), 0);
+                return TRUE;
+            }
+            else {
+                /* Open the menu programmatically */
+                /* Find the position of this item in the menu bar */
+                HMENU hMenuBar = GetMenu(g_app.mainWindow);
+                if (hMenuBar) {
+                    /* For top-level menus, we can use WM_SYSCOMMAND or keyboard */
+                    /* Send F10 then navigate, or use TrackPopupMenu */
+
+                    /* Simplest reliable approach: send Alt + access key */
+                    /* Or just hilite the menu */
+                    SendMessageW(g_app.mainWindow, WM_SYSCOMMAND, SC_KEYMENU, 0);
+                    Sleep(100);
+                    /* Send arrow keys based on position */
+                    for (int k = 0; k < mi->position; k++) {
+                        PostMessageW(g_app.mainWindow, WM_KEYDOWN, VK_RIGHT, 0);
+                        PostMessageW(g_app.mainWindow, WM_KEYUP, VK_RIGHT, 0);
+                        Sleep(50);
+                    }
+                    PostMessageW(g_app.mainWindow, WM_KEYDOWN, VK_RETURN, 0);
+                    PostMessageW(g_app.mainWindow, WM_KEYUP, VK_RETURN, 0);
+                    return TRUE;
+                }
+            }
+        }
+    }
+    wprintf(L"Menu item '%ls' not found.\n", text);
+    return FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Click a menu item by command ID                                     */
+/* ------------------------------------------------------------------ */
+BOOL ClickMenuById(UINT menuId)
+{
+    wprintf(L"Sending WM_COMMAND for menu ID %u\n", menuId);
+    PostMessageW(g_app.mainWindow, WM_COMMAND, MAKEWPARAM(menuId, 0), 0);
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Set text in a control by index                                      */
+/* ------------------------------------------------------------------ */
+BOOL SetTextByIndex(int index, const wchar_t *newText)
+{
+    if (index < 0 || index >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[index];
+    if (!ci->hwnd) {
+        wprintf(L"Cannot set text on lightweight control [%d]\n", index);
+        return FALSE;
+    }
+
+    /* Clear existing text and set new */
+    SendMessageW(ci->hwnd, WM_SETTEXT, 0, (LPARAM)newText);
+    wprintf(L"Set text on control [%d] to '%ls'\n", index, newText);
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Set text in a control by finding a nearby label                     */
+/* ------------------------------------------------------------------ */
+BOOL SetTextByName(const wchar_t *labelText, const wchar_t *newText)
+{
+    /* Find label, then find next textbox in the list */
+    for (int i = 0; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+        if (wcsstr(ci->text, labelText) != NULL) {
+            /* Found the label; look for the next textbox */
+            for (int j = i + 1; j < g_app.controlCount; j++) {
+                ControlInfo *next = &g_app.controls[j];
+                if (wcscmp(next->inferredType, L"TextBox") == 0 && next->hwnd) {
+                    return SetTextByIndex(j, newText);
+                }
+            }
+            /* Also look backwards */
+            for (int j = i - 1; j >= 0; j--) {
+                ControlInfo *prev = &g_app.controls[j];
+                if (wcscmp(prev->inferredType, L"TextBox") == 0 && prev->hwnd) {
+                    return SetTextByIndex(j, newText);
+                }
+            }
+        }
+    }
+    wprintf(L"Could not find textbox near label '%ls'\n", labelText);
+    return FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Get all items from a ComboBox                                       */
+/* ------------------------------------------------------------------ */
+void DumpComboBoxItems(HWND hwnd)
+{
+    int count = (int)SendMessageW(hwnd, CB_GETCOUNT, 0, 0);
+    if (count == CB_ERR || count <= 0) return;
+
+    wprintf(L"    ComboBox items (%d):\n", count);
+    for (int i = 0; i < count; i++) {
+        int len = (int)SendMessageW(hwnd, CB_GETLBTEXTLEN, i, 0);
+        if (len > 0 && len < MAX_TEXT) {
+            wchar_t buf[MAX_TEXT] = {0};
+            SendMessageW(hwnd, CB_GETLBTEXT, i, (LPARAM)buf);
+            int sel = (int)SendMessageW(hwnd, CB_GETCURSEL, 0, 0);
+            wprintf(L"      [%d]%ls %ls\n", i, (i == sel) ? L"*" : L" ", buf);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Get all items from a ListBox                                        */
+/* ------------------------------------------------------------------ */
+void DumpListBoxItems(HWND hwnd)
+{
+    int count = (int)SendMessageW(hwnd, LB_GETCOUNT, 0, 0);
+    if (count == LB_ERR || count <= 0) return;
+
+    wprintf(L"    ListBox items (%d):\n", count);
+    for (int i = 0; i < count; i++) {
+        int len = (int)SendMessageW(hwnd, LB_GETTEXTLEN, i, 0);
+        if (len > 0 && len < MAX_TEXT) {
+            wchar_t buf[MAX_TEXT] = {0};
+            SendMessageW(hwnd, LB_GETTEXT, i, (LPARAM)buf);
+            int sel = (int)SendMessageW(hwnd, LB_GETCURSEL, 0, 0);
+            wprintf(L"      [%d]%ls %ls\n", i, (i == sel) ? L"*" : L" ", buf);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Print all discovered controls                                       */
+/* ------------------------------------------------------------------ */
+void PrintAllControls(void)
+{
+    wprintf(L"\n=== CONTROLS (%d found) ===\n", g_app.controlCount);
+    wprintf(L"%-5ls %-18ls %-32ls %-30ls %-10ls %-8ls %-8ls %ls\n",
+            L"IDX", L"TYPE", L"CLASS", L"TEXT", L"HWND", L"VIS", L"ENA", L"RECT");
+    wprintf(L"%-5ls %-18ls %-32ls %-30ls %-10ls %-8ls %-8ls %ls\n",
+            L"---", L"----", L"-----", L"----", L"----", L"---", L"---", L"----");
+
+    for (int i = 0; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+
+        /* Indent based on depth */
+        wchar_t indent[64] = L"";
+        for (int d = 0; d < ci->depth && d < 30; d++) wcscat(indent, L". ");
+
+        wchar_t displayText[64] = {0};
+        wcsncpy(displayText, ci->text, 28);
+        if (wcslen(ci->text) > 28) wcscat(displayText, L"..");
+
+        wchar_t displayClass[34] = {0};
+        wcsncpy(displayClass, ci->className, 30);
+        if (wcslen(ci->className) > 30) wcscat(displayClass, L"..");
+
+        wprintf(L"[%3d] %-18ls %-32ls %ls%-30ls 0x%08IX  %-8ls %-8ls [%d,%d,%d,%d]\n",
+                i,
+                ci->inferredType,
+                displayClass,
+                indent,
+                displayText,
+                (uintptr_t)ci->hwnd,
+                ci->visible ? L"yes" : L"no",
+                ci->enabled ? L"yes" : L"no",
+                ci->rect.left, ci->rect.top, ci->rect.right, ci->rect.bottom);
+
+        /* Dump sub-items for combo/list boxes */
+        if (ci->hwnd) {
+            if (wcscmp(ci->inferredType, L"ComboBox") == 0) {
+                DumpComboBoxItems(ci->hwnd);
+            }
+            else if (wcscmp(ci->inferredType, L"ListBox") == 0) {
+                DumpListBoxItems(ci->hwnd);
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Print all discovered menus                                          */
+/* ------------------------------------------------------------------ */
+void PrintAllMenus(void)
+{
+    wprintf(L"\n=== MENUS (%d items found) ===\n", g_app.menuCount);
+    for (int i = 0; i < g_app.menuCount; i++) {
+        MenuItemInfo_Custom *mi = &g_app.menus[i];
+
+        wchar_t indent[64] = L"";
+        for (int d = 0; d < mi->depth && d < 30; d++) wcscat(indent, L"  ");
+
+        if (mi->isSeparator) {
+            wprintf(L"%ls--- separator ---\n", indent);
+        }
+        else {
+            wprintf(L"%ls[ID=%5u] %ls%-30ls  %ls %ls %ls\n",
+                    indent,
+                    mi->menuId,
+                    mi->isSubmenu ? L">> " : L"   ",
+                    mi->text,
+                    mi->enabled ? L"" : L"[DISABLED]",
+                    mi->checked ? L"[CHECKED]" : L"",
+                    mi->isSubmenu ? L"[SUBMENU]" : L"");
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Full report                                                         */
+/* ------------------------------------------------------------------ */
+void PrintFullReport(void)
+{
+    wprintf(L"\n");
+    wprintf(L"======================================================\n");
+    wprintf(L"  VB APPLICATION AUTOMATION REPORT\n");
+    wprintf(L"======================================================\n");
+    wprintf(L"  EXE:          %ls\n", g_app.exeName);
+    wprintf(L"  PID:          %u\n", g_app.processId);
+    wprintf(L"  Window:       0x%08IX\n", (uintptr_t)g_app.mainWindow);
+    wprintf(L"  Title:        %ls\n", g_app.windowTitle);
+    wprintf(L"  Class:        %ls\n", g_app.windowClass);
+    wprintf(L"======================================================\n");
+
+    PrintAllControls();
+    PrintAllMenus();
+
+    wprintf(L"\n=== SUMMARY ===\n");
+    int buttons=0, textboxes=0, labels=0, combos=0, lists=0, checks=0, options=0, frames=0, other=0;
+    for (int i = 0; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+        if (wcscmp(ci->inferredType, L"Button") == 0) buttons++;
+        else if (wcscmp(ci->inferredType, L"TextBox") == 0) textboxes++;
+        else if (wcscmp(ci->inferredType, L"Label") == 0) labels++;
+        else if (wcscmp(ci->inferredType, L"ComboBox") == 0) combos++;
+        else if (wcscmp(ci->inferredType, L"ListBox") == 0) lists++;
+        else if (wcscmp(ci->inferredType, L"CheckBox") == 0) checks++;
+        else if (wcscmp(ci->inferredType, L"OptionButton") == 0 || wcscmp(ci->inferredType, L"RadioButton") == 0) options++;
+        else if (wcscmp(ci->inferredType, L"Frame") == 0) frames++;
+        else other++;
+    }
+    wprintf(L"  Buttons:      %d\n", buttons);
+    wprintf(L"  TextBoxes:    %d\n", textboxes);
+    wprintf(L"  Labels:       %d\n", labels);
+    wprintf(L"  ComboBoxes:   %d\n", combos);
+    wprintf(L"  ListBoxes:    %d\n", lists);
+    wprintf(L"  CheckBoxes:   %d\n", checks);
+    wprintf(L"  Options:      %d\n", options);
+    wprintf(L"  Frames:       %d\n", frames);
+    wprintf(L"  Menus:        %d\n", g_app.menuCount);
+    wprintf(L"  Other:        %d\n", other);
+    wprintf(L"  TOTAL:        %d controls + %d menu items\n", g_app.controlCount, g_app.menuCount);
+}
+
+/* ------------------------------------------------------------------ */
+/* Find a running VB application by exe name                           */
+/* ------------------------------------------------------------------ */
+BOOL FindVBApp(const wchar_t *exeName)
+{
+    memset(&g_app, 0, sizeof(g_app));
+    wcsncpy(g_targetExe, exeName, MAX_PATH - 1);
+    g_foundWindowCount = 0;
+
+    EnumWindows(EnumWindowsCallback, 0);
+
+    if (g_foundWindowCount == 0) {
+        wprintf(L"ERROR: No windows found for process '%ls'\n", exeName);
+        return FALSE;
+    }
+
+    wprintf(L"Found %d top-level window(s) for '%ls'\n", g_foundWindowCount, exeName);
+
+    /* Pick the best main window: visible, has title, largest */
+    HWND best = NULL;
+    int bestScore = -1;
+    for (int i = 0; i < g_foundWindowCount; i++) {
+        HWND hw = g_foundWindows[i];
+        int score = 0;
+        if (IsWindowVisible(hw)) score += 100;
+        wchar_t title[MAX_TEXT] = {0};
+        GetWindowTextW(hw, title, MAX_TEXT);
+        if (title[0]) score += 50;
+        RECT r;
+        GetWindowRect(hw, &r);
+        score += (r.right - r.left) + (r.bottom - r.top);
+
+        wchar_t cls[MAX_CLASS] = {0};
+        GetClassNameW(hw, cls, MAX_CLASS);
+        if (wcsstr(cls, L"Thunder")) score += 200; /* Prefer VB form classes */
+
+        if (score > bestScore) {
+            bestScore = score;
+            best = hw;
+        }
+    }
+
+    if (!best) best = g_foundWindows[0];
+
+    g_app.mainWindow = best;
+    GetWindowThreadProcessId(best, &g_app.processId);
+    wcsncpy(g_app.exeName, exeName, MAX_PATH - 1);
+    GetWindowTextW(best, g_app.windowTitle, MAX_TEXT);
+    GetClassNameW(best, g_app.windowClass, MAX_CLASS);
+
+    /* Enumerate all HWND-based controls */
+    EnumerateAllChildren(best, 1);
+
+    /* Also enumerate any other top-level windows from same process (tool windows, etc.) */
+    for (int i = 0; i < g_foundWindowCount; i++) {
+        if (g_foundWindows[i] != best) {
+            wchar_t cls[MAX_CLASS] = {0};
+            wchar_t title[MAX_TEXT] = {0};
+            GetClassNameW(g_foundWindows[i], cls, MAX_CLASS);
+            GetWindowTextW(g_foundWindows[i], title, MAX_TEXT);
+            wprintf(L"  Also found window: 0x%08IX class='%ls' title='%ls'\n",
+                    (uintptr_t)g_foundWindows[i], cls, title);
+            EnumerateAllChildren(g_foundWindows[i], 1);
+        }
+    }
+
+    /* Enumerate menus */
+    HMENU hMenu = GetMenu(best);
+    if (hMenu) {
+        EnumerateMenuRecursive(hMenu, 0, 0);
+    }
+
+    /* Use MSAA for lightweight/windowless controls */
+    UseAccessibility(best);
+
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Refresh: re-enumerate everything                                    */
+/* ------------------------------------------------------------------ */
+void RefreshControls(void)
+{
+    g_app.controlCount = 0;
+    EnumerateAllChildren(g_app.mainWindow, 1);
+    for (int i = 0; i < g_foundWindowCount; i++) {
+        if (g_foundWindows[i] != g_app.mainWindow) {
+            EnumerateAllChildren(g_foundWindows[i], 1);
+        }
+    }
+    UseAccessibility(g_app.mainWindow);
+}
+
+void RefreshMenus(void)
+{
+    g_app.menuCount = 0;
+    HMENU hMenu = GetMenu(g_app.mainWindow);
+    if (hMenu) {
+        EnumerateMenuRecursive(hMenu, 0, 0);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Send keystrokes to the app                                          */
+/* ------------------------------------------------------------------ */
+void SendKeys(HWND hwnd, const wchar_t *keys)
+{
+    SetForegroundWindow(hwnd);
+    Sleep(100);
+
+    for (int i = 0; keys[i]; i++) {
+        SHORT vk = VkKeyScanW(keys[i]);
+        BYTE vkCode = LOBYTE(vk);
+        BYTE shift  = HIBYTE(vk);
+
+        if (shift & 1) { /* Shift */
+            keybd_event(VK_SHIFT, 0, 0, 0);
+        }
+        if (shift & 2) { /* Ctrl */
+            keybd_event(VK_CONTROL, 0, 0, 0);
+        }
+        if (shift & 4) { /* Alt */
+            keybd_event(VK_MENU, 0, 0, 0);
+        }
+
+        keybd_event(vkCode, 0, 0, 0);
+        keybd_event(vkCode, 0, KEYEVENTF_KEYUP, 0);
+
+        if (shift & 4) keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+        if (shift & 2) keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+        if (shift & 1) keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0);
+
+        Sleep(30);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Focus a control and type into it                                    */
+/* ------------------------------------------------------------------ */
+BOOL FocusAndType(int controlIndex, const wchar_t *text)
+{
+    if (controlIndex < 0 || controlIndex >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[controlIndex];
+    if (!ci->hwnd) return FALSE;
+
+    SetForegroundWindow(g_app.mainWindow);
+    Sleep(50);
+    SetFocus(ci->hwnd);
+    Sleep(50);
+
+    /* Select all existing text and replace */
+    SendMessageW(ci->hwnd, EM_SETSEL, 0, -1);
+    Sleep(20);
+
+    /* Type the new text */
+    for (int i = 0; text[i]; i++) {
+        PostMessageW(ci->hwnd, WM_CHAR, (WPARAM)text[i], 0);
+        Sleep(10);
+    }
+
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Select item in ComboBox by index                                    */
+/* ------------------------------------------------------------------ */
+BOOL SelectComboItem(int controlIndex, int itemIndex)
+{
+    if (controlIndex < 0 || controlIndex >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[controlIndex];
+    if (!ci->hwnd) return FALSE;
+
+    SendMessageW(ci->hwnd, CB_SETCURSEL, (WPARAM)itemIndex, 0);
+    /* Notify parent */
+    HWND parent = GetParent(ci->hwnd);
+    if (parent) {
+        PostMessageW(parent, WM_COMMAND,
+                     MAKEWPARAM(ci->controlId, CBN_SELCHANGE), (LPARAM)ci->hwnd);
+    }
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Select item in ListBox by index                                     */
+/* ------------------------------------------------------------------ */
+BOOL SelectListItem(int controlIndex, int itemIndex)
+{
+    if (controlIndex < 0 || controlIndex >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[controlIndex];
+    if (!ci->hwnd) return FALSE;
+
+    SendMessageW(ci->hwnd, LB_SETCURSEL, (WPARAM)itemIndex, 0);
+    HWND parent = GetParent(ci->hwnd);
+    if (parent) {
+        PostMessageW(parent, WM_COMMAND,
+                     MAKEWPARAM(ci->controlId, LBN_SELCHANGE), (LPARAM)ci->hwnd);
+    }
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toggle a checkbox                                                   */
+/* ------------------------------------------------------------------ */
+BOOL ToggleCheckBox(int controlIndex)
+{
+    if (controlIndex < 0 || controlIndex >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[controlIndex];
+    if (!ci->hwnd) return FALSE;
+
+    LRESULT state = SendMessageW(ci->hwnd, BM_GETCHECK, 0, 0);
+    SendMessageW(ci->hwnd, BM_SETCHECK,
+                 (state == BST_CHECKED) ? BST_UNCHECKED : BST_CHECKED, 0);
+    /* Notify parent */
+    HWND parent = GetParent(ci->hwnd);
+    if (parent) {
+        PostMessageW(parent, WM_COMMAND,
+                     MAKEWPARAM(ci->controlId, BN_CLICKED), (LPARAM)ci->hwnd);
+    }
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Get text from a control by index                                    */
+/* ------------------------------------------------------------------ */
+BOOL GetControlText(int controlIndex, wchar_t *outBuf, int bufSize)
+{
+    if (controlIndex < 0 || controlIndex >= g_app.controlCount) return FALSE;
+    ControlInfo *ci = &g_app.controls[controlIndex];
+    if (ci->hwnd) {
+        SendMessageTimeoutW(ci->hwnd, WM_GETTEXT, bufSize, (LPARAM)outBuf,
+                            SMTO_ABORTIFHUNG, 500, NULL);
+    }
+    else {
+        wcsncpy(outBuf, ci->text, bufSize - 1);
+    }
+    return TRUE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Find control by type and optional text pattern                      */
+/* Returns index or -1                                                 */
+/* ------------------------------------------------------------------ */
+int FindControl(const wchar_t *type, const wchar_t *textPattern, int startIndex)
+{
+    for (int i = startIndex; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+        BOOL typeMatch = (!type || type[0] == L'\0' || _wcsicmp(ci->inferredType, type) == 0);
+        BOOL textMatch = (!textPattern || textPattern[0] == L'\0' || wcsstr(ci->text, textPattern) != NULL);
+        if (typeMatch && textMatch) return i;
+    }
+    return -1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Interactive shell for testing                                       */
+/* ------------------------------------------------------------------ */
+void InteractiveShell(void)
+{
+    wchar_t cmd[MAX_TEXT];
+    wprintf(L"\n=== INTERACTIVE MODE ===\n");
+    wprintf(L"Commands:\n");
+    wprintf(L"  list                    - list all controls\n");
+    wprintf(L"  menus                   - list all menus\n");
+    wprintf(L"  report                  - full report\n");
+    wprintf(L"  refresh                 - re-enumerate\n");
+    wprintf(L"  click <index>           - click control by index\n");
+    wprintf(L"  clicktext <text>        - click control by text\n");
+    wprintf(L"  clickmenu <text>        - click menu by text\n");
+    wprintf(L"  settext <index> <text>  - set text in control\n");
+    wprintf(L"  gettext <index>         - get text from control\n");
+    wprintf(L"  find <type> <text>      - find control\n");
+    wprintf(L"  combo <index> <item>    - select combo item\n");
+    wprintf(L"  listsel <index> <item>  - select list item\n");
+    wprintf(L"  toggle <index>          - toggle checkbox\n");
+    wprintf(L"  type <index> <text>     - focus and type\n");
+    wprintf(L"  keys <text>             - send keystrokes\n");
+    wprintf(L"  quit                    - exit\n");
+    wprintf(L"\n");
+
+    while (1) {
+        wprintf(L"> ");
+        if (!fgetws(cmd, MAX_TEXT, stdin)) break;
+
+        /* Strip newline */
+        int len = (int)wcslen(cmd);
+        while (len > 0 && (cmd[len-1] == L'\n' || cmd[len-1] == L'\r')) cmd[--len] = L'\0';
+
+        if (_wcsicmp(cmd, L"quit") == 0 || _wcsicmp(cmd, L"exit") == 0) break;
+        else if (_wcsicmp(cmd, L"list") == 0) PrintAllControls();
+        else if (_wcsicmp(cmd, L"menus") == 0) PrintAllMenus();
+        else if (_wcsicmp(cmd, L"report") == 0) PrintFullReport();
+        else if (_wcsicmp(cmd, L"refresh") == 0) {
+            RefreshControls();
+            RefreshMenus();
+            wprintf(L"Refreshed: %d controls, %d menus\n", g_app.controlCount, g_app.menuCount);
+        }
+        else if (wcsncmp(cmd, L"click ", 6) == 0) {
+            int idx = _wtoi(cmd + 6);
+            ClickControlByIndex(idx);
+        }
+        else if (wcsncmp(cmd, L"clicktext ", 10) == 0) {
+            ClickControlByText(cmd + 10);
+        }
+        else if (wcsncmp(cmd, L"clickmenu ", 10) == 0) {
+            ClickMenuByText(cmd + 10);
+        }
+        else if (wcsncmp(cmd, L"settext ", 8) == 0) {
+            int idx = 0;
+            wchar_t txt[MAX_TEXT] = {0};
+            swscanf(cmd + 8, L"%d %[^\n]", &idx, txt);
+            SetTextByIndex(idx, txt);
+        }
+        else if (wcsncmp(cmd, L"gettext ", 8) == 0) {
+            int idx = _wtoi(cmd + 8);
+            wchar_t buf[MAX_TEXT] = {0};
+            if (GetControlText(idx, buf, MAX_TEXT)) {
+                wprintf(L"Text: '%ls'\n", buf);
+            }
+        }
+        else if (wcsncmp(cmd, L"find ", 5) == 0) {
+            wchar_t type[64] = {0}, pattern[MAX_TEXT] = {0};
+            swscanf(cmd + 5, L"%63s %[^\n]", type, pattern);
+            int idx = FindControl(type, pattern, 0);
+            if (idx >= 0) {
+                wprintf(L"Found at index %d: %ls '%ls'\n",
+                        idx, g_app.controls[idx].inferredType, g_app.controls[idx].text);
+            }
+            else {
+                wprintf(L"Not found.\n");
+            }
+        }
+        else if (wcsncmp(cmd, L"combo ", 6) == 0) {
+            int idx = 0, item = 0;
+            swscanf(cmd + 6, L"%d %d", &idx, &item);
+            SelectComboItem(idx, item);
+        }
+        else if (wcsncmp(cmd, L"listsel ", 8) == 0) {
+            int idx = 0, item = 0;
+            swscanf(cmd + 8, L"%d %d", &idx, &item);
+            SelectListItem(idx, item);
+        }
+        else if (wcsncmp(cmd, L"toggle ", 7) == 0) {
+            int idx = _wtoi(cmd + 7);
+            ToggleCheckBox(idx);
+        }
+        else if (wcsncmp(cmd, L"type ", 5) == 0) {
+            int idx = 0;
+            wchar_t txt[MAX_TEXT] = {0};
+            swscanf(cmd + 5, L"%d %[^\n]", &idx, txt);
+            FocusAndType(idx, txt);
+        }
+        else if (wcsncmp(cmd, L"keys ", 5) == 0) {
+            SendKeys(g_app.mainWindow, cmd + 5);
+        }
+        else {
+            wprintf(L"Unknown command: '%ls'\n", cmd);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* JSON output for machine consumption                                 */
+/* ------------------------------------------------------------------ */
+void PrintJSON(void)
+{
+    wprintf(L"{\n");
+    wprintf(L"  \"exe\": \"%ls\",\n", g_app.exeName);
+    wprintf(L"  \"pid\": %u,\n", g_app.processId);
+    wprintf(L"  \"hwnd\": %llu,\n", (unsigned long long)(uintptr_t)g_app.mainWindow);
+    wprintf(L"  \"title\": \"%ls\",\n", g_app.windowTitle);
+    wprintf(L"  \"class\": \"%ls\",\n", g_app.windowClass);
+    wprintf(L"  \"controls\": [\n");
+    for (int i = 0; i < g_app.controlCount; i++) {
+        ControlInfo *ci = &g_app.controls[i];
+        /* Escape quotes in text */
+        wchar_t escaped[MAX_TEXT * 2] = {0};
+        int ei = 0;
+        for (int j = 0; ci->text[j] && ei < MAX_TEXT * 2 - 2; j++) {
+            if (ci->text[j] == L'"') { escaped[ei++] = L'\\'; escaped[ei++] = L'"'; }
+            else if (ci->text[j] == L'\\') { escaped[ei++] = L'\\'; escaped[ei++] = L'\\'; }
+            else if (ci->text[j] == L'\n') { escaped[ei++] = L'\\'; escaped[ei++] = L'n'; }
+            else if (ci->text[j] == L'\r') { escaped[ei++] = L'\\'; escaped[ei++] = L'r'; }
+            else escaped[ei++] = ci->text[j];
+        }
+
+        wprintf(L"    {\"index\":%d,\"type\":\"%ls\",\"class\":\"%ls\",\"text\":\"%ls\","
+                L"\"hwnd\":%llu,\"id\":%u,\"visible\":%ls,\"enabled\":%ls,"
+                L"\"rect\":[%d,%d,%d,%d],\"depth\":%d}%ls\n",
+                i, ci->inferredType, ci->className, escaped,
+                (unsigned long long)(uintptr_t)ci->hwnd, ci->controlId,
+                ci->visible ? L"true" : L"false",
+                ci->enabled ? L"true" : L"false",
+                ci->rect.left, ci->rect.top, ci->rect.right, ci->rect.bottom,
+                ci->depth,
+                (i < g_app.controlCount - 1) ? L"," : L"");
+    }
+    wprintf(L"  ],\n");
+    wprintf(L"  \"menus\": [\n");
+    for (int i = 0; i < g_app.menuCount; i++) {
+        MenuItemInfo_Custom *mi = &g_app.menus[i];
+        wchar_t escaped[MAX_TEXT * 2] = {0};
+        int ei = 0;
+        for (int j = 0; mi->text[j] && ei < MAX_TEXT * 2 - 2; j++) {
+            if (mi->text[j] == L'"') { escaped[ei++] = L'\\'; escaped[ei++] = L'"'; }
+            else if (mi->text[j] == L'\\') { escaped[ei++] = L'\\'; escaped[ei++] = L'\\'; }
+            else escaped[ei++] = mi->text[j];
+        }
+
+        wprintf(L"    {\"id\":%u,\"text\":\"%ls\",\"depth\":%d,\"position\":%d,"
+                L"\"enabled\":%ls,\"checked\":%ls,\"separator\":%ls,\"submenu\":%ls}%ls\n",
+                mi->menuId, escaped, mi->depth, mi->position,
+                mi->enabled ? L"true" : L"false",
+                mi->checked ? L"true" : L"false",
+                mi->isSeparator ? L"true" : L"false",
+                mi->isSubmenu ? L"true" : L"false",
+                (i < g_app.menuCount - 1) ? L"," : L"");
+    }
+    wprintf(L"  ]\n");
+    wprintf(L"}\n");
+}
+
+/* ------------------------------------------------------------------ */
+/* Usage                                                               */
+/* ------------------------------------------------------------------ */
+void PrintUsage(const wchar_t *progname)
+{
+    wprintf(L"Usage: %ls <exe_name> [options]\n", progname);
+    wprintf(L"\n");
+    wprintf(L"  <exe_name>    Name of the running VB application (e.g. MyApp.exe)\n");
+    wprintf(L"\n");
+    wprintf(L"Options:\n");
+    wprintf(L"  --report      Print full human-readable report (default)\n");
+    wprintf(L"  --json        Print machine-readable JSON output\n");
+    wprintf(L"  --interactive Start interactive command shell\n");
+    wprintf(L"  --click <text>       Click a control by text\n");
+    wprintf(L"  --menu <text>        Click a menu item by text\n");
+    wprintf(L"  --set <idx> <text>   Set text in control at index\n");
+    wprintf(L"  --get <idx>          Get text from control at index\n");
+    wprintf(L"\n");
+    wprintf(L"Examples:\n");
+    wprintf(L"  %ls MyApp.exe --report\n", progname);
+    wprintf(L"  %ls MyApp.exe --json\n", progname);
+    wprintf(L"  %ls MyApp.exe --interactive\n", progname);
+    wprintf(L"  %ls MyApp.exe --click \"OK\"\n", progname);
+    wprintf(L"  %ls MyApp.exe --menu \"File\"\n", progname);
+}
+
+/* ------------------------------------------------------------------ */
+/* Main                                                                */
+/* ------------------------------------------------------------------ */
+int wmain(int argc, wchar_t *argv[])
+{
+    /* Set console to UTF-16 output */
+    _setmode(_fileno(stdout), _O_U16TEXT);
+    _setmode(_fileno(stdin), _O_U16TEXT);
+
+    if (argc < 2) {
+        PrintUsage(argv[0]);
+        return 1;
+    }
+
+    wchar_t *exeName = argv[1];
+
+    if (!FindVBApp(exeName)) {
+        wprintf(L"\nFailed to find running application '%ls'.\n", exeName);
+        wprintf(L"Make sure the application is running and the name matches exactly.\n");
+        wprintf(L"\nRunning processes:\n");
+        DWORD pids[2048];
+        DWORD needed;
+        if (EnumProcesses(pids, sizeof(pids), &needed)) {
+            int count = needed / sizeof(DWORD);
+            for (int i = 0; i < count; i++) {
+                wchar_t name[MAX_PATH] = {0};
+                if (GetProcessExeName(pids[i], name, MAX_PATH)) {
+                    if (wcsstr(name, L".exe") || wcsstr(name, L".EXE")) {
+                        /* Only show potential matches */
+                        if (_wcsnicmp(name, exeName, 3) == 0 ||
+                            wcsstr(name, L"Thunder") ||
+                            wcsstr(name, L"VB") ||
+                            wcsstr(name, L"vb")) {
+                            wprintf(L"  PID %5u: %ls\n", pids[i], name);
+                        }
+                    }
+                }
+            }
+        }
+        return 1;
+    }
+
+    /* Parse command line options */
+    BOOL didAction = FALSE;
+    for (int i = 2; i < argc; i++) {
+        if (_wcsicmp(argv[i], L"--json") == 0) {
+            PrintJSON();
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--interactive") == 0) {
+            PrintFullReport();
+            InteractiveShell();
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--click") == 0 && i + 1 < argc) {
+            ClickControlByText(argv[++i]);
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--menu") == 0 && i + 1 < argc) {
+            ClickMenuByText(argv[++i]);
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--set") == 0 && i + 2 < argc) {
+            int idx = _wtoi(argv[++i]);
+            SetTextByIndex(idx, argv[++i]);
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--get") == 0 && i + 1 < argc) {
+            int idx = _wtoi(argv[++i]);
+            wchar_t buf[MAX_TEXT] = {0};
+            if (GetControlText(idx, buf, MAX_TEXT)) {
+                wprintf(L"%ls\n", buf);
+            }
+            didAction = TRUE;
+        }
+        else if (_wcsicmp(argv[i], L"--report") == 0) {
+            PrintFullReport();
+            didAction = TRUE;
+        }
+    }
+
+    if (!didAction) {
+        PrintFullReport();
+    }
+
+    CoUninitialize();
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* If compiled without wmain support (MinGW), provide a wrapper.       */
+/* ------------------------------------------------------------------ */
+#ifdef NEED_MAIN_WRAPPER
+#include <shellapi.h>
+int main(void)
+{
+    int argc;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    int ret = wmain(argc, argv);
+    LocalFree(argv);
+    return ret;
+}
+#endif
+
+/*
+ * NOTES ON VB LIGHTWEIGHT CONTROLS:
+ *
+ * VB6 Labels, Images, Lines, and Shapes are "lightweight" (windowless)
+ * controls. They do NOT have their own HWND. They are painted directly
+ * onto their parent form's device context.
+ *
+ * To discover these, we use MSAA (Microsoft Active Accessibility) via
+ * the IAccessible interface. The AccessibleObjectFromWindow + recursive
+ * walk will find these lightweight controls and report their names,
+ * values, roles, and bounding rectangles.
+ *
+ * For clicking lightweight controls, we calculate their screen coordinates
+ * from the MSAA bounding rect and simulate mouse input at that location.
+ *
+ * VB SUBCLASSING NOTE:
+ * This tool does NOT inject code into the VB process. It operates
+ * entirely from outside using Win32 API messages, MSAA, and input
+ * simulation. This is far safer and more reliable than DLL injection
+ * or subclassing from another process.
+ *
+ * For cross-process operations that require reading ListView/TreeView
+ * items (which store data in the target process's memory), you would
+ * need to use VirtualAllocEx + ReadProcessMemory. This can be added
+ * as needed for specific controls.
+ *
+ * COMPILATION:
+ *   MSVC:  cl /W4 /DUNICODE /D_UNICODE vb_automator.c user32.lib kernel32.lib psapi.lib ole32.lib oleaut32.lib oleacc.lib /Fe:vb_automator.exe
+ *   MinGW: gcc -DUNICODE -D_UNICODE -DNEED_MAIN_WRAPPER vb_automator.c -o vb_automator.exe -luser32 -lkernel32 -lpsapi -lole32 -loleaut32 -loleacc -luuid
+ */
+
