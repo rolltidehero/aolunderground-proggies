@@ -1,6 +1,6 @@
 # AOL Proggie Index
 
-**2138 proggies** cataloged from the AOL Underground archive.
+**2139 proggies** cataloged from the AOL Underground archive.
 
 ## By AOL Version
 
@@ -15,7 +15,7 @@
 | AoAsCii Shop | firestorm | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoascii.zip |
 | AoAsCii Shop 2 | firestorm | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoasci2.zip |
 | AOEVIL | entering | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aoevil.zip |
-| aohell 95 | Da Chronic | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aohell 95 for aol 2.5-3.0.zip |
+| AOHell 95 v3.0 | Da Chronic | VB3 | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/aohell 95 for aol 2.5-3.0.zip |
 | barronscom | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/barronscom.zip |
 | blitz1im | None | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/blitz 1 im.zip |
 | cuntpunt | Unknown | ? | ? | programs/AOL/proggies-sorted-deduped/proggies-by-version/2.5/cuntpunt.zip |

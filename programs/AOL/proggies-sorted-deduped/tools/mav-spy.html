@@ -1,0 +1,2776 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mav-spy.zip — Analysis</title><style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
+.container{max-width:960px;margin:0 auto}
+.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
+.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
+.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
+.hero .author b{color:#f0883e}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
+.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
+.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
+.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
+.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
+.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
+section{margin-bottom:20px}
+h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
+.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
+.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
+.ctrl-table td:first-child{color:#bc8cff}
+.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
+.menu-tree li{padding:2px 0;color:#c9d1d9}
+.menu-tree li::before{content:'├─ ';color:#30363d}
+.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
+.menu-tree .submenu{padding-left:20px;list-style:none}
+.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
+.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
+.fn-group{margin-bottom:12px}
+.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
+.fn-group summary:hover{color:#79c0ff}
+.fn-item{margin:2px 0}
+.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
+.fn-item summary:hover{background:#1c2333}
+.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
+.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
+.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
+.api-name{color:#e3b341;font-family:monospace}
+.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
+.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
+.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
+.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
+.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
+.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
+.plain-str{color:#484f58;font-size:0.8em}
+blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
+.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
+.stats{color:#484f58;font-size:0.8em;margin:4px 0}
+.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
+.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
+.bar-app{background:#238636}
+.bar-used{background:#8957e5}
+.bar-dead{background:#21262d;color:#484f58 !important}
+.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-app{background:#238636}
+.dot-used{background:#8957e5}
+.dot-dead{background:#21262d;border:1px solid #484f58}
+details{margin:4px 0}
+summary{cursor:pointer}
+summary:hover{color:#58a6ff}
+.screenshot{margin:12px 0}
+.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
+.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
+.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
+@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
+@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
+.topnav a{color:#58a6ff;text-decoration:none}
+.topnav a:hover{text-decoration:underline}
+.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
+.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
+</style></head><body><div class="container">
+<div class="topnav">
+<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/main/programming/vb/Visual-Basic-Tools/mav-spy.zip">&#x2b07; Download mav-spy.zip</a>
+<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/main/programs/AOL/proggies-sorted-deduped/tools/mav-spy/mav-spy-source.zip" style="background:#238636">&#x1f4c4; Download Source</a>
+</div>
+<div class="hero">
+<div><h1>Mav-Spy 4</h1><span class="author">by <b>Mavness</b></span></div>
+<div class="badges" style="margin-top:10px">
+<span class="badge badge-ver">AOL tools</span>
+<span class="badge badge-vb">VB6</span>
+<span class="badge badge-compile">Native Code</span>
+<span class="badge" style="background:#1a1a2a;color:#8b949e;border:1px solid #30363d">Mav-Spy4.exe</span>
+<span class="badge" style="background:#1a2a1a;color:#8b949e;border:1px solid #30363d">Compiled 2000-03-04</span>
+<span class="badge" style="background:#1a1a2a;color:#79c0ff;border:1px solid #1f6feb">Module1.bas</span>
+</div></div>
+<section class="screenshot">
+<img src="mav-spy/screenshot.png" alt="Main window"><div class="caption">Main window</div>
+<img src="mav-spy/animated.gif" alt="Navigation walkthrough"><div class="caption">Navigation walkthrough</div>
+<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Individual screenshots</summary>
+<div style="margin:8px 0"><img src="mav-spy/screen_menu.png" alt="Menu"><div class="caption">Menu</div></div>
+</details>
+</section>
+<h2>&#x1f58a; Author Evidence (1)</h2>
+<span class="s author-str">My site  Mavness.com, Check for updates and other good stuff</span>
+<h2>&#x1f4e6; Dependencies (1)</h2>
+<span class="s dep-str">shell32.dll</span>
+<h2>&#x1f4cb; Project Info</h2>
+<div class="card">
+Startup: Main · Version: 4.00.0 · Company: Mavness
+</div>
+
+<h2>&#x2699; API References (3)</h2>
+<div class="card"><h3>Win32 API Calls</h3>
+<div class="api-item"><span class="api-name">GetCursorPos</span></div>
+<div class="api-item"><span class="api-name">ShowWindow</span></div>
+<div class="api-item"><span class="api-name">ReleaseCapture</span></div>
+</div>
+<h2>&#x1f5bc; Forms &amp; Controls</h2>
+<details><summary>6 forms, 123 controls</summary>
+<div class="card">
+<h3>APIcalls</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>TextBox</td><td>Text1</td><td>APIcalls.frx</td></tr>
+</table>
+</div>
+<div class="card">
+<h3>Basic</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>TextBox</td><td>Text1</td><td>Basic.frx</td></tr>
+</table>
+</div>
+<div class="card">
+<h3>Enlarge</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>TextBox</td><td>Text1</td><td>Text1</td></tr>
+</table>
+</div>
+<div class="card">
+<h3>FRMopen</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>DriveListBox</td><td>Drive1</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>FileListBox</td><td>File1</td><td>a =</td></tr>
+<tr><td>DirListBox</td><td>Dir1</td><td><span style="color:#30363d">—</span></td></tr>
+</table>
+</div>
+<div class="card">
+<h3>Main</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>SSTab</td><td>SSTab1</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Frame</td><td>Frame11</td><td>Image List</td></tr>
+<tr><td>CommandButton</td><td>Command14</td><td>Remove</td></tr>
+<tr><td>CommandButton</td><td>Command13</td><td>Add</td></tr>
+<tr><td>ListBox</td><td>List3</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Frame</td><td>Frame5</td><td>Roll Over Efects</td></tr>
+<tr><td>Frame</td><td>Frame10</td><td>Options</td></tr>
+<tr><td>CheckBox</td><td>Check1</td><td>Preload Images</td></tr>
+<tr><td>CommandButton</td><td>Command12</td><td>On Image</td></tr>
+<tr><td>CommandButton</td><td>Command11</td><td>Off Image</td></tr>
+<tr><td>CommandButton</td><td>Command9</td><td>Create Code</td></tr>
+<tr><td>Image</td><td>Image6</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Image</td><td>Image5</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Frame</td><td>Frame9</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text20</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text18</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text17</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Frame</td><td>Frame8</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text14</td><td>ir</td></tr>
+<tr><td>TextBox</td><td>Text16</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text15</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Frame</td><td>Frame7</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>PictureBox</td><td>Picture2</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>HScrollBar</td><td>HScroll1</td><td>re</td></tr>
+<tr><td>HScrollBar</td><td>HScroll1</td><td>re</td></tr>
+<tr><td>HScrollBar</td><td>HScroll1</td><td>re</td></tr>
+<tr><td>Frame</td><td>Frame6</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text19</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text13</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text12</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text11</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text10</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text9</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>PictureBox</td><td>Picture1</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Label</td><td>Label26</td><td>Red</td></tr>
+<tr><td>Label</td><td>Label21</td><td>Color</td></tr>
+<tr><td>Label</td><td>Label23</td><td>Blue</td></tr>
+<tr><td>Label</td><td>Label22</td><td>Green</td></tr>
+<tr><td>Label</td><td>Label20</td><td>Html</td></tr>
+<tr><td>Label</td><td>Label17</td><td>Hex</td></tr>
+<tr><td>Image</td><td>Image4</td><td>r.</td></tr>
+<tr><td>Frame</td><td>Frame4</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>CommandButton</td><td>Command5</td><td>API Basics</td></tr>
+<tr><td>CommandButton</td><td>Command4</td><td>What you need In your module</td></tr>
+<tr><td>CommandButton</td><td>Command10</td><td>Check for updates</td></tr>
+<tr><td>Label</td><td>Label19</td><td>Main.frx</td></tr>
+<tr><td>Label</td><td>Label16</td><td>Tko&#x27;s site, he taught me findwindow, and findwindowex, he is a great friend. Check out his site.</td></tr>
+<tr><td>Label</td><td>Label14</td><td>My site  Mavness.com, Check for updates and other good stuff</td></tr>
+<tr><td>TextBox</td><td>Text8</td><td>Main.frx</td></tr>
+<tr><td>CommandButton</td><td>Command8</td><td>HELP!</td></tr>
+<tr><td>CommandButton</td><td>Command7</td><td>Options</td></tr>
+<tr><td>CommandButton</td><td>Command6</td><td>Re-Enable Mouse</td></tr>
+<tr><td>Frame</td><td>Frame3</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text7</td><td>Main.frx</td></tr>
+<tr><td>TextBox</td><td>Text6</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text5</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>Text4</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>CommandButton</td><td>Command3</td><td>Make Code</td></tr>
+<tr><td>CommandButton</td><td>Command2</td><td>Get Info</td></tr>
+<tr><td>TextBox</td><td>Text3</td><td>Enter Handle</td></tr>
+<tr><td>Frame</td><td>Frame2</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>TextBox</td><td>APItxt</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Label</td><td>Label6</td><td>Parent Window Caption:</td></tr>
+<tr><td>Label</td><td>Label5</td><td>Parent Window Class:</td></tr>
+<tr><td>Label</td><td>Label4</td><td>Parent Window Handle:</td></tr>
+<tr><td>Label</td><td>Label3</td><td>Window Caption:</td></tr>
+<tr><td>Label</td><td>Label2</td><td>Window Class:</td></tr>
+<tr><td>Label</td><td>Label1</td><td>Window Handle:</td></tr>
+<tr><td>Frame</td><td>Frame1</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>ListBox</td><td>List2</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>ListBox</td><td>List1</td><td>= 7</td></tr>
+<tr><td>ListBox</td><td>List1</td><td>= 7</td></tr>
+<tr><td>ListBox</td><td>List1</td><td>= 7</td></tr>
+<tr><td>CommandButton</td><td>Command1</td><td>Display</td></tr>
+<tr><td>TextBox</td><td>Text2</td><td>Enter Handle</td></tr>
+<tr><td>Label</td><td>Label18</td><td>Drag For Handle</td></tr>
+<tr><td>Image</td><td>Image3</td><td>pi Spy</td></tr>
+<tr><td>TextBox</td><td>Text1</td><td>Main.frx</td></tr>
+<tr><td>Label</td><td>Label7</td><td>Next version, go to www.mavness.com for updates</td></tr>
+<tr><td>Label</td><td>Label27</td><td>Color</td></tr>
+<tr><td>Label</td><td>Label25</td><td>Html</td></tr>
+<tr><td>Label</td><td>Label24</td><td>Hex</td></tr>
+<tr><td>Label</td><td>Label15</td><td>Use to make code  ---&gt;</td></tr>
+<tr><td>Label</td><td>Label13</td><td>Move mouse or drag and drop this--&gt;</td></tr>
+<tr><td>Image</td><td>Image2</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>Image</td><td>Image1</td><td>‘| cos</td></tr>
+</table>
+<div style="margin-top:6px;color:#484f58;font-size:0.8em">Timers: Timer2, Timer1, Timer3</div>
+</div>
+<div class="card">
+<h3>Options</h3>
+<table class="ctrl-table"><tr><th>Type</th><th>Name</th><th>Caption/Text</th></tr>
+<tr><td>CommandButton</td><td>Command1</td><td>Save Changes</td></tr>
+<tr><td>Frame</td><td>Frame1</td><td><span style="color:#30363d">—</span></td></tr>
+<tr><td>CheckBox</td><td>Check5</td><td>Find Target Window By Caption</td></tr>
+<tr><td>CheckBox</td><td>Check4</td><td>Find All Windows By Their Caption</td></tr>
+<tr><td>OptionButton</td><td>Option19</td><td>A Function That Finds a Window</td></tr>
+<tr><td>OptionButton</td><td>Option18</td><td>Hit Enter Key</td></tr>
+<tr><td>OptionButton</td><td>Option17</td><td>Click on Check box</td></tr>
+<tr><td>OptionButton</td><td>Option16</td><td>UnCheck Check Box</td></tr>
+<tr><td>OptionButton</td><td>Option15</td><td>Check a Check Box</td></tr>
+<tr><td>OptionButton</td><td>Option4</td><td>Get Text</td></tr>
+<tr><td>OptionButton</td><td>Option3</td><td>Set Text</td></tr>
+<tr><td>OptionButton</td><td>Option2</td><td>Click Icon</td></tr>
+<tr><td>OptionButton</td><td>Option1</td><td>Click Button</td></tr>
+<tr><td>OptionButton</td><td>Option5</td><td>Just Find the Window</td></tr>
+<tr><td>OptionButton</td><td>Option6</td><td>Click a msgbox</td></tr>
+<tr><td>OptionButton</td><td>Option7</td><td>Right Click</td></tr>
+<tr><td>OptionButton</td><td>Option8</td><td>Double CLick</td></tr>
+<tr><td>OptionButton</td><td>Option11</td><td>Show Window</td></tr>
+<tr><td>OptionButton</td><td>Option12</td><td>Hide Window</td></tr>
+<tr><td>OptionButton</td><td>Option13</td><td>Close Window</td></tr>
+<tr><td>OptionButton</td><td>Option14</td><td>ListBox</td></tr>
+<tr><td>OptionButton</td><td>Option10</td><td>Disable Window</td></tr>
+<tr><td>OptionButton</td><td>Option9</td><td>Enable Window</td></tr>
+<tr><td>CheckBox</td><td>Check1</td><td>Get Count</td></tr>
+<tr><td>CheckBox</td><td>Check2</td><td>Get item in list</td></tr>
+<tr><td>CheckBox</td><td>Check3</td><td>Select Item in list</td></tr>
+</table>
+</div>
+</details>
+<h2>&#x1f4ca; Code Breakdown</h2>
+<div class="breakdown-bar">
+<div class="bar-app" style="width:30.5%" title="App code: 30.5%">30.5%</div>
+<div style="width:3.1%;background:#1f3a1f;color:#3fb950;text-align:center;font-size:0.75em;line-height:24px" title="Cherry-picked from known modules: 3.1%">3.1%</div>
+<div class="bar-used" style="width:63.5%" title="Used Module1.bas: 63.5%">63.5%</div>
+<div class="bar-dead" style="width:3.0%" title="Unused Module1.bas: 3.0%">3.0%</div>
+</div>
+<div class="breakdown-legend">
+<span><span class="dot dot-app"></span>Custom code — 56 funcs (30.5%)</span>
+<span><span class="dot" style="background:#3fb950"></span>Cherry-picked from dos32, jaguar32.bas — 5 funcs (3.1%)</span>
+<span><span class="dot dot-used"></span>Used from Module1.bas — 2 of 9 funcs (63.5%)</span>
+<span><span class="dot dot-dead"></span>Unused from Module1.bas — 2 funcs (3.0%)</span>
+</div>
+<details open><summary><b>Application Code</b> (56 event handlers)</summary>
+<details class="fn-item"><summary>Check_Function() <span class="sz">407b</span></summary>
+<pre>Public Function Check_Function()
+  GetWindowPlacement(%x1 = Me.Caption, 5)
+  If esi &lt;&gt; 0 Then GoTo loc_0040FC40
+  Text1.Text = vbNullString
+  var_40 = &quot;Code cannot be created for this.&quot;
+  Exit Sub
+End Function</pre>
+</details>
+<details class="fn-item"><summary>ColorToHTML(clr) <span class="sz">1.1KB</span></summary>
+<pre>Public Function ColorToHTML(clr)
+  call __vbaCopyBytes(&amp;h00000004, var_20, var_20, edi, esi, ebx)
+  var_3C = var_20
+  var_2C = Trim$(Hex$(var_20))
+  If Len(var_2C) &lt;&gt; 1 Then GoTo loc_00412FF0
+  var_2C = var_004078A8 &amp; var_2C
+  var_3C = var_1F
+  var_18 = Trim$(Hex$(var_1F))
+  If Len(var_18) &lt;&gt; 1 Then GoTo loc_00413042
+  var_18 = var_004078A8 &amp; var_18
+  var_3C = var_1E
+  var_28 = Trim$(Hex$(var_1E))
+  If Len(var_28) &lt;&gt; 1 Then GoTo loc_00413098
+  var_28 = var_004078A8 &amp; var_28
+  GoTo loc_0041309E
+  var_1C = var_004078B0 &amp; var_2C &amp; var_18 &amp; var_28
+  GoTo loc_00413109
+  If var_4 = 0 Then GoTo loc_004130F5
+  Exit Sub
+End Function</pre>
+</details>
+<details class="fn-item"><summary>Command1_Click() <span style="color:#3fb950;font-style:italic">"Save Changes"</span> <span class="sz">78b</span></summary>
+<pre>Private Sub Command1_Click()
+  var_eax = Me.Hide
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command2_Click() <span style="color:#3fb950;font-style:italic">"Get Info"</span> <span class="sz">973b → calls: GetCaption, GetClass</span></summary>
+<pre>Private Sub Command2_Click()
+  Dim var_24 As TextBox
+  Dim var_34 As TextBox
+  Dim var_20 As TextBox
+  var_34 = var_24
+  var_18 = Text3.Text
+  var_28 = CLng(Val(var_18))
+  var_1C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_28, var_20, var_24)
+  Text3.Text = var_1C
+  var_34 = var_20
+  var_18 = Text3.Text
+  var_28 = CLng(Val(var_18))
+  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_28, var_20, Me)
+  Text3.Text = var_1C
+  var_18 = Text3.Text
+  GetParent(CLng(Val(var_18)))
+  var_1C = CStr(GetParent(CLng(Val(var_18))))
+  Text3.Text = var_1C
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command3_Click() <span style="color:#3fb950;font-style:italic">"Make Code"</span> <span class="sz">267b → calls: Proc_3_8_415E30</span></summary>
+<pre>Private Sub Command3_Click()
+  var_18 = Text3.Text
+  call Proc_3_8_415E30(var_20, FFFFFFFFh, CLng(Val(var_18)))
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command4_Click() <span style="color:#3fb950;font-style:italic">"What you need In your module"</span> <span class="sz">91b</span></summary>
+<pre>Private Sub Command4_Click()
+  var_eax = APIcalls.Show var_18
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command5_Click() <span style="color:#3fb950;font-style:italic">"API Basics"</span> <span class="sz">88b</span></summary>
+<pre>Private Sub Command5_Click()
+  var_eax = Basic.Show var_18
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command6_Click() <span style="color:#3fb950;font-style:italic">"Re-Enable Mouse"</span> <span class="sz">184b</span></summary>
+<pre>Private Sub Command6_Click()
+  Timer1.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Command7_Click() <span style="color:#3fb950;font-style:italic">"Options"</span> <span class="sz">90b</span></summary>
+<pre>Private Sub Command7_Click()
+  var_eax = Options.Show var_18
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Dir1_Change() <span style="color:#484f58;font-style:italic">[DirListBox] var_18 = Dir1.Path</span> <span class="sz">213b</span></summary>
+<pre>Private Sub Dir1_Change()
+  var_18 = Dir1.Path
+  Dir1.Path = var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Drive1_Change() <span style="color:#484f58;font-style:italic">[DriveListBox] On Error Resume Next</span> <span class="sz">421b</span></summary>
+<pre>Private Sub Drive1_Change()
+  On Error Resume Next
+  var_20 = Drive1.Drive
+  Drive1.Drive = var_20
+  GoTo loc_00422138
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>File1_DblClick() <span style="color:#3fb950;font-style:italic">"a ="</span> <span class="sz">1.6KB</span></summary>
+<pre>Private Sub File1_DblClick()
+  Dim var_F0 As Variant
+  Dim var_F8 As FileListBox
+  var_38 = Dir1.Path
+  var_F4 = var_38
+  var_3C = File1.FileName
+  var_FC = var_3C
+  var_30 = var_38 &amp; var_00407AB0 &amp; var_3C
+  On Error Resume Next
+  Open var_30 For Input As #1 Len = -1
+  var_28 = Input(LOF(1), 1)
+  Close #1
+  var_B0 = var_28
+  var_58 = LCase(var_28)
+  var_68 = &quot;VB_atribute&quot;
+  var_78 = LCase(var_68)
+  call InStr(var_88, &amp;h00000000, var_78, var_58, &amp;h00000001, FFFFFFFFh, esi, ebx)
+  call Not(var_98, InStr(var_88, &amp;h00000000, var_78, var_58, &amp;h00000001, FFFFFFFFh, esi, ebx))
+  var_F0 = CBool(Not(var_98, InStr(var_88, &amp;h00000000, var_78, var_58, &amp;h00000001, FFFFFFFFh, esi, ebx)))
+  If var_F0 = 0 Then GoTo loc_00422A6A
+  var_34 = MsgBox(&quot;This does not appear to be a valid .bas file, would you like to load it anyways?&quot;, 4, var_68, 10, var_88)
+  If var_34 &lt;&gt; 7 Then GoTo loc_0042252F
+  GoTo loc_00422A6A
+  var_B0 = var_28
+  var_58 = LCase(var_28)
+  var_78 = LCase(&quot;sub&quot;)
+  call InStr(var_88, &amp;h00000000, var_78, var_58, &amp;h00000001)
+  var_F0 = Not ((InStr(var_88, &amp;h00000000, var_78, var_58, &amp;h00000001) = 0))
+  If var_F0 = 0 Then GoTo loc_004229BE
+  var_B0 = var_28
+  var_58 = LCase(var_28)
+  var_78 = LCase(&quot;End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_Load() <span class="sz">477b → calls: Proc_3_0_414910</span></summary>
+<pre>Private Sub Form_Load()
+  call __vbaCastObj(Me, var_00407424, __vbaCastObj, Me, ebx)
+  call Proc_3_0_414910(var_18, var_18, __vbaCastObj(Me, var_00407424, __vbaCastObj, Me, ebx))
+  call __vbaCastObj(Me, var_00407424)
+  call Proc_4151D0(var_18, var_18, __vbaCastObj(Me, var_00407424))
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_MouseDown(Button <span class="sz">382b → calls: GetListText</span></summary>
+<pre>Private Sub Form_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  call __vbaCastObj(Me, var_00407424, edi, Me, ebx)
+  call <span style="color:#d2a8ff" title="Proc_3_1_414B30">GetListText</span>(var_18, var_18, __vbaCastObj(Me, var_00407424, edi, Me, ebx))
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_Resize() <span class="sz">672b</span></summary>
+<pre>Private Sub Form_Resize()
+  var_18 = Me.WindowState
+  If var_18 &lt;&gt; 2 Then GoTo loc_0040EC72
+  Me.WindowState = 0
+  If var_18 &gt;= 0 Then GoTo loc_0040ECDE
+  GoTo loc_0040ECD5
+  var_18 = Me.WindowState
+  If var_18 = 1 Then GoTo loc_0040ECDE
+  Me.Width = var_45AD7000
+  Me.Height = var_45870000
+  If var_18 &gt;= 0 Then GoTo loc_0040ECDE
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_Terminate() <span class="sz">225b</span></summary>
+<pre>Private Sub Form_Terminate()
+  Set var_18 = Me
+  var_eax = Global.Unload var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Form_Unload(Cancel <span class="sz">825b</span></summary>
+<pre>Private Sub Form_Unload(Cancel As Integer)
+  Dim var_40 As Timer
+  var_40 = &quot;                         Leaving already?&quot;
+  If MsgBox(var_40, 4, var_50, var_60, var_70) &lt;&gt; 0 Then GoTo loc_0040EFC1
+  Timer1.Enabled = ebx
+  Timer2.Enabled = ebx
+  End
+  Set var_30 = Me
+  var_eax = Global.Unload var_30
+  call __vbaVarSetObjAddref(var_24, ebx, Me, var_30, var_40, Me, var_30, var_40, Me, 0, Me, ebx)
+  End
+  GoTo loc_0040EFC9
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Frame4_MouseMove(Button <span style="color:#484f58;font-style:italic">[Frame] var_eax = Unknown_VTable_Call[ecx+0000006Ch]</span> <span class="sz">392b</span></summary>
+<pre>Private Sub Frame4_MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>HScroll1_Change() <span style="color:#3fb950;font-style:italic">"re"</span> <span class="sz">1.8KB</span></summary>
+<pre>Private Sub HScroll1_Change()
+  Dim var_20 As Variant
+  Dim var_8C As HScrollBar
+  Dim var_84 As PictureBox
+  Dim var_88 As PictureBox
+  var_68 = HScroll1.Value
+  var_6C = HScroll1.Value
+  var_AC = var_34
+  var_70 = HScroll1.Value
+  var_BC = var_68
+  var_8C = var_24
+  var_68 = HScroll1.Value
+  var_18 = var_68
+  HScroll1.Max = var_18
+  var_8C = var_24
+  var_68 = HScroll1.Value
+  var_18 = var_68
+  HScroll1.Max = var_18
+  var_8C = var_24
+  var_68 = HScroll1.Value
+  var_18 = var_68
+  HScroll1.Max = var_18
+  var_84 = var_20
+  var_74 = Picture2.BackColor
+  var_3C = var_74
+  var_18 = CStr(Hex(var_74))
+  Picture2.MousePointer = var_18
+  var_88 = var_44
+  var_74 = Picture2.BackColor
+  var_18 = Main.ColorToHTML(var_74)
+  Picture2.MousePointer = var_18
+  var_74 = Picture2.BackColor
+  var_18 = var_74
+  Picture2.MousePointer = var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image1_MouseDown(Button <span style="color:#3fb950;font-style:italic">"‘| cos"</span> <span class="sz">663b</span></summary>
+<pre>Private Sub Image1_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Dim var_28 As Image
+  If eax &lt;&gt; 0 Then GoTo loc_0040F9A7
+  var_28 = Image1.Picture
+  var_38 = var_28._Default
+  var_ret_1 = var_28
+  If esi+&amp;h00000034 = 0 Then GoTo loc_0040F9A7
+  GetCursorPos()
+  CopyIcon(GetCursorPos())
+  SetSystemCursor(esi+&amp;h00000034, 32512)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image1_MouseUp(Button <span style="color:#3fb950;font-style:italic">"‘| cos"</span> <span class="sz">498b → calls: Proc_3_8_415E30</span></summary>
+<pre>Private Sub Image1_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If eax = 0 Then GoTo loc_0040FA7B
+  SetSystemCursor(Me.GetPalette, 32512)
+  var_24 = SetSystemCursor(Me.GetPalette, 32512)
+  call Proc_3_8_415E30(var_28, var_40, var_44)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image2_MouseDown(Button <span style="color:#484f58;font-style:italic">[Image] If eax &lt;&gt; 0 Then GoTo loc_0040FD97</span> <span class="sz">701b</span></summary>
+<pre>Private Sub Image2_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Dim var_28 As Image
+  If eax &lt;&gt; 0 Then GoTo loc_0040FD97
+  var_28 = Image1.Picture
+  var_38 = var_28._Default
+  var_ret_1 = var_28
+  If esi+&amp;h00000034 = 0 Then GoTo loc_0040FD97
+  GetCursorPos()
+  CopyIcon(GetCursorPos())
+  SetSystemCursor(esi+&amp;h00000034, 32512)
+  Timer1.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image2_MouseUp(Button <span style="color:#484f58;font-style:italic">[Image] If eax = 0 Then GoTo loc_0040FE80</span> <span class="sz">401b</span></summary>
+<pre>Private Sub Image2_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If eax = 0 Then GoTo loc_0040FE80
+  SetSystemCursor(Me.GetPalette, 32512)
+  Timer1.Enabled = edi
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image3_MouseDown(Button <span style="color:#3fb950;font-style:italic">"pi Spy"</span> <span class="sz">701b</span></summary>
+<pre>Private Sub Image3_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Dim var_28 As Image
+  If eax &lt;&gt; 0 Then GoTo loc_0040FFF7
+  var_28 = Image1.Picture
+  var_38 = var_28._Default
+  var_ret_1 = var_28
+  If esi+&amp;h00000034 = 0 Then GoTo loc_0040FFF7
+  GetCursorPos()
+  CopyIcon(GetCursorPos())
+  SetSystemCursor(esi+&amp;h00000034, 32512)
+  Timer2.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image3_MouseUp(Button <span style="color:#3fb950;font-style:italic">"pi Spy"</span> <span class="sz">401b</span></summary>
+<pre>Private Sub Image3_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If eax = 0 Then GoTo loc_004100E0
+  SetSystemCursor(Me.GetPalette, 32512)
+  Timer2.Enabled = edi
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image4_MouseDown(Button <span style="color:#3fb950;font-style:italic">"r."</span> <span class="sz">701b</span></summary>
+<pre>Private Sub Image4_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Dim var_28 As Image
+  If eax &lt;&gt; 0 Then GoTo loc_00410257
+  var_28 = Image1.Picture
+  var_38 = var_28._Default
+  var_ret_1 = var_28
+  If esi+&amp;h00000034 = 0 Then GoTo loc_00410257
+  GetCursorPos()
+  CopyIcon(GetCursorPos())
+  SetSystemCursor(esi+&amp;h00000034, 32512)
+  Timer3.Enabled = True
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Image4_MouseUp(Button <span style="color:#3fb950;font-style:italic">"r."</span> <span class="sz">401b</span></summary>
+<pre>Private Sub Image4_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  If eax = 0 Then GoTo loc_00410340
+  SetSystemCursor(Me.GetPalette, 32512)
+  Timer3.Enabled = edi
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label14_Click() <span style="color:#3fb950;font-style:italic">"My site  Mavness.com, Check for updates and other good stuff"</span> <span class="sz">377b</span></summary>
+<pre>Private Sub Label14_Click()
+  Dim var_2C As App
+  var_30 = Me.hWnd
+  var_2C = Global.App
+  var_18 = Global.Path
+  ShellExecute(var_30, &quot;Open&quot;, &quot;http://www.mavness.com&quot;, vbNullString, var_18, 1)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label14_MouseMove(Button <span style="color:#3fb950;font-style:italic">"My site  Mavness.com, Check for updates and other good stuff"</span> <span class="sz">271b</span></summary>
+<pre>Private Sub Label14_MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label16_Click() <span style="color:#3fb950;font-style:italic">"Tko&#x27;s site, he taught me findwindow, and findwindowex, he is a great friend. Check out his site."</span> <span class="sz">374b</span></summary>
+<pre>Private Sub Label16_Click()
+  Dim var_2C As App
+  var_30 = Me.hWnd
+  var_2C = Global.App
+  var_18 = Global.Path
+  ShellExecute(var_30, &quot;Open&quot;, &quot;http://www.vbfx.com&quot;, vbNullString, var_18, 1)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label16_MouseMove(Button <span style="color:#3fb950;font-style:italic">"Tko&#x27;s site, he taught me findwindow, and findwindowex, he is a great friend. Check out his site."</span> <span class="sz">271b</span></summary>
+<pre>Private Sub Label16_MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label19_Click() <span style="color:#3fb950;font-style:italic">"Main.frx"</span> <span class="sz">377b</span></summary>
+<pre>Private Sub Label19_Click()
+  Dim var_2C As App
+  var_30 = Me.hWnd
+  var_2C = Global.App
+  var_18 = Global.Path
+  ShellExecute(var_30, &quot;Open&quot;, &quot;http://www.patorjk.com&quot;, vbNullString, var_18, 1)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Label19_MouseMove(Button <span style="color:#3fb950;font-style:italic">"Main.frx"</span> <span class="sz">271b</span></summary>
+<pre>Private Sub Label19_MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>List1_Click() <span style="color:#3fb950;font-style:italic">"= 7"</span> <span class="sz">867b</span></summary>
+<pre>Private Sub List1_Click()
+  Dim var_44 As ListBox
+  Dim var_24 As ListBox
+  var_44 = var_24
+  var_28 = List1.ListIndex
+  List1.ListIndex = var_28
+  var_44 = var_24
+  var_28 = List1.ListIndex
+  List1.ListIndex = var_28
+  var_28 = List1.ListIndex
+  List1.ListIndex = var_28
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option10_Click() <span style="color:#3fb950;font-style:italic">"Disable Window"</span> <span class="sz">263b</span></summary>
+<pre>Private Sub Option10_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option11_Click() <span style="color:#3fb950;font-style:italic">"Show Window"</span> <span class="sz">263b</span></summary>
+<pre>Private Sub Option11_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option12_Click() <span style="color:#3fb950;font-style:italic">"Hide Window"</span> <span class="sz">263b</span></summary>
+<pre>Private Sub Option12_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option13_Click() <span style="color:#3fb950;font-style:italic">"Close Window"</span> <span class="sz">263b</span></summary>
+<pre>Private Sub Option13_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option14_Click() <span style="color:#3fb950;font-style:italic">"ListBox"</span> <span class="sz">845b</span></summary>
+<pre>Private Sub Option14_Click()
+  var_1C = Option14.Value
+  If ebx = 0 Then GoTo loc_00413DDB
+  Option14.Value = False
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  If esi &gt;= 0 Then GoTo loc_00413EC9
+  GoTo loc_00413EB7
+  Option14.Value = True
+  Check1.Enabled = True
+  Check2.Enabled = True
+  Check3.Enabled = True
+  If esi &gt;= 0 Then GoTo loc_00413EC9
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option1_Click() <span style="color:#3fb950;font-style:italic">"Click Button"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option1_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option2_Click() <span style="color:#3fb950;font-style:italic">"Click Icon"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option2_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option3_Click() <span style="color:#3fb950;font-style:italic">"Set Text"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option3_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option5_Click() <span style="color:#3fb950;font-style:italic">"Just Find the Window"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option5_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option6_Click() <span style="color:#3fb950;font-style:italic">"Click a msgbox"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option6_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option7_Click() <span style="color:#3fb950;font-style:italic">"Right Click"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option7_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option8_Click() <span style="color:#3fb950;font-style:italic">"Double CLick"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option8_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Option9_Click() <span style="color:#3fb950;font-style:italic">"Enable Window"</span> <span class="sz">262b</span></summary>
+<pre>Private Sub Option9_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Text14_KeyPress(KeyAscii <span style="color:#3fb950;font-style:italic">"ir"</span> <span class="sz">748b</span></summary>
+<pre>Private Sub Text14_KeyPress(KeyAscii As Integer)
+  On Error Resume Next
+  If KeyAscii &lt;&gt; 13 Then GoTo loc_00411277
+  If IsNumeric(Me) = 0 Then GoTo loc_00411277
+  var_20 = Text14.Text
+  Text14.FontBold = CInt(Val(var_20))
+  GoTo loc_00411277
+  var_3C = var_A8 &amp; &quot;, &quot; &amp; var_24
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Text15_KeyPress(KeyAscii <span style="color:#484f58;font-style:italic">[TextBox] On Error Resume Next</span> <span class="sz">748b</span></summary>
+<pre>Private Sub Text15_KeyPress(KeyAscii As Integer)
+  On Error Resume Next
+  If KeyAscii &lt;&gt; 13 Then GoTo loc_00411583
+  If IsNumeric(Me) = 0 Then GoTo loc_00411583
+  var_20 = Text15.Text
+  Text15.FontBold = CInt(Val(var_20))
+  GoTo loc_00411583
+  var_3C = var_A8 &amp; &quot;, &quot; &amp; var_24
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Text16_KeyPress(KeyAscii <span style="color:#484f58;font-style:italic">[TextBox] On Error Resume Next</span> <span class="sz">748b</span></summary>
+<pre>Private Sub Text16_KeyPress(KeyAscii As Integer)
+  On Error Resume Next
+  If KeyAscii &lt;&gt; 13 Then GoTo loc_00411898
+  If IsNumeric(Me) = 0 Then GoTo loc_00411898
+  var_20 = Text16.Text
+  Text16.FontBold = CInt(Val(var_20))
+  GoTo loc_00411898
+  var_3C = var_A8 &amp; &quot;, &quot; &amp; var_24
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Text1_DblClick() <span style="color:#3fb950;font-style:italic">"Main.frx"</span> <span class="sz">264b</span></summary>
+<pre>Private Sub Text1_DblClick()
+  var_eax = Enlarge.Show var_24
+  var_18 = Text1.Text
+  Text1.Text = var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Text7_DblClick() <span style="color:#3fb950;font-style:italic">"Main.frx"</span> <span class="sz">264b</span></summary>
+<pre>Private Sub Text7_DblClick()
+  var_eax = Enlarge.Show var_24
+  var_18 = Text7.Text
+  Text7.Text = var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>That <span class="sz">8.5KB</span></summary>
+<pre>Function That Finds a Window&quot;
+      Left = 2040
+      Top = 1200
+      Width = 2055
+      Height = 375
+      TabIndex = 23
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option18
+      Caption = &quot;Hit Enter Key&quot;
+      Left = 2040
+      Top = 960
+      Width = 1815
+      Height = 255
+      TabIndex = 22
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option17
+      Caption = &quot;Click on Check box&quot;
+      Left = 2040
+      Top = 720
+      Width = 1935
+      Height = 255
+      TabIndex = 21
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option16
+      Caption = &quot;UnCheck Check Box&quot;
+      Left = 2040
+      Top = 480
+      Width = 1695
+      Height = 255
+      TabIndex = 20
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option15
+      Caption = &quot;Check a Check Box&quot;
+      Left = 2040
+      Top = 240
+      Width = 1695
+      Height = 255
+      TabIndex = 19
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option4
+      Caption = &quot;Get Text&quot;
+      Left = 240
+      Top = 1200
+      Width = 1335
+      Height = 255
+      TabIndex = 17
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option3
+      Caption = &quot;Set Text&quot;
+      Left = 240
+      Top = 960
+      Width = 1575
+      Height = 255
+      TabIndex = 16
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option2
+      Caption = &quot;Click Icon&quot;
+      Left = 240
+      Top = 720
+      Width = 1215
+      Height = 255
+      TabIndex = 15
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option1
+      Caption = &quot;Click Button&quot;
+      Left = 240
+      Top = 480
+      Width = 1215
+      Height = 255
+      TabIndex = 14
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option5
+      Caption = &quot;Just Find the Window&quot;
+      Left = 240
+      Top = 240
+      Width = 1695
+      Height = 255
+      TabIndex = 13
+      Value = 255
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option6
+      Caption = &quot;Click a msgbox&quot;
+      Left = 240
+      Top = 1440
+      Width = 1335
+      Height = 255
+      TabIndex = 12
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option7
+      Caption = &quot;Right Click&quot;
+      Left = 240
+      Top = 1680
+      Width = 1095
+      Height = 255
+      TabIndex = 11
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option8
+      Caption = &quot;Double CLick&quot;
+      Left = 240
+      Top = 1920
+      Width = 1215
+      Height = 255
+      TabIndex = 10
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option11
+      Caption = &quot;Show Window&quot;
+      Left = 240
+      Top = 2640
+      Width = 1335
+      Height = 255
+      TabIndex = 9
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option12
+      Caption = &quot;Hide Window&quot;
+      Left = 240
+      Top = 2880
+      Width = 1215
+      Height = 255
+      TabIndex = 8
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option13
+      Caption = &quot;Close Window&quot;
+      Left = 240
+      Top = 3120
+      Width = 1215
+      Height = 255
+      TabIndex = 7
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option14
+      Caption = &quot;ListBox &quot;
+      Left = 240
+      Top = 3360
+      Width = 855
+      Height = 255
+      TabIndex = 6
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option10
+      Caption = &quot;Disable Window&quot;
+      Left = 240
+      Top = 2400
+      Width = 1335
+      Height = 255
+      TabIndex = 5
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin OptionButton Option9
+      Caption = &quot;Enable Window&quot;
+      Left = 240
+      Top = 2160
+      Width = 1335
+      Height = 255
+      TabIndex = 4
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin CheckBox Check1
+      Caption = &quot;Get Count&quot;
+      Left = 240
+      Top = 3600
+      Width = 1335
+      Height = 255
+      Enabled = 0   &#x27;False
+      TabIndex = 3
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin CheckBox Check2
+      Caption = &quot;Get item in list&quot;
+      Left = 240
+      Top = 3840
+      Width = 1455
+      Height = 255
+      Enabled = 0   &#x27;False
+      TabIndex = 2
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+    Begin CheckBox Check3
+      Caption = &quot;Select Item in list&quot;
+      Left = 240
+      Top = 4080
+      Width = 1455
+      Height = 255
+      Enabled = 0   &#x27;False
+      TabIndex = 1
+      BeginProperty Font
+        Name = &quot;Arial&quot;
+        Size = 6.75
+        Charset = 0
+        Weight = 400
+        Underline = 0 &#x27;False
+        Italic = 0 &#x27;False
+        Strikethrough = 0 &#x27;False
+      EndProperty
+    End
+  End
+End
+
+Attribute VB_Name = &quot;Options&quot;
+
+Private Sub Option4_Click()
+  Check1.Enabled = False
+  Check2.Enabled = False
+  Check3.Enabled = False
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Timer1_Timer() <span class="sz">4.1KB → calls: GetCaption, GetClass</span></summary>
+<pre>Private Sub Timer1_Timer()
+  Dim var_24 As TextBox
+  Dim var_58 As TextBox
+  Dim var_2C As TextBox
+  var_38 = call Proc_414D10(edi, Me, ebx)
+  call Proc_414D40(var_20, %StkVar1 = CheckObj(%StkVar2, %StkVar3, %StkVar4), var_24)
+  var_34 = (vtable)
+  var_30 = var_38
+  call Proc_414D70(var_30, var_34, var_20)
+  APItxt.Text = CStr(call Proc_414D70(var_30, var_34, var_20))
+  var_58 = var_2C
+  var_18 = APItxt.Text
+  var_30 = var_18
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 0)
+  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 0)
+  var_18 = APItxt.Text
+  var_30 = var_18
+  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 0)
+  If (var_1C = vbNullString) + 1 = 0 Then GoTo loc_00411E2C
+  APItxt.Text = &quot;VbNullString&quot;
+  GoTo loc_00411F34
+  var_58 = var_2C
+  var_18 = APItxt.Text
+  var_30 = var_18
+  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, Me, 0)
+  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, Me, 0)
+  var_3C = call Proc_414D10(var_20, Me, )
+  call Proc_414D40(call Proc_414D10(var_20, Me, ), 3, var_24)
+  var_34 = call Proc_414D40(call Proc_414D10(var_20, Me, ), 3, var_24)
+  var_30 = var_3C
+  var_38 = call Proc_414D70(var_30, var_34, var_20)
+  call Proc_414DA0(var_38, call Proc_414D10(var_20, Me, ), Me)
+  APItxt.Text = CStr(call Proc_414DA0(var_38, call Proc_414D10(var_20, Me, ), Me))
+  var_58 = var_2C
+  var_18 = APItxt.Text
+  var_30 = var_18
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 3)
+  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 3)
+  var_18 = APItxt.Text
+  var_30 = var_18
+  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 3)
+  If (var_1C = vbNullString) + 1 = 0 Then GoTo loc_00412222
+  APItxt.Text = &quot;VbNullString&quot;
+  GoTo loc_0041231B
+  var_18 = APItxt.Text
+  var_30 = var_18
+  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 3)
+  APItxt.Text = var_1C
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Timer2_Timer() <span class="sz">996b</span></summary>
+<pre>Private Sub Timer2_Timer()
+  Dim var_1C As TextBox
+  call Proc_414D10(edi, Me, ebx)
+  call Proc_414D40(var_1C, call Proc_414D10(edi, Me, ebx), Me)
+  var_24 = call Proc_414D40(var_1C, call Proc_414D10(edi, Me, ebx), Me)
+  var_20 = call Proc_414D10(edi, Me, ebx)
+  call Proc_414D70(var_20, var_24, )
+  var_18 = CStr(call Proc_414D70(var_20, var_24, ))
+  Text2.Text = var_18
+  call Proc_414D10(, , )
+  var_24 = call Proc_414D40(var_1C, esi, Me)
+  var_20 = call Proc_414D10(, , )
+  call Proc_414D70(var_20, var_24, )
+  var_18 = CStr(call Proc_414D70(var_20, var_24, ))
+  Text3.Text = var_18
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Timer3_Timer() <span class="sz">2.5KB</span></summary>
+<pre>Private Sub Timer3_Timer()
+  Dim var_9C As Variant
+  Dim var_A0 As TextBox
+  Dim var_A4 As PictureBox
+  On Error Resume Next
+  GetCursorPos(var_40)
+  var_ret_1 = var_3C
+  var_ret_2 = var_40
+  WindowFromPoint(var_ret_2, var_ret_1)
+  var_24 = WindowFromPoint(var_ret_2, var_ret_1)
+  GetDC(var_24)
+  var_28 = GetDC(var_24)
+  ScreenToClient(var_24, var_40)
+  GetPixel(var_28, var_40, var_3C)
+  var_64 = GetPixel(var_28, var_40, var_3C)
+  If var_64 &lt;&gt; -1 Then GoTo loc_004127EE
+  var_98 = Picture1.hDC
+  var_A0 = var_98
+  BitBlt(var_98, 0, 0, 1, 1, var_28, var_40, var_3C, var_00CC0020)
+  var_eax = Picture1.Point 0, 0
+  var_A0 = Picture1.Point 0, 0
+  var_64 = var_98
+  GoTo loc_0041287E
+  var_eax = Picture1.PSet (0, 0), var_64
+  var_A0 = Picture1.PSet (0, 0), var_64
+  ReleaseDC(var_24, var_28)
+  var_9C = var_70
+  Picture1.BackColor = var_64
+  var_A0 = var_9C
+  var_9C = var_70
+  var_8C = var_64
+  Text9.Text = CStr(Hex(var_64))
+  var_A0 = var_9C
+  var_A0 = var_70
+  var_6C = Main.ColorToHTML(var_64)
+  var_9C = var_6C
+  Text10.Text = var_6C
+  var_A4 = var_A0
+  var_98 = Picture1.BackColor
+  var_A0 = var_98
+  Picture1.MousePointer = var_98
+  var_A8 = var_A4
+  var_9C = var_70
+  var_6C = Text11.Text
+  var_A0 = var_6C
+  call Proc_415C00(var_B4, CLng(Val(var_6C)), var_70)
+  call __vbaCopyBytes(&amp;h0000000C, var_34, var_B4, var_B4, Me, var_74, Me, Me, var_70, var_B4, Me, var_70, Me, Me)
+  Text19.Text = var_34
+  var_A0 = var_9C
+  var_9C = var_70
+  Text12.Text = var_30
+  var_A0 = var_9C
+  var_9C = var_70
+  Text13.Text = var_2C
+  var_A0 = var_9C
+  Exit Sub
+End Sub</pre>
+</details>
+</details>
+<details><summary><b>Cherry-Picked Code</b> (4 functions cherry-picked)</summary>
+<div style="margin:8px 0 4px;color:#d2a8ff;font-size:0.85em">From <b>dos32.bas</b> (3 functions):</div>
+<details class="fn-item"><summary>GetCaption() <span class="sz"><span style="color:#3fb950">100%</span> match · 589b</span></summary>
+<pre>Public Function GetCaption(WindowHandle As Long) As String
+    Dim buffer As String, TextLength As Long
+    TextLength&amp; = GetWindowTextLength(WindowHandle&amp;)
+    buffer$ = String(TextLength&amp;, 0&amp;)
+    Call GetWindowText(WindowHandle&amp;, buffer$, TextLength&amp; + 1)
+    GetCaption$ = buffer$</pre>
+</details>
+<details class="fn-item"><summary>GetListText() <span class="sz"><span style="color:#d29922">50%</span> match · 242b</span></summary>
+<pre>Public Function GetListText(WindowHandle As Long) As String
+    Dim buffer As String, TextLength As Long
+    TextLength&amp; = SendMessage(WindowHandle&amp;, LB_GETTEXTLEN, 0&amp;, 0&amp;)
+    buffer$ = String(TextLength&amp;, 0&amp;)
+    Call SendMessageByString(WindowHandle&amp;, LB_GETTEXT, TextLength&amp; + 1, buffer$)
+    GetListText$ = buffer$</pre>
+</details>
+<details class="fn-item"><summary>ReplaceString() <span class="sz"><span style="color:#3fb950">100%</span> match · 1.9KB</span></summary>
+<pre>Public Function ReplaceString(MyString As String, ToFind As String, ReplaceWith As String) As String
+    Dim Spot As Long, NewSpot As Long, LeftString As String
+    Dim RightString As String, NewString As String
+    Spot&amp; = InStr(LCase(MyString$), LCase(ToFind))
+    NewSpot&amp; = Spot&amp;
+    Do
+        If NewSpot&amp; &gt; 0&amp; Then
+            LeftString$ = Left(MyString$, NewSpot&amp; - 1)
+            If Spot&amp; + Len(ToFind$) &lt;= Len(MyString$) Then
+                RightString$ = Right(MyString$, Len(MyString$) - NewSpot&amp; - Len(ToFind$) + 1)
+            Else
+                RightString = &quot;&quot;
+            End If
+            NewString$ = LeftString$ &amp; ReplaceWith$ &amp; RightString$
+            MyString$ = NewString$
+        Else
+            NewString$ = MyString$
+        End If
+        Spot&amp; = NewSpot&amp; + Len(ReplaceWith$)
+        If Spot&amp; &gt; 0 Then
+            NewSpot&amp; = InStr(Spot&amp;, LCase(MyString$), LCase(ToFind$))
+        End If
+    Loop Until NewSpot&amp; &lt; 1
+    ReplaceString$ = NewString$</pre>
+</details>
+<div style="margin:8px 0 4px;color:#d2a8ff;font-size:0.85em">From <b>jaguar32.bas</b> (1 functions):</div>
+<details class="fn-item"><summary>GetClass() <span class="sz"><span style="color:#3fb950">100%</span> match · 429b</span></summary>
+<pre>Function GetClass(child)
+Buffer$ = String$(250, 0)
+getclas% = GetClassName(child, Buffer$, 250)
+
+GetClass = Buffer$</pre>
+</details>
+</details>
+<details><summary><b>Used Module1.bas Functions</b> (3 called)</summary>
+<details class="fn-item"><summary>Proc_3_0_414910 <span class="sz">1.0KB</span></summary>
+<pre>Public Sub Proc_3_0_414910
+  Dim var_14 As Screen
+  var_1C = ebx.Width
+  var_14 = Global.Screen
+  var_18 = Global.Width
+  If var_424000 &lt;&gt; 0 Then GoTo loc_004149F4
+  GoTo loc_004149FF
+  var_1C = Global.TwipsPerPixelY
+  var_14 = Global.Screen
+  var_18 = Global.Height
+  If var_424000 &lt;&gt; 0 Then GoTo loc_00414AC6
+  GoTo loc_00414AD1
+  var_eax = Global.MousePointer =
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>GetCaption() <span style="color:#484f58">(Proc_3_2_414BF0)</span> <span class="sz">537b</span></summary>
+<pre>Public Sub <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>
+  GetWindowTextLength(Me)
+  var_ret_1 = GetWindowTextLength(Me)
+  var_24 = String$(si, &quot;&quot;)
+  GetWindowText(Me, var_24, var_ret_1 + 0001h)
+  var_ret_3 = var_28
+  var_20 = var_24
+  GoTo loc_00414CE7
+  If var_4 = 0 Then GoTo loc_00414CD4
+  Exit Sub
+  Exit Sub
+End Sub</pre>
+</details>
+<details class="fn-item"><summary>Proc_3_8_415E30 <span class="sz">71.1KB</span></summary>
+<pre>Public Sub Proc_3_8_415E30
+  Dim var_004240D0 As Variant
+  Dim var_EC As Variant
+  Dim var_2C4 As Variant
+  On Error Resume Next
+  If var_64 = 0 Then GoTo loc_00415FA2
+  var_ret_1 = var_54
+  var_ret_2 = var_98
+  SetSystemCursor(var_ret_2, var_ret_1)
+  var_218 = SetSystemCursor(var_ret_2, var_ret_1)
+  If eax &lt;&gt; 0 Then GoTo loc_00415FF5
+  call Proc_414D10(1, edi, var_ret_3 = %StkVar1)
+  var_21C = call Proc_414D40(ebx, , )
+  var_218 = var_ret_3
+  var_84 = call Proc_414D70(var_218, var_21C, )
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, , )
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, , )
+  ecx = eax
+  var_C0 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  var_C0 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  var_BC = Chr(34)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  var_214 = Options.Option19.Value
+  If var_22C = 0 Then GoTo loc_00416672
+  If (var_80 &lt;&gt; True) &lt;&gt; 0 Then GoTo loc_004216A0
+  If var_84 = 0 Then GoTo loc_00416E70
+  edi = edi + &amp;h00000001
+  edi+&amp;h00000001 = edi+&amp;h00000001 - &amp;h00000001
+  var_224 = edi+&amp;h00000001
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004166A7
+  var_eax = Err.Raise
+  GetParent(edx+eax*4)
+  var_84 = GetParent(edx+eax*4)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004166E2
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004166FE
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, var_EC, var_004240D0)
+  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, var_EC, var_004240D0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416748
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416748
+  var_eax = Err.Raise
+  ecx = ecx+edi*4
+  var_C0 = vbNullString
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416791
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416791
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  var_C0 = vbNullString
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416819
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416819
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004168A1
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004168A1
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416929
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416929
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004169B1
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004169B1
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416A39
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416A39
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416AC1
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416AC1
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416B49
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416B49
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  var_BC = Chr(34)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416BEA
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416BEA
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(edx+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(edx+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416C80
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416C80
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(ecx+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(ecx+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D09
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D09
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D91
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D91
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416E19
+  var_eax = Err.Raise
+  If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416E19
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  GoTo loc_00416672
+  var_214 = Options.Option19.Value
+  If var_22C = 0 Then GoTo loc_00417189
+  InputBox(&quot;Please name the function?&quot;, var_110, 10, 10, 10, 10, 10)
+  If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
+  var_C0 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
+  var_BC = Options.Option19.MousePointer
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Public Function &quot; &amp; var_00424098 &amp; &quot;() As Long&quot; &amp; &quot;vbCrLf&quot;
+  GoTo loc_004176AB
+  var_214 = Options.Option4.Value
+  If var_22C = 0 Then GoTo loc_00417397
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call var_2C4(var_EC, var_004240D0, var_004240D0, var_2C4, var_D0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call var_2C4
+  var_BC = Options.Option4.MousePointer
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Public Function &quot; &amp; var_00424098 &amp; &quot;() As String&quot; &amp; &quot;vbCrLf&quot;
+  GoTo loc_004176AB
+  var_214 = Options.Option3.Value
+  If var_22C = 0 Then GoTo loc_004176C0
+  var_100 = &quot;Enter the name of the sub&quot;
+  call var_2C4(var_EC, var_004240D0, var_004240D0, var_2C4, var_D0)
+  If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call var_2C4
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call var_2C4
+  var_BC = Options.Option3.MousePointer
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Sub &quot; &amp; var_00424098 &amp; &quot;(TheText As String)&quot; &amp; &quot;vbCrLf&quot;
+  Options.Option3.MousePointer = var_D0
+  If var_D0 &gt;= 0 Then GoTo loc_00417A2B
+  GoTo loc_00417A19
+  var_214 = Options.Option5.Value
+  If var_22C = 0 Then GoTo loc_00417792
+  Options.Option5.MousePointer = 0
+  GoTo loc_00417A66
+  var_100 = &quot;Enter the name of the sub&quot;
+  call var_2C4(var_EC, var_004240D0, var_004240D0)
+  If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call var_2C4
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call var_2C4
+  var_BC = Options.Option5.MousePointer
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Sub &quot; &amp; var_00424098 &amp; &quot;()&quot; &amp; &quot;vbCrLf&quot;
+  Options.Option5.MousePointer = var_D0
+  If var_D0 &gt;= 0 Then GoTo loc_00417A2B
+  edi+&amp;h00000001 = edi+&amp;h00000001 - &amp;h00000001
+  var_40 = edi+&amp;h00000001
+  edi+&amp;h00000001 = edi+&amp;h00000001 - &amp;h00000001
+  var_30 = edi+&amp;h00000001
+  var_BC = Options.Option5.MousePointer
+  Options.Option5.MousePointer = var_BC &amp; &quot;Dim &quot; &amp; eax+ecx*4
+  var_BC = Options.Option5.MousePointer
+  var_C0 = var_BC &amp; &quot; As Long&quot;
+  Options.Option5.MousePointer = var_C0
+  If var_30 = 0 Then GoTo loc_00417EA5
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  If var_30 &lt; 1001 Then GoTo loc_00417BFC
+  var_eax = Err.Raise
+  var_1B8 = edx+edi*4
+  var_110 = LCase(edx+edi*4)
+  Set var_EC = Me
+  var_1A8 = var_EC
+  var_100 = LCase(var_EC)
+  call __vbaCastObj(var_EC, var_00406B74)
+  If var_30 &lt; 1001 Then GoTo loc_00417C91
+  var_eax = Err.Raise
+  Len(edx+edi*4) = Len(edx+edi*4) - &amp;h00000001
+  var_120 = Left(var_110, Len(edx+edi*4))
+  call InStr(var_130, &amp;h00000000, var_120, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74))
+  var_22C = (InStr(var_130, &amp;h00000000, var_120, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74)) = 0)
+  If var_22C = 0 Then GoTo loc_00417BDA
+  var_BC = Options.Option5.MousePointer
+  var_C4 = var_BC &amp; &quot;, &quot; &amp; ecx+edx*4
+  Options.Option5.MousePointer = var_C4
+  var_BC = Options.Option5.MousePointer
+  Options.Option5.MousePointer = var_BC &amp; &quot; As Long&quot;
+  GoTo loc_00417BCC
+  var_40 = var_40 - &amp;h00000001
+  var_214 = Options.Option19.Value
+  If var_22C = 0 Then GoTo loc_004184DF
+  FindWindowEx(4341812, 0, 0, 0)
+  var_88 = FindWindowEx(4341812, 0, 0, 0)
+  If var_218 = 0 Then GoTo loc_004184DF
+  If ebx = 9 Then GoTo loc_004184DF
+  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, var_EC, var_004240D0)
+  var_1A8 = var_3C
+  Len(var_3C) = Len(var_3C) - &amp;h00000001
+  var_C0 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(Left(var_3C, Len(var_3C)), var_BC, var_C0)
+  var_C0 = vbNullString
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0), var_BC, var_C0)
+  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0), var_BC, var_C0)
+  var_3C = call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0)
+  Set var_EC = Me
+  var_1A8 = var_EC
+  var_100 = LCase(var_EC)
+  call __vbaCastObj(var_EC, var_00406B74)
+  var_1B8 = call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0)
+  var_110 = LCase(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0))
+  call InStr(var_120, &amp;h00000000, var_110, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74))
+  If CBool(InStr(var_120, &amp;h00000000, var_110, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74))) = 0 Then GoTo loc_00418347
+  var_3C = var_3C &amp; 0
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;, &quot; &amp; var_3C
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot; As Long&quot;
+  Options.Option19.MousePointer = var_C0
+  If var_30 &lt; 1001 Then GoTo loc_00418488
+  GoTo loc_00418482
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;, &quot; &amp; var_3C
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot; As Long&quot;
+  Options.Option19.MousePointer = var_C0
+  If var_30 &lt; 1001 Then GoTo loc_00418488
+  var_eax = Err.Raise
+  ecx = var_3C
+  var_30 = var_30 + &amp;h00000001
+  var_30 = var_30
+  FindWindowEx(4341812, var_88, 0, 0)
+  var_88 = FindWindowEx(4341812, var_88, 0, 0)
+  GoTo loc_00417F7A
+  var_40 = var_40 + &amp;h00000001
+  var_68 = var_40
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_00418507
+  var_eax = Err.Raise
+  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(ecx+ebx*4, , )
+  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(ecx+ebx*4, , )
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_0041853C
+  var_eax = Err.Raise
+  var_ret_4 = var_00424078
+  var_ret_5 = edx+ebx*4
+  FindWindow(var_ret_5, var_ret_4)
+  var_218 = FindWindow(var_ret_5, var_ret_4)
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_00418592
+  var_eax = Err.Raise
+  var_ret_6 = var_BC
+  var_ret_7 = var_C0
+  var_B8 = var_218
+  var_40 = var_40 - &amp;h00000002
+  If var_40 = -1 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000002
+  If var_40 &lt; 1001 Then GoTo loc_00418626
+  var_eax = Err.Raise
+  var_ret_8 = ecx+ebx*4
+  var_ret_9 = var_B8
+  FindWindowEx(var_ret_9, 0, var_ret_8, 0)
+  var_218 = FindWindowEx(var_ret_9, 0, var_ret_8, 0)
+  var_40 = var_40 - &amp;h00000002
+  If var_40 &lt; 1001 Then GoTo loc_0041867A
+  var_eax = Err.Raise
+  var_ret_A = var_BC
+  var_A8 = var_218
+  If (var_A8 = 0) = 0 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000001
+  var_68 = var_40
+  var_40 = var_40 - &amp;h00000001
+  If var_40 = -1 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_0041872E
+  var_eax = Err.Raise
+  var_ret_B = eax+ebx*4
+  var_ret_C = var_A8
+  FindWindowEx(var_ret_C, 0, var_ret_B, 0)
+  var_218 = FindWindowEx(var_ret_C, 0, var_ret_B, 0)
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_00418781
+  var_eax = Err.Raise
+  var_ret_D = var_BC
+  var_2C = var_218
+  If (var_2C = 0) = 0 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000001
+  var_68 = var_40
+  var_40 = var_40 - &amp;h00000001
+  If var_40 = -1 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_00418830
+  var_eax = Err.Raise
+  var_ret_E = edx+ebx*4
+  var_ret_F = var_A8
+  FindWindowEx(var_ret_F, 0, var_ret_E, 0)
+  var_218 = FindWindowEx(var_ret_F, 0, var_ret_E, 0)
+  var_40 = var_40 - &amp;h00000001
+  If var_40 &lt; 1001 Then GoTo loc_00418884
+  var_eax = Err.Raise
+  var_ret_10 = var_BC
+  var_2C = var_218
+  If (var_2C = 0) = 0 Then GoTo loc_00418902
+  var_40 = var_40 - &amp;h00000001
+  var_68 = var_40
+  var_214 = Options.Check4.Value
+  If ebx = 0 Then GoTo loc_0041903F
+  var_BC = Options.Check4.MousePointer
+  var_40 = var_40 - &amp;h00000001
+  var_22C = var_40
+  If var_40 &lt; 1001 Then GoTo loc_004189CD
+  var_eax = Err.Raise
+  Options.Check4.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; eax+ecx*4
+  If @%StkVar2 &amp; %x1 &gt;= 0 Then GoTo loc_00418A35
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;&amp; = FindWindow(&quot;
+  var_C0 = CStr(var_BC &amp; &quot;&amp; = FindWindow(&quot; &amp; Chr(34))
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_68 = var_68 - &amp;h00000001
+  If var_68 &lt; 1001 Then GoTo loc_00418B7F
+  var_eax = Err.Raise
+  var_C0 = var_BC &amp; ecx+esi*4
+  Options.Check4.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If edx = 0 Then GoTo loc_00418F3C
+  If var_40 &lt; 1001 Then GoTo loc_00418C82
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_00418D80
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  If var_C0 &gt;= 0 Then GoTo loc_00419012
+  GoTo loc_00419004
+  var_eax = = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004193B7
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  If var_C0 &gt;= 0 Then GoTo loc_00419012
+  GoTo loc_004193AC
+  var_BC = Options.Check4.MousePointer
+  var_2C4 = var_2C4 - &amp;h00000001
+  var_22C = var_2C4
+  If var_2C4 &lt; 1001 Then GoTo loc_0041908B
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; ecx+edx*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;&amp; = FindWindow(&quot;
+  var_C0 = CStr(var_BC &amp; &quot;&amp; = FindWindow(&quot; &amp; Chr(34))
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_68 = var_68 - &amp;h00000001
+  If var_68 &lt; 1001 Then GoTo loc_0041923E
+  var_eax = Err.Raise
+  var_C0 = var_BC &amp; ecx+esi*4
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;,vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;,vbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  var_68 = var_68 - &amp;h00000002
+  var_38 = var_68
+  var_1B8 = var_68
+  For var_B8 = 0 To var_68 Step 1
+  If var_B8 = 0 Then GoTo loc_0041C72B
+  If var_68 = -1 Then GoTo loc_0041C72B
+  var_214 = Options.Option19.Value
+  If edx = 0 Then GoTo loc_004194CC
+  If var_68 = 1 Then GoTo loc_0041C72B
+  var_214 = Options.Option19.Value
+  If edx = 0 Then GoTo loc_004195B2
+  var_1B8 = var_68
+  If (var_B8 + 2 &lt;&gt; var_68) &lt;&gt; 0 Then GoTo loc_0041BD07
+  If var_38 &lt; 1001 Then GoTo loc_004195C3
+  var_eax = Err.Raise
+  If var_44 = 0 Then GoTo loc_0041BCC9
+  If var_38 &lt;&gt; 0 Then GoTo loc_00419735
+  If &amp;h00000001 &lt; 1001 Then GoTo loc_004195F0
+  var_eax = Err.Raise
+  var_ret_11 = CInt(4341840)
+  FindWindowEx(ecx+esi*4, 0, var_ret_11, 0)
+  var_218 = FindWindowEx(ecx+esi*4, 0, var_ret_11, 0)
+  var_ret_12 = var_BC
+  If var_218 = &amp;h00424034 Then GoTo loc_0041971C
+  If var_38 &lt; 1001 Then GoTo loc_0041966A
+  var_eax = Err.Raise
+  If var_218 = 0 Then GoTo loc_0041972B
+  If var_38 &lt; 1001 Then GoTo loc_00419682
+  var_eax = Err.Raise
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_0041969B
+  var_eax = Err.Raise
+  var_ret_13 = ecx+ebx*4
+  FindWindowEx(ecx+esi*4, var_218, var_ret_13, 0)
+  var_218 = FindWindowEx(ecx+esi*4, var_218, var_ret_13, 0)
+  If var_38 &lt; 1001 Then GoTo loc_004196DF
+  var_eax = Err.Raise
+  var_ret_14 = var_BC
+  var_34 = var_34 + &amp;h00000001
+  var_34 = var_34
+  GoTo loc_0041965A
+  var_34 = var_34 + &amp;h00000001
+  var_34 = var_34
+  If var_34 &gt;= 4 Then GoTo loc_0041B252
+  If var_38 &lt; 1001 Then GoTo loc_00419743
+  var_eax = Err.Raise
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_0041975E
+  var_eax = Err.Raise
+  var_ret_15 = edx+ebx*4
+  FindWindowEx(edx+esi*4, 0, var_ret_15, 0)
+  var_218 = FindWindowEx(edx+esi*4, 0, var_ret_15, 0)
+  If var_38 &lt; 1001 Then GoTo loc_0041979F
+  var_eax = Err.Raise
+  var_ret_16 = var_BC
+  var_44 = var_218
+  If var_38 &lt; 1001 Then GoTo loc_004197D5
+  var_eax = Err.Raise
+  If var_218 = 0 Then GoTo loc_0041AAD3
+  If var_38 &lt; 1001 Then GoTo loc_004197F7
+  var_eax = Err.Raise
+  If var_44 = 0 Then GoTo loc_0041A172
+  If var_38 &lt; 1001 Then GoTo loc_00419812
+  var_eax = Err.Raise
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_00419827
+  var_eax = Err.Raise
+  var_ret_17 = ecx+edi*4
+  FindWindowEx(edx+esi*4, var_44, var_ret_17, 0)
+  var_218 = FindWindowEx(edx+esi*4, var_44, var_ret_17, 0)
+  If var_38 &lt; 1001 Then GoTo loc_0041986A
+  var_eax = Err.Raise
+  var_ret_18 = var_BC
+  var_44 = var_218
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; eax+ecx*4
+  var_C8 = var_C4 &amp; var_00407DEC
+  Options.Option19.MousePointer = var_C8
+  var_BC = Options.Option19.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_004199B2
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; edx+edi*4
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &quot;
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; eax+ebx*4
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, &quot;
+  var_100 = Chr(34)
+  var_C0 = var_BC &amp; &quot;&amp;, &quot; &amp; var_100
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; eax+ebx*4
+  Options.Option19.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If eax = 0 Then GoTo loc_0041A079
+  If var_38 &lt; 1001 Then GoTo loc_00419D97
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(ecx+esi*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_00419EC0
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004197E4
+  If (var_70 = 0) = 0 Then GoTo loc_004197E4
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_00419EF9
+  call ecx(var_BC, Me, var_00406B74, &amp;h000000A0, var_004240D0)
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004197E4
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_0041A0A2
+  call edx(var_BC, Me, var_00406B74, &amp;h000000A0)
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004197E4
+  var_BC = Options.Check4.MousePointer
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; edx+eax*4 &amp; var_00407DEC
+  Options.Check4.MousePointer = var_C8
+  var_BC = Options.Check4.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_0041A28F
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; ecx+edi*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &quot;
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; ecx+edi*4
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, &quot;
+  var_100 = Chr(34)
+  var_C0 = var_BC &amp; &quot;&amp;, &quot; &amp; var_100
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; ecx+ebx*4
+  Options.Check4.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If edx = 0 Then GoTo loc_0041A9AA
+  If var_38 &lt; 1001 Then GoTo loc_0041A658
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041A7B0
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  If (var_70 = 0) = 0 Then GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_0041A7E9
+  call eax(var_BC, var_BC, var_00406B74, &amp;h000000A0, var_004240D0)
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_1D8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0 &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_0041A9D3
+  call ecx(var_BC, Me, var_00406B74, &amp;h000000A0)
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; ecx+ebx*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  esi = esi + &amp;h00000001
+  If esi &lt; 1001 Then GoTo loc_0041ABD1
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; ecx+edi*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, 0&amp;,&quot;
+  var_C0 = CStr(var_BC &amp; &quot;&amp;, 0&amp;,&quot; &amp; Chr(34))
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; ecx+ebx*4
+  Options.Check4.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If edx = 0 Then GoTo loc_0041B159
+  If var_38 &lt; 1001 Then GoTo loc_0041AE78
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041AFA0
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  If (var_70 = 0) = 0 Then GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_0041AFD9
+  call eax(var_BC, var_BC, var_00406B74, &amp;h000000A0, var_004240D0)
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  If var_BC &gt;= 0 Then GoTo loc_0041B182
+  call ecx(var_BC, Me, var_00406B74, &amp;h000000A0)
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_004195B2
+  var_BC = Options.Check4.MousePointer
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Dim X As Long&quot;
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;For X = 0 To &quot; &amp; var_34 &amp; &quot;vbCrLf&quot;
+  Options.Check4.MousePointer = var_D0
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; ecx+ebx*4
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  esi = esi + &amp;h00000001
+  var_22C = esi+&amp;h00000001
+  If esi &lt; 1001 Then GoTo loc_0041B4E7
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot; = FindWindowEx(&quot; &amp; eax+ecx*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_C4 = var_BC &amp; &quot;, &quot; &amp; ecx+ebx*4
+  Options.Check4.MousePointer = var_C4
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;, &quot;
+  var_100 = Chr(34)
+  If esi &lt; 1001 Then GoTo loc_0041B696
+  var_eax = Err.Raise
+  var_1A8 = edx+ebx*4
+  var_C0 = var_BC &amp; &quot;, &quot; &amp; var_100 &amp; edx+ebx*4
+  Options.Check4.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If edx = 0 Then GoTo loc_0041BB1D
+  If esi &lt; 1001 Then GoTo loc_0041B7E2
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+ebx*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041B937
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_0041BC3E
+  If (var_70 = 0) = 0 Then GoTo loc_0041BC49
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_1D8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0 &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_0041BC49
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; &quot;Next X&quot;
+  Options.Check4.MousePointer = var_C0
+  var_38 = var_38 - &amp;h00000001
+  var_38 = var_38
+  Next var_B8
+  GoTo loc_0041942C
+  If var_38 &lt; 1001 Then GoTo loc_0041BD16
+  var_eax = Err.Raise
+  var_38 = var_38 + &amp;h00000001
+  If var_38 &lt; 1001 Then GoTo loc_0041BD30
+  var_eax = Err.Raise
+  var_ret_19 = ecx+edx*4
+  FindWindowEx(edx+esi*4, 0, var_ret_19, 0)
+  var_218 = FindWindowEx(edx+esi*4, 0, var_ret_19, 0)
+  If var_38 &lt; 1001 Then GoTo loc_0041BD79
+  var_eax = Err.Raise
+  var_ret_1A = var_BC
+  var_BC = Options.Check4.MousePointer
+  Options.Check4.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; eax+ecx*4 &amp; var_00407DEC
+  var_BC = Options.Check4.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041BEC7
+  var_eax = Err.Raise
+  Options.Check4.MousePointer = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; eax+ecx*4
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &quot;
+  Options.Check4.MousePointer = var_C0
+  var_BC = Options.Check4.MousePointer
+  Options.Check4.MousePointer = var_BC &amp; eax+ecx*4
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, &quot;
+  Options.Check4.MousePointer = CStr(var_BC &amp; &quot;&amp;, &quot; &amp; Chr(34))
+  var_BC = Options.Check4.MousePointer
+  var_C0 = var_BC &amp; ecx+edx*4
+  Options.Check4.MousePointer = var_C0
+  var_214 = Options.Check4.Value
+  If edx = 0 Then GoTo loc_0041C5F5
+  If var_38 &lt; 1001 Then GoTo loc_0041C288
+  var_eax = Err.Raise
+  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041C3E7
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, VbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  Options.Check4.MousePointer = CStr(var_BC &amp; Chr(34) &amp; &quot;, VbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  GoTo loc_0041C720
+  If (var_70 = 0) = 0 Then GoTo loc_0041C72B
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1B8 = var_70
+  var_1D8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &amp;H407DA8 &amp; Chr(34) &amp; var_70 &amp; Chr(34) &amp; &amp;H407DB0 &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  GoTo loc_0041C72B
+  var_BC = Options.Check4.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_1B8 = &quot;vbCrLf&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot; &amp; &quot;vbCrLf&quot;)
+  Options.Check4.MousePointer = var_C0
+  If arg_C = var_FFFFFF Then GoTo loc_004216A0
+  var_214 = Options.Option1.Value
+  If eax = 0 Then GoTo loc_0041CAAE
+  var_BC = Options.Option1.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041C808
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; edx+eax*4
+  Options.Option1.MousePointer = var_C8
+  var_BC = Options.Option1.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_LBUTTONDOWN, 0&amp;, 0&amp;&quot;
+  Options.Option1.MousePointer = var_C0
+  var_BC = Options.Option1.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041C980
+  var_eax = Err.Raise
+  Options.Option1.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; eax+ecx*4
+  var_BC = Options.Option1.MousePointer
+  Options.Option1.MousePointer = var_BC &amp; &quot;&amp;, WM_LBUTTONUP, 0&amp;, 0&amp;&quot;
+  GoTo loc_004212C7
+  var_214 = Options.Option2.Value
+  If edx = 0 Then GoTo loc_0041CE02
+  var_BC = Options.Option2.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041CB7E
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; ecx+edx*4
+  Options.Option2.MousePointer = var_C8
+  var_BC = Options.Option2.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H201, 0&amp;, 0&amp;&quot;
+  Options.Option2.MousePointer = var_C0
+  var_BC = Options.Option2.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041CCF6
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; edx+eax*4
+  Options.Option2.MousePointer = var_C8
+  var_BC = Options.Option2.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H202, 0&amp;, 0&amp;&quot;
+  Options.Option2.MousePointer = var_C0
+  If var_C0 &gt;= 0 Then GoTo loc_0041F877
+  GoTo loc_0041F869
+  var_214 = Options.Option3.Value
+  If eax = 0 Then GoTo loc_0041CFCE
+  var_BC = Options.Option3.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041CED2
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessageByString &quot; &amp; edx+eax*4
+  Options.Option3.MousePointer = var_C8
+  var_BC = Options.Option3.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_SETTEXT, 0&amp;, TheText$&quot;
+  GoTo loc_0041CDED
+  var_214 = Options.Option4.Value
+  If eax = 0 Then GoTo loc_0041D641
+  var_BC = Options.Option4.MousePointer
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Dim TheText As String, TL As Long&quot;
+  Options.Option4.MousePointer = var_C4
+  var_BC = Options.Option4.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041D145
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;TL&amp; = SendMessageLong(&quot; &amp; ecx+edx*4
+  Options.Option4.MousePointer = var_C8
+  var_BC = Options.Option4.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_GETTEXTLENGTH, 0&amp;, 0&amp;)&quot;
+  Options.Option4.MousePointer = var_C0
+  var_BC = Options.Option4.MousePointer
+  var_C0 = var_BC &amp; &quot;vbCrLf&quot;
+  var_108 = var_C0 &amp; &quot;TheText$ = String$(TL&amp; + 1, &quot;
+  var_C4 = CStr(var_C0 &amp; &quot;TheText$ = String$(TL&amp; + 1, &quot; &amp; Chr(34) &amp; &amp;H407BE4 &amp; Chr(34) &amp; &amp;H407DB0)
+  Options.Option4.MousePointer = var_C4
+  var_BC = Options.Option4.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041D44D
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Call SendMessageByString(&quot; &amp; edx+eax*4
+  Options.Option4.MousePointer = var_C8
+  var_BC = Options.Option4.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_GETTEXT, TL + 1, TheText$)&quot;
+  Options.Option4.MousePointer = var_C0
+  var_BC = Options.Option4.MousePointer
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; var_00424098 &amp; &quot; = Left(TheText$, TL&amp;)&quot;
+  Options.Option4.MousePointer = var_C8
+  GoTo loc_004212C7
+  var_214 = Options.Option5.Value
+  If edx &lt;&gt; 0 Then GoTo loc_004216A0
+  var_214 = Options.Option6.Value
+  If edx = 0 Then GoTo loc_0041DA07
+  var_BC = Options.Option6.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041D793
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; ecx+edx*4
+  Options.Option6.MousePointer = var_C8
+  var_BC = Options.Option6.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H201, 0&amp;, 0&amp;&quot;
+  Options.Option6.MousePointer = var_C0
+  var_BC = Options.Option6.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041D90B
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; edx+eax*4
+  Options.Option6.MousePointer = var_C8
+  var_BC = Options.Option6.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H202, 0&amp;, 0&amp;&quot;
+  GoTo loc_0041CDED
+  var_214 = Options.Option7.Value
+  If eax = 0 Then GoTo loc_0041DD4A
+  var_BC = Options.Option7.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041DAD7
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; edx+eax*4
+  Options.Option7.MousePointer = var_C8
+  var_BC = Options.Option7.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H204, 0&amp;, 0&amp;&quot;
+  Options.Option7.MousePointer = var_C0
+  var_BC = Options.Option7.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041DC4F
+  var_eax = Err.Raise
+  Options.Option7.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; eax+ecx*4
+  var_BC = Options.Option7.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H205, 0&amp;, 0&amp;&quot;
+  GoTo loc_0041CA76
+  var_214 = Options.Option8.Value
+  If edx = 0 Then GoTo loc_0041DF49
+  var_BC = Options.Option8.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041DE1A
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; ecx+edx*4
+  Options.Option8.MousePointer = var_C8
+  var_BC = Options.Option8.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H203, 0&amp;, 0&amp;&quot;
+  Options.Option8.MousePointer = var_C0
+  GoTo loc_004212C7
+  var_214 = Options.Option9.Value
+  If edx = 0 Then GoTo loc_0041E115
+  var_BC = Options.Option9.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E019
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;EnableWindow &quot; &amp; ecx+edx*4
+  Options.Option9.MousePointer = var_C8
+  var_BC = Options.Option9.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, 1&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option10.Value
+  If edx = 0 Then GoTo loc_0041E2E1
+  var_BC = Options.Option10.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E1E5
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;EnableWindow &quot; &amp; ecx+edx*4
+  Options.Option10.MousePointer = var_C8
+  var_BC = Options.Option10.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, 0&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option11.Value
+  If edx = 0 Then GoTo loc_0041E4AD
+  var_BC = Options.Option11.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E3B1
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;ShowWindow &quot; &amp; ecx+edx*4
+  Options.Option11.MousePointer = var_C8
+  var_BC = Options.Option11.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, 1&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option12.Value
+  If edx = 0 Then GoTo loc_0041E679
+  var_BC = Options.Option12.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E57D
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;ShowWindow &quot; &amp; ecx+edx*4
+  Options.Option12.MousePointer = var_C8
+  var_BC = Options.Option12.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, 0&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option13.Value
+  If edx = 0 Then GoTo loc_0041E845
+  var_BC = Options.Option13.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E749
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessage &quot; &amp; ecx+edx*4
+  Options.Option13.MousePointer = var_C8
+  var_BC = Options.Option13.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H10, 0&amp;, 0&amp;&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option14.Value
+  If edx = 0 Then GoTo loc_0041EFBF
+  var_214 = Options.Check1.Value
+  If edx = 0 Then GoTo loc_0041EAFB
+  var_BC = Options.Check1.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041E997
+  var_eax = Err.Raise
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Dim Count as long&quot; &amp; &quot;vbCrLf&quot; &amp; &quot; Count&amp; = SendMessageLong(&quot; &amp; ecx+edx*4
+  Options.Check1.MousePointer = var_D0
+  var_BC = Options.Check1.MousePointer
+  Options.Check1.MousePointer = var_BC &amp; &quot;&amp;, &amp;H18B, 0&amp;, 0&amp;)&quot;
+  var_214 = Options.Check2.Value
+  If edx = 0 Then GoTo loc_0041EDB9
+  var_BC = Options.Check2.MousePointer
+  var_CC = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Dim Text as String, Index as long&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;TheText$ = String$(255, 0)&quot;
+  Options.Check2.MousePointer = var_CC
+  var_BC = Options.Check2.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041ECAC
+  var_eax = Err.Raise
+  var_C4 = var_BC &amp; &quot;Call SendMessageByString(&quot; &amp; edx+eax*4
+  Options.Check2.MousePointer = var_C4
+  var_BC = Options.Check2.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H189, Index&amp;, Text$)&quot;
+  Options.Check2.MousePointer = var_C0
+  var_214 = Options.Check3.Value
+  If edx = 0 Then GoTo loc_004212C7
+  var_BC = Options.Check3.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041EE89
+  var_eax = Err.Raise
+  var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Dim Index as long&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessageLong &quot; &amp; ecx+edx*4
+  Options.Check3.MousePointer = var_D0
+  var_BC = Options.Check3.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, &amp;H186, 0, 0&amp;&quot;
+  GoTo loc_0041CA76
+  var_214 = Options.Option15.Value
+  If edx = 0 Then GoTo loc_0041F186
+  var_BC = Options.Option15.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041F08A
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessageLong &quot; &amp; ecx+edx*4
+  Options.Option15.MousePointer = var_C8
+  var_BC = Options.Option15.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, BM_SETCHECK, True, 0&amp;&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option16.Value
+  If edx = 0 Then GoTo loc_0041F352
+  var_BC = Options.Option16.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041F256
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessageLong &quot; &amp; ecx+edx*4
+  Options.Option16.MousePointer = var_C8
+  var_BC = Options.Option16.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, BM_SETCHECK, False, 0&amp;&quot;
+  GoTo loc_0041DF11
+  var_214 = Options.Option17.Value
+  If edx = 0 Then GoTo loc_0041F696
+  var_BC = Options.Option17.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041F422
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; ecx+edx*4
+  Options.Option17.MousePointer = var_C8
+  var_BC = Options.Option17.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_LBUTTONDOWN, 0&amp;, 0&amp;)&quot;
+  Options.Option17.MousePointer = var_C0
+  var_BC = Options.Option17.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041F59A
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;PostMessage &quot; &amp; edx+eax*4
+  Options.Option17.MousePointer = var_C8
+  var_BC = Options.Option17.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_LBUTTONUP, 0&amp;, 0&amp;&quot;
+  GoTo loc_0041CDED
+  var_214 = Options.Option18.Value
+  If eax = 0 Then GoTo loc_0041F895
+  var_BC = Options.Option18.MousePointer
+  var_38 = var_38 + &amp;h00000001
+  var_22C = var_38
+  If var_38 &lt; 1001 Then GoTo loc_0041F766
+  var_eax = Err.Raise
+  var_C8 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;SendMessageLong &quot; &amp; edx+eax*4
+  Options.Option18.MousePointer = var_C8
+  var_BC = Options.Option18.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp;, WM_CHAR, 13, 0&amp;&quot;
+  Options.Option18.MousePointer = var_C0
+  If var_C0 &gt;= 0 Then GoTo loc_0041F877
+  GoTo loc_004212C7
+  var_214 = Options.Option19.Value
+  If eax = 0 Then GoTo loc_004212C7
+  FindWindowEx(4341812, 0, 0, 0)
+  var_88 = FindWindowEx(4341812, 0, 0, 0)
+  If var_218 = 0 Then GoTo loc_0041FD7F
+  If esi = 9 Then GoTo loc_0041FD7F
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; ecx+esi*4
+  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, , )
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot;
+  var_C4 = var_C0 &amp; 4341868
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, 0&amp;, &quot;
+  var_100 = Chr(34)
+  var_C0 = var_BC &amp; &quot;&amp;, 0&amp;, &quot; &amp; var_100
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; var_3C
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  Options.Option19.MousePointer = var_C0
+  var_30 = var_30 + &amp;h00000001
+  var_30 = var_30
+  FindWindowEx(4341812, var_88, 0, 0)
+  var_88 = FindWindowEx(4341812, var_88, 0, 0)
+  GoTo loc_0041F948
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;If &quot;
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; ecx+edx*4
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot; &lt;&gt; 0&quot;
+  Options.Option19.MousePointer = var_C0
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  If var_30 &lt;= 0 Then GoTo loc_004200EC
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot; And &quot; &amp; ecx+esi*4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot; &lt;&gt; 0&quot;
+  Options.Option19.MousePointer = var_C0
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  GoTo loc_0041FF6C
+  var_2C4 = var_43C
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot;Then&quot; &amp; &quot;vbCrLf&quot; &amp; var_00424098 &amp; &quot;&amp; = &quot; &amp; 4341868
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; var_004085F8 &amp; &quot;vbCrLf&quot;
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot;Exit Function&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;Else&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;Do Until &quot; &amp; 4341868
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot;&amp; = 0&amp;&quot; &amp; &quot;vbCrLf&quot;
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; 4341868
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot; = FindWindowEx(&quot; &amp; edx+&amp;h00000004
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;&amp;, &quot; &amp; 4341868
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, &quot;
+  var_C0 = CStr(var_BC &amp; &quot;&amp;, &quot; &amp; Chr(34) &amp; &amp;H424050)
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  Options.Option19.MousePointer = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  FindWindowEx(4341812, 0, 0, 0)
+  var_88 = FindWindowEx(4341812, 0, 0, 0)
+  If var_218 = 0 Then GoTo loc_00420CC3
+  If esi = 9 Then GoTo loc_00420CC3
+  var_BC = Options.Option19.MousePointer
+  var_464 = var_2C4
+  var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; edx+esi*4
+  Options.Option19.MousePointer = var_C4
+  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, , )
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; 4341868
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC &amp; &quot;&amp;, 0&amp;, &quot;
+  var_C0 = CStr(var_BC &amp; &quot;&amp;, 0&amp;, &quot; &amp; Chr(34))
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; var_3C
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  var_108 = var_BC
+  var_1A8 = &quot;, vbNullString)&quot;
+  var_C0 = CStr(var_BC &amp; Chr(34) &amp; &quot;, vbNullString)&quot;)
+  Options.Option19.MousePointer = var_C0
+  var_30 = var_30 + &amp;h00000001
+  var_30 = var_30
+  FindWindowEx(4341812, var_88, 0, 0)
+  var_218 = FindWindowEx(4341812, var_88, 0, 0)
+  var_88 = var_218
+  GoTo loc_0042088C
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;If &quot;
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; edx+eax*4
+  Options.Option19.MousePointer = var_C0
+  var_BC = Options.Option19.MousePointer
+  Options.Option19.MousePointer = var_BC &amp; &quot; &lt;&gt; 0&quot;
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  If var_30 &lt;= 0 Then GoTo loc_00421018
+  var_BC = Options.Option19.MousePointer
+  var_C4 = var_BC &amp; &quot; And &quot; &amp; ecx+edx*4
+  Options.Option19.MousePointer = var_C4
+  var_BC = Options.Option19.MousePointer
+  var_C0 = var_BC &amp; &quot; &lt;&gt; 0&quot;
+  Options.Option19.MousePointer = var_C0
+  var_30 = var_30 - &amp;h00000001
+  var_30 = var_30
+  GoTo loc_00420EB0
+  var_BC = Options.Option19.MousePointer
+  var_D0 = var_BC &amp; &quot;Then&quot; &amp; &quot;vbCrLf&quot; &amp; var_00424098 &amp; &quot;&amp; = &quot; &amp; 4341868
+  Options.Option19.MousePointer = var_D0
+  var_BC = Options.Option19.MousePointer
+  var_CC = var_BC &amp; var_004085F8 &amp; &quot;vbCrLf&quot; &amp; &quot;Exit Function&quot; &amp; &quot;vbCrLf&quot;
+  var_DC = var_CC &amp; &quot;End If&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;Loop&quot; &amp; &quot;vbCrLf&quot;
+  var_E8 = var_DC &amp; &quot;End If&quot; &amp; &quot;vbCrLf&quot; &amp; &quot;End Function</pre>
+</details>
+</details>
+<h2>&#x2b50; Interesting Strings (64)</h2>
+<span class="s interesting-str">Please name the function?</span>
+<span class="s interesting-str">Public Function</span>
+<span class="s interesting-str">Enter the name of the sub</span>
+<span class="s interesting-str">(TheText As String)</span>
+<span class="s interesting-str">, VbNullString)</span>
+<span class="s interesting-str">, vbNullString)</span>
+<span class="s interesting-str">Dim X As Long</span>
+<span class="s interesting-str">Dim TheText As String, TL As Long</span>
+<span class="s interesting-str">TheText$ = String$(TL&amp; + 1,</span>
+<span class="s interesting-str">= Left(TheText$, TL&amp;)</span>
+<span class="s interesting-str">Dim Count as long</span>
+<span class="s interesting-str">Dim Text as String, Index as long</span>
+<span class="s interesting-str">Dim Index as long</span>
+<span class="s interesting-str">Exit Function</span>
+<span class="s interesting-str">End Function</span>
+<span class="s interesting-str">Whats needed in your module</span>
+<span class="s interesting-str">APIcalls.frx</span>
+<span class="s interesting-str">Enlarged Code</span>
+<span class="s interesting-str">Basic.frx</span>
+<span class="s interesting-str">Open existing module</span>
+<span class="s interesting-str">This does not appear to be a valid .bas file, would you like to load it anyways?</span>
+<span class="s interesting-str">Save Changes</span>
+<span class="s interesting-str">Find Target Window By Caption</span>
+<span class="s interesting-str">Find All Windows By Their Caption</span>
+<span class="s interesting-str">A Function That Finds a Window</span>
+<span class="s interesting-str">Hit Enter Key</span>
+<span class="s interesting-str">Click on Check box</span>
+<span class="s interesting-str">UnCheck Check Box</span>
+<span class="s interesting-str">Check a Check Box</span>
+<span class="s interesting-str">Click Button</span>
+<span class="s interesting-str">Just Find the Window</span>
+<span class="s interesting-str">Click a msgbox</span>
+<span class="s interesting-str">Double CLick</span>
+<span class="s interesting-str">Close Window</span>
+<span class="s interesting-str">Disable Window</span>
+<span class="s interesting-str">Enable Window</span>
+<span class="s interesting-str">Get item in list</span>
+<span class="s interesting-str">Select Item in list</span>
+<span class="s interesting-str">www.mavness.com</span>
+<span class="s interesting-str">Main.frx</span>
+<span class="s interesting-str">Roll Over Efects</span>
+<span class="s interesting-str">Preload Images</span>
+<span class="s interesting-str">What you need In your module</span>
+<span class="s interesting-str">Check for updates</span>
+<span class="s interesting-str">My site  Mavness.com, Check for updates and other good stuff</span>
+<span class="s interesting-str">Re-Enable Mouse</span>
+<span class="s interesting-str">Double click to enlarge</span>
+<span class="s interesting-str">Enter Handle</span>
+<span class="s interesting-str">Parent Window Caption:</span>
+<span class="s interesting-str">Parent Window Class:</span>
+<span class="s interesting-str">Parent Window Handle:</span>
+<span class="s interesting-str">Window Caption:</span>
+<span class="s interesting-str">Window Class:</span>
+<span class="s interesting-str">Window Handle:</span>
+<span class="s interesting-str">Drag For Handle</span>
+<span class="s interesting-str">Next version, go to www.mavness.com for updates</span>
+<span class="s interesting-str">Use to make code  ---&gt;</span>
+<span class="s interesting-str">Move mouse or drag and drop this--&gt;</span>
+<span class="s interesting-str">Please select what to display in the listbox</span>
+<span class="s interesting-str">http://www.mavness.com</span>
+<span class="s interesting-str">http://www.vbfx.com</span>
+<span class="s interesting-str">http://www.patorjk.com</span>
+<span class="s interesting-str">Leaving already?</span>
+<span class="s interesting-str">Code cannot be created for this.</span>
+<details><summary style="color:#484f58;font-size:0.85em">Other Strings (48)</summary>
+<span class="s plain-str">vbNullString</span>
+<span class="s plain-str">,vbNullString)</span>
+<span class="s plain-str">For X = 0 To</span>
+<span class="s plain-str">Next X</span>
+<span class="s plain-str">PostMessage</span>
+<span class="s plain-str">EnableWindow</span>
+<span class="s plain-str">TheText$ = String$(255, 0)</span>
+<span class="s plain-str">APIcalls</span>
+<span class="s plain-str">Enlarge</span>
+<span class="s plain-str">API Basics</span>
+<span class="s plain-str">VB_atribute</span>
+<span class="s plain-str">Captions</span>
+<span class="s plain-str">Get Text</span>
+<span class="s plain-str">Set Text</span>
+<span class="s plain-str">Click Icon</span>
+<span class="s plain-str">Right Click</span>
+<span class="s plain-str">Show Window</span>
+<span class="s plain-str">Hide Window</span>
+<span class="s plain-str">ListBox</span>
+<span class="s plain-str">Get Count</span>
+<span class="s plain-str">Image List</span>
+<span class="s plain-str">Off Image</span>
+<span class="s plain-str">Create Code</span>
+<span class="s plain-str">Make Code</span>
+<span class="s plain-str">Get Info</span>
+<span class="s plain-str">Display</span>
+<span class="s plain-str">ReleaseCapture</span>
+<span class="s plain-str">ScreenToClient</span>
+<span class="s plain-str">ReleaseDC</span>
+<span class="s plain-str">GetPixel</span>
+<span class="s plain-str">GetWindowPlacement</span>
+<span class="s plain-str">SetWindowPos</span>
+<span class="s plain-str">GetCursorPos</span>
+<span class="s plain-str">LoadCursorFromFileA</span>
+<span class="s plain-str">SetSystemCursor</span>
+<span class="s plain-str">CopyIcon</span>
+<span class="s plain-str">GetWindowTextA</span>
+<span class="s plain-str">GetWindowTextLengthA</span>
+<span class="s plain-str">GetWindowWord</span>
+<span class="s plain-str">GetWindowLongA</span>
+<span class="s plain-str">GetClassWord</span>
+<span class="s plain-str">GetClassNameA</span>
+<span class="s plain-str">GetClassLongA</span>
+<span class="s plain-str">GetClassInfoA</span>
+<span class="s plain-str">WindowFromPoint</span>
+<span class="s plain-str">GetParent</span>
+<span class="s plain-str">ShellExecuteA</span>
+<span class="s plain-str">VbNullString</span>
+</details>
+<div class="stats">Total unique strings: 193 · Interesting: 64 · Noise filtered: 67</div>
+</div></body></html>
