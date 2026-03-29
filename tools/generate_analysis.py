@@ -1424,6 +1424,18 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     lines.append('<a href="../../../../proggie-index.html">&#x2190; All Proggies</a>')
     if dl_link:
         lines.append(f'<a class="dl-btn" href="{e(dl_link)}">&#x2b07; Download {e(archive_name)}</a>')
+    # Source code zip if decompiled source exists
+    source_dir = html_path.parent / zip_stem / 'source'
+    if source_dir.exists() and any(source_dir.rglob('*')):
+        src_zip = html_path.parent / zip_stem / f'{zip_stem}-source.zip'
+        if not src_zip.exists():
+            import zipfile
+            with zipfile.ZipFile(src_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for f in sorted(source_dir.rglob('*')):
+                    if f.is_file():
+                        zf.write(f, f.relative_to(source_dir))
+        src_gh = f'{GITHUB_RAW}programs/AOL/proggies-sorted-deduped/{html_path.parent.name}/{zip_stem}/{zip_stem}-source.zip'
+        lines.append(f'<a class="dl-btn" href="{e(src_gh)}" style="background:#238636">&#x1f4c4; Download Source</a>')
     lines.append('</div>')
 
     # Hero
