@@ -1436,6 +1436,7 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
                         zf.write(f, f.relative_to(source_dir))
         src_gh = f'{GITHUB_RAW}programs/AOL/proggies-sorted-deduped/{html_path.parent.name}/{zip_stem}/{zip_stem}-source.zip'
         lines.append(f'<a class="dl-btn" href="{e(src_gh)}" style="background:#238636">&#x1f4c4; Download Source</a>')
+    lines.append('<a class="dl-btn" href="https://buymeacoffee.com/aolunderground" style="background:#f0883e">Donate</a>')
     lines.append('</div>')
 
     # Hero
@@ -1519,6 +1520,10 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     total = len(seen)
     if interesting or other:
         lines.append(f'<div class="stats">Total unique strings: {total} · Interesting: {len(interesting)} · Noise filtered: {len(junk)}</div>')
+    lines.append('<div style="text-align:center;padding:24px 0 12px;border-top:1px solid #21262d;margin-top:32px;color:#8b949e;font-size:0.9em">'
+                 'Preserving the AOL underground, one proggie at a time. '
+                 '<a href="https://buymeacoffee.com/aolunderground" style="color:#f0883e">Donate</a> · '
+                 '<a href="https://aolunderground.com" style="color:#58a6ff">Podcast</a></div>')
     lines.append('</div></body></html>')
     return '\n'.join(lines)
 
