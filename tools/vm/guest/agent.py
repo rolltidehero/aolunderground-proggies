@@ -30,6 +30,32 @@ def load_config():
     return cfg
 
 
+def _setup_win32_prototypes():
+    """Set Win32 ctypes prototypes for 64-bit correctness."""
+    import ctypes, ctypes.wintypes as w
+    k = ctypes.windll.kernel32
+    H, D, B, P = w.HANDLE, w.DWORD, w.BOOL, ctypes.c_void_p
+    PD = ctypes.POINTER(w.DWORD)
+    k.CreateFileW.argtypes = [w.LPCWSTR, D, D, P, D, D, H]
+    k.CreateFileW.restype = H
+    k.CreateEventW.argtypes = [P, B, B, w.LPCWSTR]
+    k.CreateEventW.restype = H
+    k.ReadFile.argtypes = [H, P, D, PD, P]
+    k.ReadFile.restype = B
+    k.WriteFile.argtypes = [H, P, D, PD, P]
+    k.WriteFile.restype = B
+    k.CloseHandle.argtypes = [H]
+    k.CloseHandle.restype = B
+    k.WaitForSingleObject.argtypes = [H, D]
+    k.WaitForSingleObject.restype = D
+    k.GetOverlappedResult.argtypes = [H, P, PD, B]
+    k.GetOverlappedResult.restype = B
+    k.CancelIoEx.argtypes = [H, P]
+    k.CancelIoEx.restype = B
+    k.GetLastError.argtypes = []
+    k.GetLastError.restype = D
+
+
 def open_device():
     """Open virtio-serial device using ctypes. Retry until available."""
     import ctypes, ctypes.wintypes
@@ -37,11 +63,12 @@ def open_device():
     GENERIC_RW = 0xC0000000
     OPEN_EXISTING = 3
     FILE_FLAG_OVERLAPPED = 0x40000000
+    INVALID_HANDLE = ctypes.c_void_p(-1).value
     while True:
         h = k32.CreateFileW(DEVICE_PATH, GENERIC_RW, 0, None,
                             OPEN_EXISTING, FILE_FLAG_OVERLAPPED, None)
-        if h != -1 and h != 0xFFFFFFFF:
-            log.info("Device opened: %s handle=%d", DEVICE_PATH, h)
+        if h is not None and h != INVALID_HANDLE:
+            log.info("Device opened: %s handle=%s", DEVICE_PATH, h)
             return h
         err = k32.GetLastError()
         log.debug("Waiting for device: err=%d", err)
@@ -148,7 +175,7 @@ def handle_decompile(cmd, cfg):
     # Write args for helper
     with open(args_file, "w") as f:
         json.dump({"target": target, "output": output, "vbd": vbd,
-                    "use_plugin": cmd.get("use_plugin", True)}, f)
+                    "use_plugin": cmd.get("use_plugin", False)}, f)
 
     # Run helper as lab user in interactive session
     subprocess.run(["schtasks", "/run", "/tn", "VBDHelper"],
@@ -172,27 +199,36 @@ def handle_decompile(cmd, cfg):
 
 _procs = {}
 
+
+def _reap_procs():
+    """Remove finished processes from _procs."""
+    dead = [pid for pid, p in _procs.items() if p.poll() is not None]
+    for pid in dead:
+        _procs.pop(pid, None)
+
+
 def handle_run(cmd, cfg):
     target = cmd["target"]
+    _reap_procs()
     try:
-        p = subprocess.Popen(target, shell=False)
+        p = subprocess.Popen([target], shell=False)
         _procs[p.pid] = p
         return {"status": "running", "pid": p.pid}
     except Exception as e:
         return {"status": "error", "msg": str(e)}
-
-
 def handle_kill(cmd, cfg):
     pid = cmd["pid"]
+    _reap_procs()
     try:
-        subprocess.run(["taskkill", "/PID", str(pid), "/F", "/T"],
-                       capture_output=True, timeout=10)
+        r = subprocess.run(["taskkill", "/PID", str(pid), "/F", "/T"],
+                           capture_output=True, text=True, timeout=10)
         _procs.pop(pid, None)
+        if r.returncode != 0:
+            return {"status": "error",
+                    "msg": f"taskkill failed (rc={r.returncode}): {r.stderr.strip()}"}
         return {"status": "killed"}
     except Exception as e:
         return {"status": "error", "msg": str(e)}
-
-
 def handle_shell(cmd, cfg):
     try:
         r = subprocess.run(cmd["command"], shell=True,
@@ -239,6 +275,7 @@ HANDLERS = {
 
 def main():
     cfg = load_config()
+    _setup_win32_prototypes()
     log.info("Agent starting. Config: %s", cfg)
 
     while True:

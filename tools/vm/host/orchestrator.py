@@ -3,7 +3,7 @@
 Orchestrator: batch-process VB exes in the isolated Windows VM.
 Decompile, run, interact, record — all headless, no network.
 """
-import argparse, glob, json, logging, os, subprocess, sys, time
+import argparse, glob, json, logging, os, socket, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from config import *
@@ -20,9 +20,22 @@ SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
 
 def vm_is_running():
-    return os.path.exists(QMP_SOCK)
-
-
+    """Check if QEMU is actually running by probing the QMP socket."""
+    if not os.path.exists(QMP_SOCK):
+        return False
+    try:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(2)
+        s.connect(QMP_SOCK)
+        s.close()
+        return True
+    except (ConnectionRefusedError, OSError):
+        # Stale socket from crashed QEMU — remove it
+        try:
+            os.unlink(QMP_SOCK)
+        except OSError:
+            pass
+        return False
 def vm_start(mode="run"):
     script = os.path.join(SCRIPTS_DIR, "launch-vm.sh")
     subprocess.run(["bash", script, mode], check=True)
@@ -131,7 +144,7 @@ def main():
 
             qmp = QMPClient(QMP_SOCK).connect()
             recorder = ScreenRecorder(qmp, RECORDINGS_DIR)
-            controller = InputController(qmp)
+            controller = InputController(qmp, screen_w=SCREEN_WIDTH, screen_h=SCREEN_HEIGHT)
 
             if process_one(exe, args, qmp, c2, recorder, controller):
                 ok += 1

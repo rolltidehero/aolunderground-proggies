@@ -19,7 +19,24 @@ def log(msg):
     with open(LOG_FILE, "a") as f:
         f.write(f"{time.time():.1f} {msg}\n")
 
-@ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.c_long)
+def _setup_user32_prototypes():
+    """Set user32 ctypes prototypes for 64-bit correctness."""
+    u = ctypes.windll.user32
+    H, P, B = ctypes.wintypes.HWND, ctypes.c_void_p, ctypes.wintypes.BOOL
+    u.FindWindowW.restype = H
+    u.FindWindowExW.restype = H
+    u.GetDlgItem.restype = H
+    u.EnumWindows.argtypes = [P, ctypes.wintypes.LPARAM]
+    u.EnumWindows.restype = B
+    u.EnumChildWindows.argtypes = [H, P, ctypes.wintypes.LPARAM]
+    u.EnumChildWindows.restype = B
+    u.SendMessageW.argtypes = [H, ctypes.wintypes.UINT, ctypes.wintypes.WPARAM, P]
+    u.SendMessageW.restype = P
+    u.PostMessageW.argtypes = [H, ctypes.wintypes.UINT, ctypes.wintypes.WPARAM, P]
+    u.PostMessageW.restype = B
+
+
+@ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 def _dismiss_blockers_cb(hwnd, lp):
     cls = ctypes.create_unicode_buffer(256)
     u32.GetClassNameW(hwnd, cls, 256)
@@ -52,7 +69,7 @@ def dismiss_all():
 def find_vbd(timeout=60):
     """Find VBD main form (TfrmMain class). Dismiss splash/info dialogs along the way."""
     result = [0]
-    @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.c_long)
+    @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
     def find_main(hwnd, lp):
         cls = ctypes.create_unicode_buffer(256)
         u32.GetClassNameW(hwnd, cls, 256)
@@ -119,6 +136,8 @@ def main():
     try: os.remove(LOG_FILE)
     except: pass
 
+    _setup_user32_prototypes()
+
     with open(ARGS_FILE) as f:
         args = json.load(f)
     target = args["target"]
@@ -137,10 +156,15 @@ def main():
                          "Deploy vbd_plugin.dll before decompiling.")
             return
 
-    # Clean plugin state
+    # Clean plugin state -- must succeed to prevent stale sentinel false positives
     for pf in [r"C:\plugin_cmd.txt", r"C:\plugin_done.txt", r"C:\plugin_err.txt"]:
-        try: os.remove(pf)
-        except: pass
+        try:
+            os.remove(pf)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            write_result("error", msg=f"Cannot clean stale {pf}: {e}")
+            return
 
     try:
         subprocess.Popen([vbd])
@@ -153,7 +177,7 @@ def main():
 
         # Diagnostic: enumerate ALL top-level windows
         all_wins = []
-        @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.c_long)
+        @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
         def enum_top(h, lp):
             buf = ctypes.create_unicode_buffer(512)
             u32.GetWindowTextW(h, buf, 512)
@@ -214,7 +238,7 @@ def main():
         if not edit:
             # Enumerate dialog children for debugging
             ch_list = []
-            @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.c_long)
+            @ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
             def enum_dlg(ch, lp):
                 cls = ctypes.create_unicode_buffer(256)
                 u32.GetClassNameW(ch, cls, 256)
@@ -338,6 +362,9 @@ def main():
                     for fn in files:
                         shutil.copy2(os.path.join(root, fn), os.path.join(dest, fn))
                 shutil.rmtree(plugin_out, ignore_errors=True)
+            else:
+                write_result("error", msg=f"Plugin output directory not found: {plugin_out}")
+                return
         else:
             # Old flow: Save project (ID 10)
             u32.PostMessageW(hwnd, WM_COMMAND, 10, 0)
@@ -376,7 +403,9 @@ def main():
         if os.path.exists(vbp_path):
             import re as _re
             vbp_text = open(vbp_path, errors='replace').read()
-            vbp_forms = set(_re.findall(r'^Form=(\S+\.frm)', vbp_text, _re.MULTILINE))
+            vbp_forms = set(
+                os.path.basename(f) for f in _re.findall(r'^Form=(\S+\.frm)', vbp_text, _re.MULTILINE)
+            )
             frm_files = set()
             for fn in files_out:
                 if fn.endswith('.frm'):

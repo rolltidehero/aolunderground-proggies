@@ -5,19 +5,21 @@ log = logging.getLogger(__name__)
 
 
 class InputController:
-    def __init__(self, qmp_client):
+    def __init__(self, qmp_client, screen_w=1024, screen_h=768):
         self.qmp = qmp_client
+        self.screen_w = screen_w
+        self.screen_h = screen_h
 
     def click(self, x, y):
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
 
     def double_click(self, x, y):
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
         time.sleep(0.1)
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
 
     def right_click(self, x, y):
-        self.qmp.send_mouse_click(x, y, "right")
+        self.qmp.send_mouse_click(x, y, "right", screen_w=self.screen_w, screen_h=self.screen_h)
 
     def type_text(self, text):
         self.qmp.send_text(text)

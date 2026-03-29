@@ -13,20 +13,41 @@ Demonstrates the full Tier 1+2 pipeline on a single app:
 Usage:
     python3 poc_walkthrough.py <exe_path>
 """
-import sys, os, re, json, time, struct, subprocess, shutil, logging, glob
+import sys, os, re, json, time, struct, subprocess, shutil, logging, glob, pwd
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 log = logging.getLogger('poc')
 
-DISPLAY = ':98'
-WINE_USER = 'wineshot'
-WINE_PREFIX = '/home/wineshot/.wine'
-C2_CMD = '/home/wineshot/.wine/drive_c/c2s_cmd.txt'
-C2_RES = '/home/wineshot/.wine/drive_c/c2s_res.txt'
-REPO_ROOT = '/home/braker/git/aolunderground-proggies'
-NAV_FILE = os.path.join(REPO_ROOT, 'tools/c2/nav_graphs.json')
-STAGE_DIR = '/home/wineshot/.wine/drive_c/progstage'
+# F21: All paths overridable via environment variables
+DISPLAY = os.environ.get('POC_DISPLAY', ':98')
+WINE_USER = os.environ.get('POC_WINE_USER', 'wineshot')
+WINE_PREFIX = os.environ.get('POC_WINE_PREFIX', '/home/wineshot/.wine')
+C2_CMD = os.environ.get('POC_C2_CMD', WINE_PREFIX + '/drive_c/c2s_cmd.txt')
+C2_RES = os.environ.get('POC_C2_RES', WINE_PREFIX + '/drive_c/c2s_res.txt')
+REPO_ROOT = os.environ.get('POC_REPO_ROOT',
+                           '/home/braker/git/aolunderground-proggies')
+NAV_FILE = os.environ.get('POC_NAV_FILE',
+                          os.path.join(REPO_ROOT, 'tools/c2/nav_graphs.json'))
+STAGE_DIR = os.environ.get('POC_STAGE_DIR',
+                           WINE_PREFIX + '/drive_c/progstage')
+
+# F20: Configurable timing (seconds)
+TIMING = {
+    'wmcommand_delay': float(os.environ.get('POC_WMCMD_DELAY', '0.6')),
+    'tab_delay':       float(os.environ.get('POC_TAB_DELAY', '0.8')),
+    'click_delay':     float(os.environ.get('POC_CLICK_DELAY', '1.5')),
+    'render_delay':    float(os.environ.get('POC_RENDER_DELAY', '1.5')),
+}
+
+# F8: Single unified danger word set for ALL phases
+DANGER_WORDS = frozenset({
+    'exit', 'quit', 'close', 'send', 'punt', 'boot', 'kill', 'bomb',
+    'flood', 'nuke', 'disconnect', 'terminate', 'shutdown', 'unload',
+    'destroy', 'attack', 'scroll', 'mass', 'spam', 'kick',
+    'end', 'x', 'cancel', 'start', 'stop', 'connect', 'crack',
+    'run', 'go', 'begin',
+})
 
 VB_CLASSES = [
     'ThunderRT6FormDC', 'ThunderRT6Form', 'ThunderRT6MDIForm',
@@ -57,25 +78,56 @@ def ensure_c2host():
 
 
 def c2(cmd, timeout=8):
-    """Send command to c2host.exe, return response string."""
+    """Send command to c2host.exe, return response or None on failure."""
+    # F16: Clear stale response
     try:
         os.remove(C2_RES)
     except FileNotFoundError:
         pass
-    with open(C2_CMD, 'w') as f:
-        f.write(cmd + '\n')
-    os.chown(C2_CMD, 993, 993)
+    except PermissionError:
+        log.error('c2: permission denied removing %s', C2_RES)
+        return None
+    # F16: Atomic write via tmp + rename
+    tmp_path = C2_CMD + '.tmp'
+    try:
+        with open(tmp_path, 'w') as f:
+            f.write(cmd + '\n')
+        os.rename(tmp_path, C2_CMD)
+    except OSError as e:
+        log.error('c2: failed to write command: %s', e)
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        return None
+    # F10: Dynamic UID via pwd instead of hardcoded 993
+    try:
+        pw = pwd.getpwnam(WINE_USER)
+        os.chown(C2_CMD, pw.pw_uid, pw.pw_gid)
+    except KeyError:
+        log.error('c2: user "%s" not found', WINE_USER)
+        return None
+    except PermissionError as e:
+        log.warning('c2: chown failed: %s', e)
+    # F12: Distinct failure returns with specific logging
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             with open(C2_RES, 'r') as f:
                 r = f.read().strip()
             if r:
-                os.remove(C2_RES)
+                try:
+                    os.remove(C2_RES)
+                except OSError:
+                    pass
                 return r
         except FileNotFoundError:
             pass
+        except PermissionError:
+            log.error('c2: permission denied reading %s', C2_RES)
+            return None
         time.sleep(0.05)
+    log.warning('c2: timeout after %ds for: %s', timeout, cmd[:80])
     return None
 
 
@@ -92,10 +144,12 @@ def c2_find(cls, title='*'):
 
 
 def c2_find_all(cls):
-    """Find ALL top-level windows of a given class using FindWindowEx chain."""
+    """Find ALL top-level windows of a given class via FindWindowEx chain.
+    F19: Dedup protection via seen set."""
     found = []
+    seen = set()
     after = 0
-    for _ in range(50):  # safety limit
+    for _ in range(50):
         r = c2('FINDWINDOWEX 0 %d %s *' % (after, cls), timeout=3)
         if not r:
             break
@@ -106,6 +160,9 @@ def c2_find_all(cls):
             break
         if hwnd <= 0:
             break
+        if hwnd in seen:
+            break
+        seen.add(hwnd)
         found.append(hwnd)
         after = hwnd
     return found
@@ -153,15 +210,47 @@ def c2_enum_menus(hwnd):
     return menus
 
 
+def _get_window_geometry(hwnd):
+    """Get window geometry (x, y, w, h) via xdotool. Returns tuple or None.
+    Helper for F3/F4 fixes."""
+    title = get_window_title(hwnd)
+    if not title:
+        return None
+    try:
+        r = subprocess.run(
+            ['xdotool', 'search', '--name', title],
+            env={'DISPLAY': DISPLAY}, timeout=5,
+            capture_output=True, text=True)
+        for line in r.stdout.strip().split('\n'):
+            xid = line.strip()
+            if not xid:
+                continue
+            geo = subprocess.run(
+                ['xdotool', 'getwindowgeometry', '--shell', xid],
+                env={'DISPLAY': DISPLAY}, timeout=5,
+                capture_output=True, text=True)
+            if geo.returncode == 0:
+                vals = {}
+                for gl in geo.stdout.strip().split('\n'):
+                    if '=' in gl:
+                        k, v = gl.split('=', 1)
+                        vals[k.strip()] = int(v.strip())
+                if all(k in vals for k in ('X', 'Y', 'WIDTH', 'HEIGHT')):
+                    return (vals['X'], vals['Y'],
+                            vals['WIDTH'], vals['HEIGHT'])
+    except Exception:
+        pass
+    return None
+
+
 def c2_screenshot(hwnd, path, client=True):
-    """Screenshot via xwd full-screen capture + auto-crop to content.
-    BitBlt and GETRECT coordinates are unreliable under Wine, so we
-    capture the full X11 screen and crop to the non-black content region."""
+    """Screenshot a specific window via xwd + targeted crop.
+    F3: Uses xdotool geometry for the target hwnd when available.
+    Falls back to non-black content detection."""
     from PIL import Image
-    import subprocess
     try:
         proc = subprocess.run(
-            ['sudo', '-u', 'wineshot', 'env', 'DISPLAY=:98',
+            ['sudo', '-u', WINE_USER, 'env', 'DISPLAY=' + DISPLAY,
              'xwd', '-root', '-silent'],
             capture_output=True, timeout=10)
         if proc.returncode != 0:
@@ -179,15 +268,24 @@ def c2_screenshot(hwnd, path, client=True):
     except Exception as e:
         log.error('Screenshot capture failed: %s', e)
         return False
-
-    # Crop to non-black content region, ignoring Wine desktop label.
-    # Wine draws a small label in upper-left. We detect it as an isolated
-    # cluster: if content in the first 20 rows doesn't connect to content
-    # below row 25, it's the label — exclude it.
+    w_img, h_img = img.size
+    # F3: Try targeted crop via xdotool window geometry
+    win_geom = _get_window_geometry(hwnd)
+    if win_geom:
+        gx, gy, gw, gh = win_geom
+        cl = max(0, gx)
+        ct = max(0, gy)
+        cr = min(w_img, gx + gw)
+        cb = min(h_img, gy + gh)
+        if cr > cl + 10 and cb > ct + 10:
+            cropped = img.crop((cl, ct, cr, cb))
+            cropped.save(path)
+            return True
+        log.warning('xdotool geometry for hwnd=%d out of range, fallback',
+                    hwnd)
+    # Fallback: crop to non-black content region
     w, h = img.size
     pixels = img.load()
-
-    # First pass: find full content bounds
     top, bottom, left, right = h, 0, w, 0
     for y in range(0, h, 2):
         for x in range(0, w, 2):
@@ -199,10 +297,6 @@ def c2_screenshot(hwnd, path, client=True):
                 right = max(right, x)
     if right <= left or bottom <= top:
         return False
-
-    # Check if there's a gap between the label region and the main window.
-    # If rows 21-25 are all black across the content width, the top content
-    # is just the Wine label — start from below it.
     if top < 5:
         gap_rows = range(21, 26)
         gap_is_black = True
@@ -215,7 +309,6 @@ def c2_screenshot(hwnd, path, client=True):
             if not gap_is_black:
                 break
         if gap_is_black:
-            # Re-scan starting below the label
             top, left, right = h, w, 0
             for y in range(26, h, 2):
                 for x in range(0, w, 2):
@@ -229,8 +322,8 @@ def c2_screenshot(hwnd, path, client=True):
                 return False
     if right <= left or bottom <= top:
         return False
-    cropped = img.crop((max(0, left-1), max(0, top-1),
-                        min(w, right+2), min(h, bottom+2)))
+    cropped = img.crop((max(0, left - 1), max(0, top - 1),
+                        min(w, right + 2), min(h, bottom + 2)))
     cropped.save(path)
     return True
 
@@ -270,28 +363,33 @@ def kill_all_proggies():
 
 
 def stage_and_launch(exe_path):
-    """Copy exe + co-located files to stage dir, launch under Wine."""
+    """Copy exe + co-located files to stage dir, launch under Wine.
+    F11: Handles subdirectories and Wine file locks gracefully."""
     os.makedirs(STAGE_DIR, exist_ok=True)
-    # Clean stage
-    for f in os.listdir(STAGE_DIR):
-        os.remove(os.path.join(STAGE_DIR, f))
-
+    for fn in os.listdir(STAGE_DIR):
+        fp = os.path.join(STAGE_DIR, fn)
+        try:
+            if os.path.isdir(fp):
+                shutil.rmtree(fp, ignore_errors=True)
+            else:
+                os.remove(fp)
+        except OSError as e:
+            log.warning('stage cleanup: cannot remove %s: %s', fp, e)
     exe_dir = os.path.dirname(exe_path)
     exe_name = os.path.basename(exe_path)
-
-    # Copy exe and supporting files
     shutil.copy2(exe_path, os.path.join(STAGE_DIR, exe_name))
-    for f in os.listdir(exe_dir):
-        if f == exe_name:
+    for fn in os.listdir(exe_dir):
+        if fn == exe_name:
             continue
-        src = os.path.join(exe_dir, f)
+        src = os.path.join(exe_dir, fn)
         if os.path.isfile(src) and os.path.getsize(src) < 5_000_000:
-            shutil.copy2(src, os.path.join(STAGE_DIR, f))
-
-    # Fix ownership
-    subprocess.run(['sudo', 'chown', '-R', 'wineshot:nonet', STAGE_DIR],
+            try:
+                shutil.copy2(src, os.path.join(STAGE_DIR, fn))
+            except OSError as e:
+                log.warning('stage copy failed for %s: %s', fn, e)
+    # F11: Use WINE_USER variable instead of hardcoded string
+    subprocess.run(['sudo', 'chown', '-R', WINE_USER + ':nonet', STAGE_DIR],
                    timeout=5)
-
     win_path = 'C:\\progstage\\' + exe_name
     proc = subprocess.Popen(
         ['sudo', '-u', WINE_USER, 'env',
@@ -334,36 +432,68 @@ def get_window_title(hwnd):
 
 # ── Main POC ──
 
+
 def run_poc(exe_path):
+    """Main POC walkthrough entry point."""
     exe_path = os.path.abspath(exe_path)
-    exe_name = Path(exe_path).stem
+    exe_name = os.path.splitext(os.path.basename(exe_path))[0]
     log.info('=== POC Walkthrough: %s ===', exe_name)
 
-    # Load nav graph
+    # F5: Load nav graph with exact-match priority
     nav_graph = None
+    has_nav_graph = False
     if os.path.exists(NAV_FILE):
         with open(NAV_FILE) as f:
             all_graphs = json.load(f)
-        # Find matching graph by exe name
-        for key, g in all_graphs.items():
-            if exe_name.lower() in key.lower():
-                nav_graph = g
-                log.info('Nav graph found: %d nav, %d dangerous, %d menus',
-                         len(g['navigation']), len(g['dangerous']),
-                         len(g['menus']))
+        exe_lower = exe_name.lower()
+        match_key = None
+        for key in all_graphs:
+            if exe_lower == key.lower():
+                match_key = key
                 break
+        if not match_key:
+            for key in all_graphs:
+                ks = os.path.splitext(key)[0].lower() if '.' in key else key.lower()
+                if exe_lower == ks:
+                    match_key = key
+                    break
+        if not match_key:
+            candidates = [k for k in all_graphs if exe_lower in k.lower()]
+            if len(candidates) == 1:
+                match_key = candidates[0]
+                log.info('Nav graph substring match: "%s"', match_key)
+            elif len(candidates) > 1:
+                log.warning('Ambiguous nav graph for "%s": %s',
+                            exe_name, candidates)
+        if match_key:
+            nav_graph = all_graphs[match_key]
+            has_nav_graph = True
+            log.info('Nav graph (%s): %d nav, %d dangerous, %d menus',
+                     match_key, len(nav_graph['navigation']),
+                     len(nav_graph['dangerous']),
+                     len(nav_graph['menus']))
     if not nav_graph:
-        log.info('No nav graph found, will do blind screenshot only')
+        log.info('No nav graph found, blind screenshot only')
+        nav_graph = {'navigation': [], 'dangerous': [], 'menus': [],
+                     'clickable': [], 'forms': []}
 
-    # Load enumerate_controls data for danger caption filtering
+    # F13: Load and validate enumerate_controls data
     dangerous_captions = set()
     ec_menu_count = 0
-    DANGER_CAPTION_WORDS = {'exit', 'quit', 'close', 'send', 'punt', 'boot',
-                            'kill', 'bomb', 'flood', 'nuke', 'disconnect',
-                            'terminate', 'shutdown', 'unload', 'destroy',
-                            'attack', 'scroll', 'mass', 'spam', 'kick'}
     bas_path = os.path.join(os.path.dirname(exe_path),
                             exe_name + '.decompiled.bas')
+    if os.path.exists(bas_path):
+        try:
+            bas_mt = os.path.getmtime(bas_path)
+            exe_mt = os.path.getmtime(exe_path)
+            if bas_mt < exe_mt - 86400:
+                log.warning('.bas file is >1 day older than exe')
+            with open(bas_path, 'r', errors='replace') as bf:
+                hdr = bf.read(4096)
+            if exe_name.lower() not in hdr.lower():
+                log.warning('.bas file may not match "%s"', exe_name)
+        except OSError as e:
+            log.warning('.bas validation failed: %s', e)
     if os.path.exists(bas_path):
         try:
             sys.path.insert(0, os.path.join(REPO_ROOT, 'tools/c2'))
@@ -375,12 +505,10 @@ def run_poc(exe_path):
                 ec_menu_count += 1
                 cap = (ctrl.get('caption') or '').lower().strip()
                 if cap and cap != '?' and cap != '-':
-                    if any(w in cap for w in DANGER_CAPTION_WORDS):
+                    if any(w in cap for w in DANGER_WORDS):
                         dangerous_captions.add(cap)
-            log.info('enumerate_controls: %d menus, %d dangerous captions',
+            log.info('enumerate_controls: %d menus, %d dangerous',
                      ec_menu_count, len(dangerous_captions))
-            if dangerous_captions:
-                log.info('  dangerous: %s', dangerous_captions)
         except Exception as e:
             log.warning('enumerate_controls failed: %s', e)
 
@@ -390,33 +518,25 @@ def run_poc(exe_path):
     os.makedirs(os.path.join(WINE_PREFIX, 'drive_c', 'screenshots'),
                 exist_ok=True)
 
-    # Kill any running proggies
     log.info('Cleaning up...')
     kill_all_proggies()
-
-    # Ensure c2host is running
     if not ensure_c2host():
         log.error('c2host.exe failed to start')
         return
 
-    # Launch
     log.info('Launching %s...', exe_name)
     proc = stage_and_launch(exe_path)
-
-    # Wait for VB window
     hwnd = find_vb_window()
     if not hwnd:
         log.error('No VB window appeared')
         proc.kill()
         return
-    time.sleep(1.5)  # let it render
+    time.sleep(TIMING['render_delay'])
 
     title = get_window_title(hwnd)
     log.info('Found window: hwnd=%d title="%s"', hwnd, title)
-
     frames = []
 
-    # Screenshot 1: main window
     shot1 = os.path.join(out_dir, '01_main.bmp')
     if c2_screenshot(hwnd, shot1):
         frames.append(shot1)
@@ -424,124 +544,121 @@ def run_poc(exe_path):
     else:
         log.error('Failed to screenshot main window')
 
-    # Discover controls and menus
     children = c2_enum_children(hwnd)
     menus = c2_enum_menus(hwnd)
     log.info('ENUMCHILDREN: %d controls', len(children))
-    for c in children:
-        log.info('  hwnd=%d class=%s text="%s"', c['hwnd'], c['class'],
-                 c['text'][:40])
+    for ch in children:
+        log.info('  hwnd=%d class=%s text="%s"',
+                 ch['hwnd'], ch['class'], ch['text'][:40])
     log.info('ENUMMENUS: %d items', len(menus))
     for m in menus:
         log.info('  id=%d %s > %s', m['id'], m['top'], m['sub'])
 
-    if not nav_graph:
-        log.info('No nav graph found')
-        nav_graph = {'navigation': [], 'dangerous': [], 'menus': [],
-                     'clickable': [], 'forms': []}
-
-    # Build danger set
     danger_names = {d['control'].lower() for d in nav_graph['dangerous']}
-    log.info('Dangerous controls to avoid: %s', danger_names)
+    log.info('Dangerous controls: %s', danger_names)
 
-    # Build menu name -> id mapping
+    # F15: Build menu_map AND use it for safe ID computation
     menu_map = {}
     for m in menus:
         if m['id'] > 0:
-            # Key by submenu text, lowercased
             clean = m['sub'].strip().lower()
             menu_map[clean] = m['id']
 
+    # F1: Compute safe menu IDs from nav graph + menu_map
+    safe_menu_ids = set()
+    if menu_map and has_nav_graph:
+        nav_menu_names = set()
+        for me in nav_graph.get('menus', []):
+            mn = me.get('name', '').lower().strip().replace('&', '')
+            if mn:
+                nav_menu_names.add(mn)
+        for name, mid in menu_map.items():
+            if name in danger_names:
+                continue
+            if any(w in name for w in DANGER_WORDS):
+                continue
+            if nav_menu_names:
+                if name in nav_menu_names:
+                    safe_menu_ids.add(mid)
+            else:
+                safe_menu_ids.add(mid)
+        if safe_menu_ids:
+            log.info('Safe menu IDs: %s', sorted(safe_menu_ids))
+
     step = 2
 
-    # Phase 1: Brute-force WM_COMMAND menu scan
-    # VB6 menus are internal (ENUMMENUS returns 0 for most apps under Wine).
-    # Keyboard walk (F10) is unreliable. WM_COMMAND brute-force works.
+    # Phase 1: WM_COMMAND scan
+    # F7: Only run when nav graph exists for safety filtering
     nav_menu_count = len(nav_graph.get('menus', []))
     has_menus = nav_menu_count > 0 or menus or ec_menu_count > 0
-    if has_menus:
+    if has_menus and has_nav_graph:
         max_id = max(nav_menu_count * 3, ec_menu_count * 2, 50)
-        log.info('--- Phase 1: WM_COMMAND brute-force (max_id=%d) ---', max_id)
-        step, hwnd = _bruteforce_wmcommand(
+        log.info('--- Phase 1: WM_COMMAND scan (max_id=%d) ---', max_id)
+        step, hwnd, relaunched_proc = _bruteforce_wmcommand(
             hwnd, step, out_dir, frames, nav_graph,
             max_id=max_id, exe_path=exe_path,
-            dangerous_captions=dangerous_captions)
+            dangerous_captions=dangerous_captions,
+            safe_menu_ids=safe_menu_ids if safe_menu_ids else None)
+        if relaunched_proc is not None:
+            proc = relaunched_proc
+    elif has_menus:
+        log.info('Skipping Phase 1: no nav graph for safety filtering')
 
-    # Check main window still alive before continuing
     if not hwnd or hwnd not in find_all_vb_windows():
-        log.warning('Main window died during Phase 1, skipping remaining phases')
+        log.warning('Main window lost during Phase 1')
         _assemble_gif(exe_name, frames, out_dir)
         kill_all_proggies()
         return
 
-    # Re-enumerate children (hwnd may have changed after relaunch)
     children = c2_enum_children(hwnd)
 
-    # Phase 2: Tab cycling — SSTabControl, SysTabControl32, etc.
-    tab_classes = {'sstabctlwndclass', 'systabcontrol32', 'thunderrt6tabstrip'}
-    tab_controls = [c for c in children
-                    if c['class'].lower() in tab_classes]
+    # Phase 2: Tab cycling
+    tab_classes = {'sstabctlwndclass', 'systabcontrol32',
+                   'thunderrt6tabstrip'}
+    tab_controls = [ch for ch in children
+                    if ch['class'].lower() in tab_classes]
     if tab_controls:
-        log.info('--- Phase 2: tab cycling (%d tab controls) ---',
-                 len(tab_controls))
+        log.info('--- Phase 2: tab cycling (%d tabs) ---', len(tab_controls))
         step = _cycle_tabs(hwnd, step, out_dir, frames, max_tabs=6)
 
-    # Phase 3: Click ONLY buttons that the nav graph says open another form.
-    # Match by: caption text == nav control name (case-insensitive),
-    # or nav control name starts with "Command" and we try all CommandButtons
-    # that aren't dangerous.
-    nav_names = set()  # lowercase control names that navigate to forms
-    nav_command_targets = {}  # "Command2" -> target_form (can't match by caption)
+    # Phase 3: F2 - click ONLY positively matched nav buttons
+    nav_names = set()
     for nav in nav_graph.get('navigation', []):
         ctrl = nav['from_control']
         if nav['is_menu']:
-            continue  # menus handled in Phase 1
+            continue
         if ctrl.lower() in danger_names:
             continue
         nav_names.add(ctrl.lower())
-        if ctrl.lower().startswith('command'):
-            nav_command_targets[ctrl.lower()] = nav['to_form']
 
-    clickable_children = [c for c in children
-                          if ('CommandButton' in c['class'] or
-                              'PictureBox' in c['class']) and
-                          c['hwnd'] != hwnd]
-    danger_captions = {'exit', 'quit', 'close', 'end', 'x', 'cancel',
-                       'start', 'stop', 'connect', 'send', 'crack',
-                       'punt', 'flood', 'attack', 'run', 'go', 'begin'}
+    clickable_children = [ch for ch in children
+                          if ('CommandButton' in ch['class'] or
+                              'PictureBox' in ch['class']) and
+                          ch['hwnd'] != hwnd]
 
-    # Match children to nav graph entries by caption
     nav_buttons = []
     for child in clickable_children:
         caption = child['text'].lower().strip().replace('&', '')
-        if caption in danger_captions:
+        if any(w in caption for w in DANGER_WORDS):
             continue
         if caption in nav_names:
             nav_buttons.append(child)
-            log.info('  Nav match by caption: "%s"', child['text'])
+            log.info('  Nav match: "%s"', child['text'])
 
-    # If nav graph has generic "Command*" entries and we have unmatched buttons,
-    # try them if they're not dangerous. Also try PictureBoxes when nav graph
-    # has navigation but no caption matches (proggies use images as buttons).
+    # F2: No fallback -- do not click unmatched controls
     if nav_names and not nav_buttons:
-        for child in clickable_children:
-            caption = child['text'].lower().strip().replace('&', '')
-            if caption and caption in danger_captions:
-                continue
-            nav_buttons.append(child)
+        log.info('  No caption matches for %s, skipping Phase 3', nav_names)
 
     if nav_buttons:
-        log.info('--- Phase 3: clicking %d nav-graph buttons ---',
-                 len(nav_buttons))
+        log.info('--- Phase 3: clicking %d nav buttons ---', len(nav_buttons))
 
     for child in nav_buttons[:6]:
-        log.info('  Clicking nav button: hwnd=%d text="%s"',
-                 child['hwnd'], child['text'])
+        log.info('  Click: hwnd=%d text="%s"', child['hwnd'], child['text'])
         _xdotool_click_window(child['hwnd'])
-        time.sleep(1.5)
-        step = _screenshot_new_state(hwnd, step, child['text'], out_dir, frames)
+        time.sleep(TIMING['click_delay'])
+        step = _screenshot_new_state(hwnd, step, child['text'],
+                                     out_dir, frames)
 
-    # Clean up
     log.info('Killing app...')
     proc.kill()
     try:
@@ -549,35 +666,43 @@ def run_poc(exe_path):
     except subprocess.TimeoutExpired:
         pass
     kill_all_proggies()
-
-    # Assemble GIF
     _assemble_gif(exe_name, frames, out_dir)
 
 
 def _xdotool_click_window(hwnd):
-    """Click the center of a Win32 child control via xdotool.
-
-    Uses GETRECT to get the control's screen coordinates (Wine virtual screen),
-    then xdotool to click at those coordinates on the X11 display.
-    Wine maps its virtual screen 1:1 to the X11 display.
-    """
+    """Click center of a Win32 child control via coordinate-based click.
+    F4: Uses GETRECT as primary, xdotool geometry as fallback."""
     r = c2('GETRECT %d' % hwnd)
-    if not r:
-        log.warning('GETRECT failed for hwnd=%d', hwnd)
-        return
-    try:
-        parts = r.strip().split()
-        x, y, w, h = int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3])
+    if r:
+        try:
+            parts = r.strip().split()
+            if len(parts) >= 4:
+                x, y, w, h = (int(parts[0]), int(parts[1]),
+                              int(parts[2]), int(parts[3]))
+                if w > 0 and h > 0:
+                    cx = x + w // 2
+                    cy = y + h // 2
+                    log.info('  GETRECT: %d,%d %dx%d -> click %d,%d',
+                             x, y, w, h, cx, cy)
+                    subprocess.run(
+                        ['xdotool', 'mousemove', '--sync',
+                         str(cx), str(cy), 'click', '1'],
+                        env={'DISPLAY': DISPLAY}, timeout=5)
+                    return
+        except (ValueError, IndexError) as e:
+            log.warning('GETRECT parse error for hwnd=%d: %s', hwnd, e)
+    geom = _get_window_geometry(hwnd)
+    if geom:
+        x, y, w, h = geom
         cx = x + w // 2
         cy = y + h // 2
-        log.info('  GETRECT: %d,%d %dx%d -> click at %d,%d', x, y, w, h, cx, cy)
+        log.info('  xdotool geom fallback: click %d,%d', cx, cy)
         subprocess.run(
             ['xdotool', 'mousemove', '--sync', str(cx), str(cy),
              'click', '1'],
-            env={'DISPLAY': DISPLAY}, timeout=5
-        )
-    except Exception as e:
-        log.warning('click failed: %s', e)
+            env={'DISPLAY': DISPLAY}, timeout=5)
+    else:
+        log.warning('No geometry for hwnd=%d, cannot click', hwnd)
 
 
 def _find_x11_window(hwnd):
@@ -598,79 +723,89 @@ def _find_x11_window(hwnd):
 
 
 def _xkey(hwnd, key):
-    """Send a key via xdotool. Finds X11 window by title, falls back to focus."""
-    xid = _find_x11_window(hwnd)
-    if xid:
+    """Send a key to a specific window via xdotool.
+    F6: Does NOT fall back to global keystrokes -- drops instead."""
+    title = get_window_title(hwnd)
+    if not title:
+        log.warning('_xkey: no title for hwnd=%d, dropping key "%s"',
+                    hwnd, key)
+        return
+    try:
+        r = subprocess.run(
+            ['xdotool', 'search', '--name', title],
+            env={'DISPLAY': DISPLAY}, timeout=5,
+            capture_output=True, text=True)
+        xids = [x.strip() for x in r.stdout.strip().split('\n')
+                if x.strip()]
+    except Exception as e:
+        log.warning('_xkey: xdotool search failed: %s', e)
+        return
+    if not xids:
+        log.warning('_xkey: no X11 window for "%s" (hwnd=%d), '
+                    'dropping key "%s"', title, hwnd, key)
+        return
+    xid = xids[0]
+    try:
         subprocess.run(
-            ['xdotool', 'windowactivate', str(xid)],
+            ['xdotool', 'windowactivate', xid],
             env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
         time.sleep(0.1)
         subprocess.run(
-            ['xdotool', 'key', '--window', str(xid), key],
+            ['xdotool', 'key', '--window', xid, key],
             env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
-    else:
-        subprocess.run(
-            ['xdotool', 'key', key],
-            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
+    except Exception as e:
+        log.warning('_xkey: send failed for hwnd=%d: %s', hwnd, e)
 
 
 def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
-                          max_id=200, exe_path=None, dangerous_captions=None):
-    """Brute-force WM_COMMAND IDs 1..max_id. Screenshot any new windows.
-
-    VB6 menu item IDs are assigned sequentially by MSVBVM60 at runtime.
-    GetMenu() returns 0 cross-process under Wine, but WM_COMMAND still works
-    because the VB6 runtime dispatches it internally.
-
-    Returns (next_step, main_hwnd) — hwnd may change if app was relaunched.
-    """
-    # Build danger words from nav graph
-    danger_words = {'exit', 'quit', 'close', 'end', 'unload', 'terminate',
-                    'shutdown', 'kill'}
+                          max_id=200, exe_path=None, dangerous_captions=None,
+                          safe_menu_ids=None):
+    """Invoke WM_COMMAND IDs to discover menu-triggered windows.
+    F1: When safe_menu_ids is provided, only those IDs are invoked.
+    Returns (next_step, main_hwnd, relaunched_proc)."""
+    danger_words = set(DANGER_WORDS)
     if nav_graph:
         for d in nav_graph.get('dangerous', []):
             ctrl = d['control'].lower()
             if ctrl.startswith('mnu'):
                 danger_words.add(ctrl[3:].lower())
             danger_words.add(ctrl.lower())
-
-    # Snapshot existing windows before we start
     baseline_vb = set(find_all_vb_windows())
     baseline_dlg = set(c2_find_all('#32770'))
-
-    # Determine main window's class for faster per-iteration checks
     main_cls_r = c2('GETCLASS %d' % main_hwnd)
     main_cls = main_cls_r.strip() if main_cls_r else VB_CLASSES[0]
-
-    discovered = []  # list of (id, title, class)
+    discovered = []
     consecutive_noop = 0
-    seen_hwnds = set(baseline_vb | baseline_dlg)  # track all known windows
-    skip_ids = set()  # IDs that killed the app
-    max_deaths = 3  # don't relaunch forever
-
-    for cmd_id in range(1, max_id + 1):
+    seen_hwnds = set(baseline_vb | baseline_dlg)
+    skip_ids = set()
+    max_deaths = 3
+    relaunched_proc = None
+    # F1: Positive-match mode when safe IDs available
+    if safe_menu_ids:
+        ids_to_try = sorted(safe_menu_ids)
+        log.info('Positive-match mode: %d safe IDs: %s',
+                 len(ids_to_try), ids_to_try)
+    else:
+        ids_to_try = list(range(1, max_id + 1))
+        log.warning('No safe menu IDs - danger-filtered scan (1..%d)', max_id)
+    for cmd_id in ids_to_try:
         if cmd_id in skip_ids:
             continue
-
-        # Send WM_COMMAND (0x111 = 273)
         c2_wmcommand(main_hwnd, cmd_id)
-        time.sleep(0.6)
-
-        # Check main window alive (fast: single GETCLASS on known hwnd)
+        time.sleep(TIMING['wmcommand_delay'])
+        # F9: Check if main window survived
         alive_r = c2('GETCLASS %d' % main_hwnd, timeout=3)
         if not alive_r or not alive_r.strip() or alive_r.strip() == '0':
             skip_ids.add(cmd_id)
-            log.warning('Main window died at WM_COMMAND id=%d, relaunching',
-                        cmd_id)
+            log.warning('Main window died at WM_COMMAND id=%d', cmd_id)
             if not exe_path or len(skip_ids) > max_deaths:
-                return step, 0
-            stage_and_launch(exe_path)
+                return step, 0, relaunched_proc
+            relaunched_proc = stage_and_launch(exe_path)
             main_hwnd = find_vb_window(timeout=10)
             if not main_hwnd:
                 log.error('Failed to relaunch after id=%d', cmd_id)
-                return step, 0
-            time.sleep(1.5)
-            # Reset baselines for new process
+                return step, 0, relaunched_proc
+            time.sleep(TIMING['render_delay'])
             baseline_vb = set(find_all_vb_windows())
             baseline_dlg = set(c2_find_all('#32770'))
             seen_hwnds = set(baseline_vb | baseline_dlg)
@@ -678,8 +813,6 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
             main_cls = main_cls_r.strip() if main_cls_r else VB_CLASSES[0]
             consecutive_noop = 0
             continue
-
-        # Check for new windows: main class + #32770 (covers most cases)
         new_hwnd = None
         for h in c2_find_all(main_cls):
             if h not in seen_hwnds:
@@ -690,33 +823,26 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
                 if h not in seen_hwnds:
                     new_hwnd = h
                     break
-
         if not new_hwnd:
             consecutive_noop += 1
             if consecutive_noop > 30:
                 log.info('30 consecutive no-ops after id=%d, stopping', cmd_id)
                 break
             continue
-
         consecutive_noop = 0
         seen_hwnds.add(new_hwnd)
         title = get_window_title(new_hwnd)
         cls_r = c2('GETCLASS %d' % new_hwnd)
         cls = cls_r.strip() if cls_r else '?'
-
-        # Read dialog body text for #32770 (InputBox/MsgBox static labels)
         body_text = ''
         if cls == '#32770':
-            children = c2_enum_children(new_hwnd)
+            ch_list = c2_enum_children(new_hwnd)
             body_text = ' '.join(
-                c['text'] for c in children
-                if c['class'] == 'Static' and c['text'].strip()
+                ch['text'] for ch in ch_list
+                if ch['class'] == 'Static' and ch['text'].strip()
             ).lower()
-
         log.info('  id=%d -> new window: "%s" (%s) body="%s"',
                  cmd_id, title, cls, body_text[:60])
-
-        # Check if this looks dangerous by title or body text
         title_lower = title.lower() if title else ''
         is_dangerous = any(w in title_lower for w in danger_words)
         if not is_dangerous and dangerous_captions and body_text:
@@ -724,212 +850,55 @@ def _bruteforce_wmcommand(main_hwnd, step, out_dir, frames, nav_graph,
         if is_dangerous:
             log.info('  id=%d matches danger filter, dismissing', cmd_id)
         else:
-            # Screenshot it
             safe = re.sub(r'[^\w\-]', '_', title or 'cmd_%d' % cmd_id)[:30]
-            shot_path = os.path.join(out_dir, '%02d_menu_%s.bmp' % (step, safe))
+            shot_path = os.path.join(out_dir,
+                                     '%02d_menu_%s.bmp' % (step, safe))
             if c2_screenshot(new_hwnd, shot_path):
                 if not frames or not _frames_identical(frames[-1], shot_path):
                     frames.append(shot_path)
-                    log.info('Frame %d: WM_COMMAND id=%d -> "%s"', step, cmd_id, title)
+                    log.info('Frame %d: WM_COMMAND id=%d -> "%s"',
+                             step, cmd_id, title)
                     step += 1
                 else:
                     os.remove(shot_path)
-
         discovered.append((cmd_id, title, cls))
-
-        # Dismiss: blast all methods without checking (fast, no c2 round-trips).
-        # Sending to a dead/closed window is harmless.
         if cls == '#32770':
-            c2('POSTMSG %d 273 2 0' % new_hwnd, timeout=3)  # WM_COMMAND IDCANCEL
+            c2('POSTMSG %d 273 2 0' % new_hwnd, timeout=3)
             time.sleep(0.3)
-        c2('POSTMSG %d 16 0 0' % new_hwnd, timeout=3)  # WM_CLOSE
+        c2('POSTMSG %d 16 0 0' % new_hwnd, timeout=3)
         time.sleep(0.3)
         _xkey(new_hwnd, 'Escape')
         time.sleep(0.3)
-
     if discovered:
         log.info('WM_COMMAND scan found %d windows:', len(discovered))
-        for cid, t, c in discovered:
-            log.info('  id=%d "%s" (%s)', cid, t, c)
-        # Save ID→caption mapping as metadata
-        meta = {str(cid): {'title': t, 'class': c} for cid, t, c in discovered}
+        for cid, ttl, clz in discovered:
+            log.info('  id=%d "%s" (%s)', cid, ttl, clz)
+        meta = {str(cid): {'title': ttl, 'class': clz}
+                for cid, ttl, clz in discovered}
         if skip_ids:
             for sid in skip_ids:
                 meta[str(sid)] = {'title': '(killed app)', 'class': 'DEAD'}
         meta_path = os.path.join(out_dir, 'wmcommand_map.json')
-        with open(meta_path, 'w') as f:
-            json.dump(meta, f, indent=2)
+        with open(meta_path, 'w') as mf:
+            json.dump(meta, mf, indent=2)
         log.info('Saved %s', meta_path)
-
-    return step, main_hwnd
+    return step, main_hwnd, relaunched_proc
 
 
 def _walk_menus_keyboard(main_hwnd, step, out_dir, frames, danger_words,
                          max_top=6, max_sub=10):
-    """Walk VB6 menus via keyboard: F10, arrows, Enter. Screenshot new forms.
-
-    NOTE: This is unreliable under Wine for VB6 apps. Prefer
-    _bruteforce_wmcommand() instead. Kept as fallback.
-
-    Returns next step number.
-    """
-    # Activate and focus main window via X11
-    xid = _find_x11_window(main_hwnd)
-    if xid:
-        subprocess.run(
-            ['xdotool', 'windowactivate', str(xid)],
-            env={'DISPLAY': DISPLAY}, timeout=3, capture_output=True)
-    time.sleep(0.3)
-
-    # F10 activates the menu bar in VB6 apps
-    _xkey(main_hwnd, 'F10')
-    time.sleep(0.5)
-
-    # Screenshot with menu bar active (full window, not client, to show menu)
-    shot_path = os.path.join(out_dir, '%02d_menubar.bmp' % step)
-    if c2_screenshot(main_hwnd, shot_path, client=False):
-        if not frames or not _frames_identical(frames[-1], shot_path):
-            frames.append(shot_path)
-            log.info('Frame %d: menu bar activated', step)
-            step += 1
-        else:
-            os.remove(shot_path)
-
-    # Escape back, then walk each top-level menu
-    _xkey(main_hwnd, 'Escape')
-    time.sleep(0.2)
-
-    for top_idx in range(max_top):
-        # Activate menu bar
-        _xkey(main_hwnd, 'F10')
-        time.sleep(0.3)
-
-        # Navigate to the Nth top-level menu
-        for _ in range(top_idx):
-            _xkey(main_hwnd, 'Right')
-            time.sleep(0.15)
-
-        # Open this top-level menu (Down arrow)
-        _xkey(main_hwnd, 'Down')
-        time.sleep(0.3)
-
-        # Check if a popup appeared (VB6 menus create popup windows)
-        # If no popup, we've gone past the last menu
-        popup = c2_find('#32768')  # Win32 popup menu class
-        if not popup:
-            # Also check for VB6 internal popup (sometimes no #32768)
-            # Try screenshotting — if identical to previous, no menu opened
-            _xkey(main_hwnd, 'Escape')
-            time.sleep(0.2)
-            _xkey(main_hwnd, 'Escape')
-            time.sleep(0.2)
-            log.info('  Top menu %d: no popup, stopping', top_idx)
-            break
-
-        log.info('  Top menu %d: popup found', top_idx)
-
-        # Walk submenu items
-        for sub_idx in range(max_sub):
-            # Get the menu item text via GETTEXT on the popup
-            # (won't work for VB6 internal menus, but try)
-
-            # Press Enter to click the current item
-            _xkey(main_hwnd, 'Return')
-            time.sleep(1.0)
-
-            # Check if a new window appeared
-            new_wins = find_all_vb_windows()
-            dlg = c2_find('#32770')
-            new_hwnd = None
-            for h in new_wins:
-                if h != main_hwnd:
-                    new_hwnd = h
-                    break
-            if not new_hwnd and dlg:
-                new_hwnd = dlg
-
-            if new_hwnd:
-                new_title = get_window_title(new_hwnd)
-                new_cls = (c2('GETCLASS %d' % new_hwnd) or '').strip()
-                # Only screenshot real VB6 forms, not #32770 dialogs
-                if new_cls != '#32770':
-                    safe = re.sub(r'[^\w\-]', '_', new_title or 'menu_%d_%d' % (top_idx, sub_idx))[:30]
-                    shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
-                    if c2_screenshot(new_hwnd, shot_path):
-                        if not frames or not _frames_identical(frames[-1], shot_path):
-                            frames.append(shot_path)
-                            log.info('Frame %d: menu %d.%d -> "%s"',
-                                     step, top_idx, sub_idx, new_title)
-                            step += 1
-                        else:
-                            os.remove(shot_path)
-
-                # Dismiss the new window
-                _xkey(new_hwnd, 'Escape')
-                time.sleep(0.3)
-                still = find_all_vb_windows()
-                if new_hwnd in still:
-                    _xkey(new_hwnd, 'alt+F4')
-                    time.sleep(0.3)
-
-                # Check main window still alive
-                main_alive = find_all_vb_windows()
-                if main_hwnd not in main_alive:
-                    log.warning('Main window died after menu %d.%d', top_idx, sub_idx)
-                    return step
-
-                # Re-open the menu to continue walking
-                _xkey(main_hwnd, 'F10')
-                time.sleep(0.3)
-                for _ in range(top_idx):
-                    _xkey(main_hwnd, 'Right')
-                    time.sleep(0.15)
-                _xkey(main_hwnd, 'Down')
-                time.sleep(0.3)
-                # Navigate back to where we were + 1
-                for _ in range(sub_idx + 1):
-                    _xkey(main_hwnd, 'Down')
-                    time.sleep(0.15)
-            else:
-                # No new window — might be a toggle, separator, or submenu
-                # Check if we're still in a menu
-                popup2 = c2_find('#32768')
-                if not popup2:
-                    # Menu closed — item was a leaf action (no dialog)
-                    # Re-open to continue
-                    _xkey(main_hwnd, 'F10')
-                    time.sleep(0.3)
-                    for _ in range(top_idx):
-                        _xkey(main_hwnd, 'Right')
-                        time.sleep(0.15)
-                    _xkey(main_hwnd, 'Down')
-                    time.sleep(0.3)
-                    for _ in range(sub_idx + 1):
-                        _xkey(main_hwnd, 'Down')
-                        time.sleep(0.15)
-                    popup3 = c2_find('#32768')
-                    if not popup3:
-                        log.info('  Menu %d: exhausted at item %d', top_idx, sub_idx)
-                        break
-                else:
-                    # Still in menu — move down to next item
-                    _xkey(main_hwnd, 'Down')
-                    time.sleep(0.15)
-
-        # Close any remaining menu
-        _xkey(main_hwnd, 'Escape')
-        time.sleep(0.2)
-        _xkey(main_hwnd, 'Escape')
-        time.sleep(0.2)
-
-    return step
+    """DEPRECATED: Unreliable under Wine for VB6 apps.
+    F17: Use _bruteforce_wmcommand() instead."""
+    raise NotImplementedError(
+        '_walk_menus_keyboard is deprecated - use _bruteforce_wmcommand')
 
 
 def _cycle_tabs(main_hwnd, step, out_dir, frames, max_tabs=6):
-    """Cycle through tab pages via Ctrl+PageDown, screenshot each."""
+    """Cycle through tab pages via Ctrl+PageDown, screenshot each.
+    F20: Uses TIMING config instead of hardcoded delays."""
     for i in range(max_tabs):
-        _xkey(main_hwnd, 'ctrl+Next')  # Ctrl+PageDown
-        time.sleep(0.8)
+        _xkey(main_hwnd, 'ctrl+Next')
+        time.sleep(TIMING['tab_delay'])
         safe = 'tab_%d' % (i + 1)
         shot_path = os.path.join(out_dir, '%02d_%s.bmp' % (step, safe))
         if c2_screenshot(main_hwnd, shot_path):
@@ -939,7 +908,7 @@ def _cycle_tabs(main_hwnd, step, out_dir, frames, max_tabs=6):
                 step += 1
             else:
                 os.remove(shot_path)
-                log.info('Tab %d: duplicate, stopping tab cycle', i + 1)
+                log.info('Tab %d: duplicate, stopping', i + 1)
                 break
     return step
 
@@ -993,23 +962,21 @@ def _screenshot_new_state(main_hwnd, step, label, out_dir, frames):
 
 
 def _assemble_gif(exe_name, frames, out_dir):
-    """Assemble BMP frames into animated GIF."""
+    """Assemble BMP frames into animated GIF.
+    F18: Scale to fit instead of silent crop for size normalization."""
     if len(frames) < 1:
         log.info('No frames to assemble')
         return
-
     try:
         from PIL import Image
     except ImportError:
-        log.error('Pillow not installed, skipping GIF assembly')
+        log.error('Pillow not installed, skipping GIF')
         return
-
     gif_path = os.path.join(out_dir, exe_name + '.gif')
     pil_frames = []
     for f in frames:
         try:
             img = Image.open(f).convert('RGB')
-            # Upscale small images
             if img.width < 400:
                 scale = max(2, 400 // img.width)
                 img = img.resize((img.width * scale, img.height * scale),
@@ -1017,30 +984,29 @@ def _assemble_gif(exe_name, frames, out_dir):
             pil_frames.append(img)
         except Exception as e:
             log.warning('Cannot load %s: %s', f, e)
-
     if not pil_frames:
         return
-
-    # Normalize all frames to same size as first
+    # F18: Normalize to first frame size via scale-to-fit
     w, h = pil_frames[0].size
     normalized = []
     for img in pil_frames:
         if img.size != (w, h):
-            # Center on gray background
+            sf = min(w / img.width, h / img.height)
+            nw = int(img.width * sf)
+            nh = int(img.height * sf)
+            resample = Image.LANCZOS if hasattr(Image, 'LANCZOS') else Image.BICUBIC
+            img = img.resize((nw, nh), resample)
             bg = Image.new('RGB', (w, h), (192, 192, 192))
             ox = (w - img.width) // 2
             oy = (h - img.height) // 2
-            bg.paste(img, (max(0, ox), max(0, oy)))
+            bg.paste(img, (ox, oy))
             normalized.append(bg)
         else:
             normalized.append(img)
-
-    # Convert to palette with full 256 colors to avoid aggressive quantization
     palettized = [img.quantize(colors=256, method=2) for img in normalized]
     palettized[0].save(
         gif_path, save_all=True, append_images=palettized[1:],
-        duration=2000, loop=0
-    )
+        duration=2000, loop=0)
     log.info('GIF: %s (%d frames, %d KB)',
              gif_path, len(normalized),
              os.path.getsize(gif_path) // 1024)

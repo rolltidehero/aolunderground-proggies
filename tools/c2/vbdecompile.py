@@ -17,7 +17,7 @@ def c2(cmd, timeout=10):
     except: pass
     with open(CMD_FILE, 'w') as f:
         f.write(cmd + '\n')
-    os.chown(CMD_FILE, 994, 1005)
+    shutil.chown(CMD_FILE, user='wineuser', group='nonet')
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -140,8 +140,13 @@ def main():
 
     # Save all in one module (WM_COMMAND ID=9)
     print('Saving...')
-    try: os.remove(save_tmp)
-    except: pass
+    if os.path.isfile(save_tmp):
+        os.remove(save_tmp)
+    if os.path.isfile(save_tmp):
+        print(f'ERROR: Cannot remove stale output file {save_tmp}')
+        sys.exit(1)
+
+    save_start = time.time()
 
     c2(f'WMCOMMAND {hmain} 9')
     sdlg = wait_window('#32770', 'Save All To One BAS File')
@@ -158,10 +163,10 @@ def main():
     time.sleep(0.5)
     c2(f'SENDMSG {sdlg} 273 1 0')
 
-    # Wait for output file
+    # Wait for output file with freshness check
     deadline = time.time() + 15
     while time.time() < deadline:
-        if os.path.isfile(save_tmp):
+        if os.path.isfile(save_tmp) and os.path.getmtime(save_tmp) >= save_start:
             break
         time.sleep(0.5)
 
@@ -169,7 +174,7 @@ def main():
     dismiss_dialogs()
 
     # Copy output
-    if os.path.isfile(save_tmp):
+    if os.path.isfile(save_tmp) and os.path.getmtime(save_tmp) >= save_start:
         os.makedirs(os.path.dirname(output_bas) or '.', exist_ok=True)
         subprocess.run(['sudo', 'cp', save_tmp, output_bas], check=True)
         size = os.path.getsize(output_bas)

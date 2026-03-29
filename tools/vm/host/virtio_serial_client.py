@@ -53,19 +53,22 @@ class VirtioSerialClient:
     def wait_for_agent(self, timeout=180):
         deadline = time.time() + timeout
         while time.time() < deadline:
+            connected = False
             try:
                 self.connect()
                 r = self.ping()
                 if r.get("status") == "pong":
                     log.info("Agent online")
+                    connected = True
                     return True
             except Exception:
                 pass
             finally:
-                if self.sock:
-                    self.sock.close()
-                    self.sock = None
-                    self._buf = b""
+                if not connected:
+                    if self.sock:
+                        self.sock.close()
+                        self.sock = None
+                        self._buf = b""
             time.sleep(2)
         raise TimeoutError(f"Agent not online after {timeout}s")
 

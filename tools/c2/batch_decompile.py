@@ -10,7 +10,7 @@ checkpoint file so it can be stopped and resumed.
 
 Auto-recovers: if Xvfb, VB Decompiler, or C2 die, spins them back up.
 """
-import sys, os, time, json, subprocess, argparse, logging, re
+import sys, os, time, json, subprocess, argparse, logging, re, hashlib, struct
 from datetime import datetime
 
 REPO_ROOT = '/home/braker/git/aolunderground-proggies'
@@ -29,7 +29,7 @@ MAX_RECOVERY_ATTEMPTS = 3
 
 INSTALLER_NAME_RE = re.compile(
     r'(^setup\.exe$|^install\.exe$|setup\.exe$|install\.exe$'
-    r'|installer\.exe$|[\b_ -]setup\.exe$)',
+    r'|installer\.exe$|(?:^|[_ -])setup\.exe$)',
     re.IGNORECASE)
 
 INSTALLER_SIGS = [
@@ -38,6 +38,8 @@ INSTALLER_SIGS = [
 ]
 
 logger = logging.getLogger('batch_decompile')
+
+_last_output_hash = None
 
 def setup_logging():
     logger.setLevel(logging.DEBUG)
@@ -75,7 +77,7 @@ def ensure_xvfb():
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      stdin=subprocess.DEVNULL)
     time.sleep(2)
-    return bool(_pgrep('"Xvfb.*:99"'))
+    return bool(_pgrep('Xvfb.*:99'))
 
 def ensure_metacity():
     """Make sure metacity is running on :99."""
@@ -174,8 +176,12 @@ def ensure_environment():
 # ── C2 comms ──
 
 def c2(cmd, timeout=10):
-    try: os.remove(RES_FILE)
-    except: pass
+    for _drain in range(5):
+        try:
+            os.remove(RES_FILE)
+            time.sleep(0.1)
+        except FileNotFoundError:
+            break
     with open(CMD_FILE, 'w') as f:
         f.write(cmd + '\n')
     os.chown(CMD_FILE, 994, 1005)
@@ -187,6 +193,11 @@ def c2(cmd, timeout=10):
                 return f.read().strip().replace('\r', '')
         except FileNotFoundError:
             pass
+    time.sleep(0.3)
+    try:
+        os.remove(RES_FILE)
+    except FileNotFoundError:
+        pass
     return None
 
 def c2_healthy():
@@ -243,6 +254,19 @@ def is_installer(exe_path):
         pass
     return None
 
+
+def is_16bit_ne(exe_path):
+    try:
+        with open(exe_path, 'rb') as f:
+            if f.read(2) != b'MZ': return False
+            f.seek(0x3C)
+            pe_off = struct.unpack('<I', f.read(4))[0]
+            f.seek(pe_off)
+            return f.read(2) == b'NE'
+    except Exception:
+        return False
+
+
 # ── checkpoint ──
 
 def load_checkpoint():
@@ -253,8 +277,19 @@ def load_checkpoint():
 
 def save_checkpoint(ckpt):
     ckpt['updated'] = datetime.now().isoformat()
-    with open(CHECKPOINT_FILE, 'w') as f:
-        json.dump(ckpt, f, indent=2)
+    import tempfile
+    dir_name = os.path.dirname(CHECKPOINT_FILE) or '.'
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(ckpt, f, indent=2)
+        os.replace(tmp_path, CHECKPOINT_FILE)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 # ── decompile one file ──
 
@@ -339,6 +374,18 @@ def decompile_one(exe_path, output_path, hmain):
     if size == 0:
         os.remove(SAVE_TMP)
         return False, 'Output file is empty'
+
+    global _last_output_hash
+    try:
+        with open(SAVE_TMP, 'rb') as fh:
+            content_hash = hashlib.md5(fh.read()).hexdigest()
+        if _last_output_hash is not None and content_hash == _last_output_hash:
+            logger.warning(f'Stale output detected: hash {content_hash} matches previous')
+            os.remove(SAVE_TMP)
+            return False, 'Stale output: identical to previous decompilation'
+        _last_output_hash = content_hash
+    except Exception as e:
+        logger.debug(f'Output hash check failed: {e}')
 
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     subprocess.run(['sudo', 'cp', SAVE_TMP, output_path], check=True,
@@ -509,6 +556,15 @@ def main():
             }
             save_checkpoint(ckpt)
             logger.info(f'  SKIP (permission)')
+            continue
+
+        if is_16bit_ne(exe_path):
+            ckpt['files'][rel] = {
+                'status': 'skipped', 'detail': '16-bit NE executable',
+                'timestamp': datetime.now().isoformat()
+            }
+            save_checkpoint(ckpt)
+            logger.info(f'  SKIP (16-bit NE)')
             continue
 
         inst = is_installer(exe_path)

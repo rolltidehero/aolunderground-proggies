@@ -11,7 +11,7 @@ Steps:
     4. Update proggie_db.sqlite
     5. Regenerate HTML analysis page
 """
-import argparse, json, logging, os, re, sqlite3, subprocess, sys, time
+import argparse, json, logging, os, re, shutil, sqlite3, subprocess, sys, time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -22,6 +22,8 @@ DB_PATH = REPO / 'proggie_db.sqlite'
 sys.path.insert(0, str(REPO / 'tools' / 'vm' / 'host'))
 from virtio_serial_client import VirtioSerialClient
 from push_file import push_file
+
+sys.path.insert(0, str(REPO / 'tools'))
 
 log = logging.getLogger('single_decompile')
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -62,11 +64,12 @@ def decompile_exe(zip_stem, exe_name, exe_path):
         return None
 
     log.info(f'Decompile OK, {result.get("count", 0)} files. Pulling output...')
+    if local_out.exists():
+        shutil.rmtree(local_out)
     local_out.mkdir(parents=True, exist_ok=True)
     pull_decompiled(guest_out, local_out)
 
     # Post-pull validation
-    sys.path.insert(0, str(REPO / 'tools'))
     from validate_decompile import validate_one
     vr = validate_one(zip_stem)
     if vr['status'] == 'FAIL':
@@ -116,7 +119,7 @@ def pull_decompiled(guest_dir, local_dir):
         local_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             qga('guest-sync', {'id': 7777})
-            h = qga('guest-file-open', {'path': guest_path, 'mode': 'r'})['return']
+            h = qga('guest-file-open', {'path': guest_path, 'mode': 'rb'})['return']
             data = b''
             while True:
                 chunk = qga('guest-file-read', {'handle': h, 'count': 1048576})['return']
@@ -157,15 +160,19 @@ def build_metadata(zip_stem, exe_name):
             vbp = f
             break
     proj = {}
+    proj_all = {}
     if vbp and vbp.exists():
         txt = vbp.read_text(errors='replace')
         for line in txt.splitlines():
             if '=' in line:
                 k, _, v = line.partition('=')
-                proj[k.strip()] = v.strip()
+                k, v = k.strip(), v.strip()
+                proj[k] = v
+                proj_all.setdefault(k, []).append(v)
     meta['project'] = proj
-    meta['vb_version'] = _detect_vb(proj, base)
-    meta['base_module'] = _identify_base_module(proj, base)
+    meta['project_all'] = proj_all
+    meta['vb_version'] = _detect_vb(proj, base, proj_all)
+    meta['base_module'] = _identify_base_module(proj, base, proj_all)
     # Compile type from VBP if not already set from info.txt
     if meta['compile_type'] == 'unknown' and 'CompilationType' in proj:
         meta['compile_type'] = 'p-code' if proj['CompilationType'].strip() == '1' else 'native'
@@ -260,12 +267,13 @@ def build_metadata(zip_stem, exe_name):
     return meta
 
 
-def _detect_vb(proj, base):
+def _detect_vb(proj, base, proj_all=None):
     """Detect VB version from project references and runtime DLL."""
-    refs = proj.get('Reference', '')
-    if 'MSVBVM60' in str(base) or 'VB6' in refs:
+    refs_list = proj_all.get('Reference', []) if proj_all else [proj.get('Reference', '')]
+    all_refs = ' '.join(refs_list)
+    if 'MSVBVM60' in str(base) or 'VB6' in all_refs or 'MSVBVM60' in all_refs:
         return 'VB6'
-    if 'MSVBVM50' in str(base):
+    if 'MSVBVM50' in str(base) or 'MSVBVM50' in all_refs:
         return 'VB5'
     info = base / 'info.txt'
     if info.exists():
@@ -295,15 +303,19 @@ _KNOWN_MODULES = {
     'x2k':       {'name': 'x2k.bas',      'author': 'unknown', 'era': 'AOL 4.0-5.0'},
 }
 
-def _identify_base_module(proj, base):
+def _identify_base_module(proj, base, proj_all=None):
     """Identify the known AOL base module (.bas) used by this proggie."""
-    # Check VBP Module= lines for known names
-    for key in ('Module', 'module'):
-        val = proj.get(key, '')
-        # Module=dos32; dos32.bas  OR  Module=modFoo; modFoo.bas
-        mod_name = val.split(';')[0].strip().lower() if val else ''
-        if mod_name in _KNOWN_MODULES:
-            return _KNOWN_MODULES[mod_name]
+    if proj_all:
+        for val in proj_all.get('Module', []) + proj_all.get('module', []):
+            mod_name = val.split(';')[0].strip().lower() if val else ''
+            if mod_name in _KNOWN_MODULES:
+                return _KNOWN_MODULES[mod_name]
+    else:
+        for key in ('Module', 'module'):
+            val = proj.get(key, '')
+            mod_name = val.split(';')[0].strip().lower() if val else ''
+            if mod_name in _KNOWN_MODULES:
+                return _KNOWN_MODULES[mod_name]
 
     # Check .bas filenames directly
     bas_files = list(base.glob('*.bas'))
@@ -629,37 +641,50 @@ def _parse_frm(frm_path):
     lines = txt.split('\n')
     i = 0
     while i < len(lines):
-        m = re.match(r'\s*Begin\s+(?:VB\.)?(\w+)\s+(\w+)', lines[i])
+        m = re.match(r'\s*Begin\s+(?:\w+\.)?(\w+)\s+(\w+)', lines[i])
         if m:
             ctrl_type, ctrl_name = m.group(1), m.group(2)
             if ctrl_type == 'Form':
                 # Grab form dimensions and caption
                 j = i + 1
                 form_caption = ''
+                depth = 0
                 while j < len(lines):
                     pl = lines[j].strip()
-                    if pl.startswith('Begin'):
-                        break
-                    cw = re.match(r'ClientWidth\s*=\s*(\d+)', pl)
-                    ch = re.match(r'ClientHeight\s*=\s*(\d+)', pl)
-                    cc = re.match(r'Caption\s*=\s*"([^"]*)"', pl)
-                    if cw: form_width = int(cw.group(1))
-                    if ch: form_height = int(ch.group(1))
-                    if cc: form_caption = cc.group(1).strip()
+                    if pl.startswith('Begin') or pl.startswith('BeginProperty'):
+                        depth += 1
+                    elif pl == 'End' or pl.startswith('EndProperty'):
+                        if depth > 0:
+                            depth -= 1
+                        else:
+                            break
+                    elif depth == 0:
+                        cw = re.match(r'ClientWidth\s*=\s*(\d+)', pl)
+                        ch = re.match(r'ClientHeight\s*=\s*(\d+)', pl)
+                        cc = re.match(r'Caption\s*=\s*"([^"]*)"', pl)
+                        if cw: form_width = int(cw.group(1))
+                        if ch: form_height = int(ch.group(1))
+                        if cc: form_caption = cc.group(1).strip()
                     j += 1
                 name = ctrl_name
                 i += 1
                 continue
-            # Grab immediate properties (until next Begin or End)
             props = {}
             j = i + 1
+            depth = 0
             while j < len(lines):
                 pl = lines[j].strip()
-                if pl.startswith('Begin') or pl == 'End':
-                    break
-                pm = re.match(r'(\w+)\s*=\s*"?([^"]*)"?', pl)
-                if pm:
-                    props[pm.group(1)] = pm.group(2).strip()
+                if pl.startswith('Begin') or pl.startswith('BeginProperty'):
+                    depth += 1
+                elif pl == 'End' or pl.startswith('EndProperty'):
+                    if depth > 0:
+                        depth -= 1
+                    else:
+                        break
+                elif depth == 0:
+                    pm = re.match(r'(\w+)\s*=\s*"?([^"]*)"?', pl)
+                    if pm:
+                        props[pm.group(1)] = pm.group(2).strip()
                 j += 1
             caption = props.get('Caption', '')
 

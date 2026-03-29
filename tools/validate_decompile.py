@@ -43,12 +43,14 @@ def validate_one(stem):
         # Count forms in VBP
         vbp_forms = set()
         for m in re.finditer(r'^Form=(\S+)\.frm', vbp_text, re.MULTILINE):
-            vbp_forms.add(m.group(1).lower())
+            form_name = m.group(1).replace('\\', '/').rsplit('/', 1)[-1]
+            vbp_forms.add(form_name.lower())
 
         # Count modules in VBP
         vbp_modules = set()
         for m in re.finditer(r'^Module=\w+;\s*(\S+)\.bas', vbp_text, re.MULTILINE):
-            vbp_modules.add(m.group(1).lower())
+            mod_name = m.group(1).replace('\\', '/').rsplit('/', 1)[-1]
+            vbp_modules.add(mod_name.lower())
 
         # Count actual .frm files (check both root and forms/ subdir)
         disk_forms = set()
@@ -66,6 +68,8 @@ def validate_one(stem):
         mods_dir = exe_dir / 'modules'
         if mods_dir.exists():
             for f in mods_dir.glob('*.declarations'):
+                disk_modules.add(f.stem.lower())
+            for f in mods_dir.glob('*.bas'):
                 disk_modules.add(f.stem.lower())
             for d in mods_dir.iterdir():
                 if d.is_dir() and d.name.endswith('_funcs'):
@@ -125,7 +129,7 @@ def main():
     else:
         results = scan_all()
 
-    failures = [r for r in results if r['status'] == 'FAIL']
+    failures = [r for r in results if r['status'] in ('FAIL', 'missing')]
     ok_count = sum(1 for r in results if r['status'] == 'ok')
 
     if fix_list:

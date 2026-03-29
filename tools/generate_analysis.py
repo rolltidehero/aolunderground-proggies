@@ -6,6 +6,7 @@ loads decompile metadata.json when available, and generates rich analysis pages
 with progressive disclosure, version-annotated API refs, and structured forms.
 """
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -13,6 +14,12 @@ import subprocess
 import sys
 import html as H
 from pathlib import Path
+
+try:
+    from clean_code import clean_for_display
+except ImportError:
+    def clean_for_display(code):
+        return code
 
 SORTED_DIR = Path("programs/AOL/proggies-sorted-deduped")
 DB_PATH = Path("exe_strings.db")
@@ -194,7 +201,9 @@ def get_meta_from_db(zip_stem, conn=None):
         conn = sqlite3.connect(str(db))
     row = conn.execute(
         "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path, p.zip_path "
-        "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? LIMIT 1",
+        "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? "
+        "ORDER BY CASE WHEN e.exe_name LIKE '%setup%' OR e.exe_name LIKE '%install%' THEN 1 ELSE 0 END, e.exe_name "
+        "LIMIT 1",
         (zip_stem,)
     ).fetchone()
     if own_conn: conn.close()
@@ -206,13 +215,11 @@ def get_meta_from_db(zip_stem, conn=None):
         'zip_path': row[8] or '',
     }
     # Read PE timestamp for compile date
-    if row[7]:
+    if row[7] and row[4]:
         exe_path = SORTED_DIR / '_extracted' / zip_stem / row[4]
         if exe_path.exists():
             meta['compile_date'] = _read_pe_timestamp(exe_path)
     return meta
-
-
 def _read_pe_timestamp(exe_path):
     """Read compile date from PE header TimeDateStamp field."""
     import struct, datetime
@@ -224,9 +231,12 @@ def _read_pe_timestamp(exe_path):
             ts = struct.unpack('<I', f.read(4))[0]
             if ts < 631152000 or ts > 1893456000:  # 1990-2030 sanity check
                 return None
-            dt = datetime.datetime.fromtimestamp(ts, datetime.UTC)
+            dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
             return dt.strftime('%Y-%m-%d')
+    except (OSError, struct.error, ValueError, OverflowError):
+        return None
     except Exception:
+        logging.exception("Unexpected error reading PE timestamp from %s", exe_path)
         return None
 
 
@@ -259,9 +269,7 @@ def find_exe_in_db(conn, exe_name, archive_base):
     pool = aol or candidates
     for p in pool:
         if archive_base.lower() in p.lower(): return p
-    return pool[0] if pool else None
-
-
+    return None  # Ambiguous — do not guess
 def load_decompile_data(zip_stem, exe_name):
     """Load metadata.json and function code from decompiled output."""
     meta_path = DECOMPILED_DIR / zip_stem / exe_name / "metadata.json"
@@ -401,10 +409,16 @@ def render_hero(meta, archive_name, decomp):
     # Try to extract real program name from decompiled source
     if decomp:
         proj_name = (decomp.get('project') or {}).get('name', '')
-        if proj_name:
+        proj_ok = (proj_name
+                   and not re.match(r'^Project\d*$', proj_name, re.I)
+                   and proj_name.lower() != meta.get('exe', '').replace('.exe', '').lower()
+                   and len(proj_name) > 3)
+        if proj_ok:
             program = proj_name
-        elif program == meta.get('exe', '').replace('.exe', ''):
-            program = _extract_program_name(decomp) or program
+        else:
+            extracted = _extract_program_name(decomp)
+            if extracted:
+                program = extracted
     author = meta.get('author', 'Unknown')
     version = meta.get('aol_version', '?')
     cat = meta.get('category', '?')
@@ -497,9 +511,9 @@ def render_screenshots(zip_stem, html_path):
             form_info, label_info = wt.get('form'), wt.get('labels', {})
 
         if form_info and label_info and (img_dir / form_info.get('image', '')).exists():
-            fw, fh = form_info['width'], form_info['height']
+            fw, fh = form_info.get('width', 0), form_info.get('height', 0)
             nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
-            form_img = f'{zip_stem}/{form_info["image"]}'
+            form_img = f'{zip_stem}/{form_info.get("image", "")}'
             main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
             sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
 
@@ -509,7 +523,7 @@ def render_screenshots(zip_stem, html_path):
                 for item in cat['items']:
                     img_name = item.get('image', '')
                     exists = (img_dir / img_name).exists() if img_name else False
-                    d = {'caption': item['caption'],
+                    d = {'caption': item.get('caption', ''),
                          'image': f'{zip_stem}/{img_name}' if exists else '',
                          'type': item.get('type', '')}
                     if item.get('child_h') and item['child_h'] < 460:
@@ -518,7 +532,7 @@ def render_screenshots(zip_stem, html_path):
                         d['ct'] = item['child_title']
                     items_js.append(d)
                 lbl = sorted_labels[ci][1] if ci < len(sorted_labels) else None
-                cat_data.append({'name': cat['category'], 'items': items_js, 'label': lbl})
+                cat_data.append({'name': cat.get('category', ''), 'items': items_js, 'label': lbl})
 
             # Stage: flexbox — main form left, child forms right
             lines.append(f'<div class="app-sim">')
@@ -629,14 +643,14 @@ function hideChild(){childEl.innerHTML=""}
             lines.append('<div class="wt-tabs">')
             for ci, cat in enumerate(categories):
                 active = ' active' if ci == 0 else ''
-                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat["category"])}</button>')
+                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat.get("category", ""))}</button>')
             lines.append('</div>')
             for ci, cat in enumerate(categories):
                 vis = '' if ci == 0 else ' style="display:none"'
                 lines.append(f'<div class="wt-panel" id="wt-panel-{ci}"{vis}>')
                 for item in cat['items']:
                     img_name = item.get('image', '')
-                    cap = H.escape(item['caption'])
+                    cap = H.escape(item.get('caption', ''))
                     lines.append(f'<div class="wt-item" onclick="wtShow(this)"><span class="wt-label">{cap}</span>')
                     if (img_dir / img_name).exists():
                         lines.append(f'<img class="wt-img" src="{zip_stem}/{img_name}" alt="{cap}" loading="lazy" style="display:none">')
@@ -712,10 +726,10 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
     lines.append(f'<details><summary>{form_count} forms, {ctrl_count} controls</summary>')
     for form in decomp['forms']:
         lines.append('<div class="card">')
-        lines.append(f'<h3>{e(form["name"])}</h3>')
+        lines.append(f'<h3>{e(form.get("name", "Unknown"))}</h3>')
         # SVG layout from .frm file
         if zip_stem and exe_name:
-            frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form["name"]}.frm'
+            frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form.get("name", "")}.frm'
             if frm_path.exists():
                 svg = render_form_layout(form['name'], frm_path)
                 if svg:
@@ -805,7 +819,6 @@ def _make_proc_resolver(decomp):
         return proc_names.get(short) or addr_names.get(m.group(3)) or raw_name
 
     def replace_in_code(code_text):
-        from clean_code import clean_for_display
         cleaned = clean_for_display(code_text)
         escaped = e(cleaned)
         def _sub(m):
@@ -813,10 +826,9 @@ def _make_proc_resolver(decomp):
             addr = m.group(3)
             canon = proc_names.get(short) or addr_names.get(addr)
             if canon:
-                return f'<span style="color:#d2a8ff" title="{m.group(0)}">{canon}</span>'
+                return f'{canon}'
             return m.group(0)
         return re.sub(r'(Proc_\d+)_(\d+)_([A-F0-9]+)', _sub, escaped)
-
     return replace_in_code, resolve_name
 
 
@@ -863,7 +875,9 @@ def render_code_breakdown(decomp):
     lines = ['<h2>&#x1f4ca; Code Breakdown</h2>']
 
     # Stacked bar
-    app_pct, used_pct, dead_pct = cb['app_pct'], cb['reachable_pct'], cb['dead_pct']
+    app_pct = cb.get('app_pct', 0)
+    used_pct = cb.get('reachable_pct', 0)
+    dead_pct = cb.get('dead_pct', 0)
     cherry = cb.get('cherry_picked', [])
     cherry_size = sum(f['size'] for f in cherry)
     total_size = cb.get('total_size', 1)
@@ -884,16 +898,16 @@ def render_code_breakdown(decomp):
 
     # Legend
     lines.append('<div class="breakdown-legend">')
-    lines.append(f'<span><span class="dot dot-app"></span>Custom code — {cb["app_funcs_count"]} funcs ({adj_app_pct}%)</span>')
+    lines.append(f'<span><span class="dot dot-app"></span>Custom code — {cb.get("app_funcs_count", 0)} funcs ({adj_app_pct}%)</span>')
     if cherry_pct > 0:
         mods = sorted(set(f['matched_module'] for f in cherry))
         lines.append(f'<span><span class="dot" style="background:#3fb950"></span>Cherry-picked from {", ".join(mods)}.bas — {len(cherry)} funcs ({cherry_pct}%)</span>')
     if used_pct > 0:
-        remaining_used = cb["reachable_base_funcs"] - len(cherry)
+        remaining_used = cb.get("reachable_base_funcs", 0) - len(cherry)
         if remaining_used > 0:
-            lines.append(f'<span><span class="dot dot-used"></span>Used from {e(bas_label)} — {remaining_used} of {cb["total_base_funcs"]} funcs ({used_pct}%)</span>')
+            lines.append(f'<span><span class="dot dot-used"></span>Used from {e(bas_label)} — {remaining_used} of {cb.get("total_base_funcs", 0)} funcs ({used_pct}%)</span>')
     if dead_pct > 0:
-        lines.append(f'<span><span class="dot dot-dead"></span>Unused from {e(bas_label)} — {cb["dead_base_funcs"]} funcs ({dead_pct}%)</span>')
+        lines.append(f'<span><span class="dot dot-dead"></span>Unused from {e(bas_label)} — {cb.get("dead_base_funcs", 0)} funcs ({dead_pct}%)</span>')
     lines.append('</div>')
 
     # App functions section (unique code)
@@ -985,8 +999,8 @@ def render_code_breakdown(decomp):
 def render_api_refs(api_strings, decomp=None):
     """Render API references split into AOL Classes vs Win32 Calls.
     When decomp has code_breakdown, scan reachable code for known API strings."""
-    if not api_strings:
-        return ''
+    if api_strings is None:
+        api_strings = []
     e = H.escape
 
     # When we have code_breakdown, scan reachable code for all known API strings
@@ -1002,8 +1016,11 @@ def render_api_refs(api_strings, decomp=None):
             for name in AOL_API_VERSIONS:
                 if name in reachable_code:
                     found.add(name)
-            # Use only the found set
-            api_strings = list(found)
+            # Merge code-found APIs with string-extracted APIs
+            api_strings = list(set(api_strings) | found)
+
+    if not api_strings:
+        return ''
 
     aol_classes = []
     win32_calls = []
@@ -1020,26 +1037,24 @@ def render_api_refs(api_strings, decomp=None):
     total = len(aol_classes) + len(win32_calls) + len(other_api)
     if not total:
         return ''
-    lines = [f'<h2>&#x2699; API References ({total})</h2>']
+    lines = [f'&#x2699; API References ({total})']
     if aol_classes:
         aol_classes.sort(key=lambda x: x[0].lstrip('_').lower())
-        lines.append('<div class="card"><h3>AOL Window Classes</h3>')
+        lines.append('AOL Window Classes')
         for s, ver in aol_classes:
-            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span> <span class="badge-api">{e(ver)}</span></div>')
-        lines.append('</div>')
+            lines.append(f'{e(s)} {e(ver)}')
+        lines.append('')
     if win32_calls:
-        lines.append('<div class="card"><h3>Win32 API Calls</h3>')
+        lines.append('Win32 API Calls')
         for s, ver in win32_calls:
-            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
-        lines.append('</div>')
+            lines.append(f'{e(s)}')
+        lines.append('')
     if other_api:
-        lines.append('<div class="card"><h3>Other</h3>')
+        lines.append('Other')
         for s, ver in other_api:
-            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
-        lines.append('</div>')
+            lines.append(f'{e(s)}')
+        lines.append('')
     return '\n'.join(lines)
-
-
 def render_greets(greet_names, greet_text):
     """Render greet names as tags and closing text."""
     if not greet_names and not greet_text:
@@ -1093,7 +1108,6 @@ def render_deps_from_db(zip_stem, conn=None):
 def _parse_frm_controls(frm_path):
     """Parse .frm file to extract control positions and sizes."""
     text = frm_path.read_text(encoding='utf-8-sig', errors='ignore')
-    controls = []
     form_w = form_h = 0
     # Get form dimensions
     m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
@@ -1105,46 +1119,9 @@ def _parse_frm_controls(frm_path):
     NONVISUAL = {'Timer', 'VBMsg', 'CommonDialog', 'MCI', 'InvisibleIcon',
                  'OLE', 'Data', 'Winsock', 'Inet', 'MAPI'}
 
-    # Parse nested Begin/End blocks with parent offset tracking
-    lines = text.splitlines()
-    stack = []  # (ctrl_type, ctrl_name, offset_x, offset_y)
-    ox, oy = 0, 0
-    for line in lines:
-        stripped = line.strip()
-        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
-        if m:
-            raw_type = m.group(1).split('.')[-1] if '.' in m.group(1) else m.group(1)
-            stack.append((raw_type, m.group(2), ox, oy))
-            continue
-        if stripped == 'End' and stack:
-            _, _, ox, oy = stack.pop()
-            continue
-        if not stack:
-            continue
-        pm = re.match(r'(\w+)\s*=\s*(.+)', stripped)
-        if not pm:
-            continue
-        key, val = pm.group(1), pm.group(2).strip()
-        cur_type, cur_name = stack[-1][0], stack[-1][1]
-        # When we see Left/Top of a container (Frame/SSFrame/SSPanel), record its offset for children
-        if key == 'Left' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
-            try:
-                parent_ox, parent_oy = stack[-2][2], stack[-2][3] if len(stack) > 1 else (0, 0)
-            except IndexError:
-                parent_ox = 0
-            # Update stack entry with this container's absolute position
-            pox = stack[-2][2] if len(stack) > 1 else 0
-            stack[-1] = (cur_type, cur_name, pox + int(val.split("'")[0].strip()), stack[-1][3])
-        elif key == 'Top' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
-            poy = stack[-2][3] if len(stack) > 1 else 0
-            stack[-1] = (cur_type, cur_name, stack[-1][2], poy + int(val.split("'")[0].strip()))
-
-    # Re-parse with proper nesting using a simpler recursive approach
     controls = []
     _parse_nested(text.splitlines(), controls, 0, 0, NONVISUAL)
     return controls, form_w, form_h
-
-
 def _parse_nested(lines, controls, ox, oy, nonvisual, start=0):
     """Recursively parse Begin/End blocks, accumulating parent offsets."""
     i = start
@@ -1318,6 +1295,9 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
                         exe_name = sub.name
                         break
 
+    # Normalize strings: decomp data may contain dicts
+    strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in strings]
+
     # Build string frequency map (count before dedup)
     str_freq = {}
     for s in strings:
@@ -1484,7 +1464,13 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     lines.append(render_forms(decomp, zip_stem, exe_name))
 
     # Code breakdown (base module vs app code) — single code section
-    lines.append(render_code_breakdown(decomp))
+    cb_html = render_code_breakdown(decomp)
+    if cb_html:
+        lines.append(cb_html)
+    else:
+        fn_html = render_functions(decomp)
+        if fn_html:
+            lines.append(fn_html)
 
     # Interesting strings with frequency
     if interesting:
@@ -1511,43 +1497,61 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     return '\n'.join(lines)
 
 
+def _init_worker(exe_index):
+    """Pool initializer: set pre-built exe path index in each worker."""
+    global _exe_path_index
+    _exe_path_index = exe_index
+
+
 def _process_one(html_path_str):
     """Worker function for multiprocessing — generates one HTML page."""
-    html_path = Path(html_path_str)
-    conn = sqlite3.connect(str(DB_PATH))
-    pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+    conn = None
+    pdb = None
+    try:
+        html_path = Path(html_path_str)
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
 
-    meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
-    exe_name = meta.get('exe', '')
-    archive_name = html_path.stem + '.zip'
-    archive_base = html_path.stem
+        meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+        exe_name = meta.get('exe', '')
+        archive_name = html_path.stem + '.zip'
+        archive_base = html_path.stem
 
-    exe_path = find_exe_in_db(conn, exe_name, archive_base)
-    strings = get_strings_from_db(conn, exe_path) if exe_path else []
+        exe_path = find_exe_in_db(conn, exe_name, archive_base)
+        strings = get_strings_from_db(conn, exe_path) if exe_path else []
 
-    if not strings:
-        decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
-        if not decomp:
-            decomp_base = DECOMPILED_DIR / archive_base
-            if decomp_base.exists():
-                for sub in decomp_base.iterdir():
-                    if sub.is_dir() and (sub / 'metadata.json').exists():
-                        decomp = load_decompile_data(archive_base, sub.name)
-                        if decomp:
-                            exe_name = sub.name
-                            break
-        if decomp and decomp.get('strings'):
-            strings = decomp['strings']
-        elif not exe_path:
-            conn.close()
-            if pdb: pdb.close()
-            return 'skip'
+        if not strings:
+            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+            if not decomp:
+                decomp_base = DECOMPILED_DIR / archive_base
+                if decomp_base.exists():
+                    for sub in decomp_base.iterdir():
+                        if sub.is_dir() and (sub / 'metadata.json').exists():
+                            decomp = load_decompile_data(archive_base, sub.name)
+                            if decomp:
+                                exe_name = sub.name
+                                break
+            if decomp and decomp.get('strings'):
+                strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+            elif not exe_path:
+                conn.close()
+                if pdb: pdb.close()
+                return 'skip'
 
-    page = generate_html(meta, strings, archive_name, html_path, pdb)
-    html_path.write_text(page, encoding='utf-8')
-    conn.close()
-    if pdb: pdb.close()
-    return 'ok'
+        page = generate_html(meta, strings, archive_name, html_path, pdb)
+        html_path.write_text(page, encoding='utf-8')
+        conn.close()
+        if pdb: pdb.close()
+        return 'ok'
+    except Exception:
+        logging.exception("Failed to process %s", html_path_str)
+        if conn:
+            try: conn.close()
+            except Exception: pass
+        if pdb:
+            try: pdb.close()
+            except Exception: pass
+        return 'error'
 
 
 def main() -> int:
@@ -1565,59 +1569,69 @@ def main() -> int:
     total = len(html_files)
     print(f"Processing {total} HTML pages", file=sys.stderr)
 
+    # Pre-build exe path index once for all workers (F13)
+    global _exe_path_index
+    str_conn = sqlite3.connect(str(DB_PATH))
+    _exe_path_index = _build_exe_path_index(str_conn)
+    str_conn.close()
+
     if total > 4:
         import multiprocessing
         workers = max(1, multiprocessing.cpu_count() - 1)
-        generated = skipped = 0
-        with multiprocessing.Pool(workers) as pool:
+        generated = skipped = errors = 0
+        with multiprocessing.Pool(workers, initializer=_init_worker, initargs=(_exe_path_index,)) as pool:
             for i, result in enumerate(pool.imap_unordered(_process_one, [str(p) for p in html_files], chunksize=16)):
                 if result == 'ok':
                     generated += 1
+                elif result == 'error':
+                    errors += 1
                 else:
                     skipped += 1
                 if (i + 1) % 200 == 0:
-                    print(f"  {i+1}/{total} processed, {generated} regenerated", file=sys.stderr)
+                    print(f"  {i+1}/{total} processed, {generated} regenerated, {errors} errors", file=sys.stderr)
     else:
         conn = sqlite3.connect(str(DB_PATH))
         pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
-        generated = skipped = 0
+        generated = skipped = errors = 0
         for html_path in html_files:
-            meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
-            exe_name = meta.get('exe', '')
-            archive_name = html_path.stem + '.zip'
-            archive_base = html_path.stem
-            exe_path = find_exe_in_db(conn, exe_name, archive_base)
-            strings = get_strings_from_db(conn, exe_path) if exe_path else []
-            if not strings:
-                decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
-                if not decomp:
-                    decomp_base = DECOMPILED_DIR / archive_base
-                    if decomp_base.exists():
-                        for sub in decomp_base.iterdir():
-                            if sub.is_dir() and (sub / 'metadata.json').exists():
-                                decomp = load_decompile_data(archive_base, sub.name)
-                                if decomp:
-                                    exe_name = sub.name
-                                    break
-                if decomp and decomp.get('strings'):
-                    strings = decomp['strings']
-                elif not exe_path:
-                    skipped += 1
-                    continue
-            page = generate_html(meta, strings, archive_name, html_path, pdb)
-            html_path.write_text(page, encoding='utf-8')
-            generated += 1
+            try:
+                meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+                exe_name = meta.get('exe', '')
+                archive_name = html_path.stem + '.zip'
+                archive_base = html_path.stem
+                exe_path = find_exe_in_db(conn, exe_name, archive_base)
+                strings = get_strings_from_db(conn, exe_path) if exe_path else []
+                if not strings:
+                    decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+                    if not decomp:
+                        decomp_base = DECOMPILED_DIR / archive_base
+                        if decomp_base.exists():
+                            for sub in decomp_base.iterdir():
+                                if sub.is_dir() and (sub / 'metadata.json').exists():
+                                    decomp = load_decompile_data(archive_base, sub.name)
+                                    if decomp:
+                                        exe_name = sub.name
+                                        break
+                    if decomp and decomp.get('strings'):
+                        strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+                    elif not exe_path:
+                        skipped += 1
+                        continue
+                page = generate_html(meta, strings, archive_name, html_path, pdb)
+                html_path.write_text(page, encoding='utf-8')
+                generated += 1
+            except Exception:
+                logging.exception("Failed to process %s", html_path)
+                errors += 1
         conn.close()
         if pdb: pdb.close()
 
-    print(f"Done: {generated} regenerated, {skipped} skipped")
+    print(f"Done: {generated} regenerated, {skipped} skipped, {errors} errors")
 
     # Generate landing page
     generate_landing_page()
 
     return 0
-
-
 def generate_landing_page():
     """Generate index.html landing page with auto-detected featured proggies."""
     from jinja2 import Environment, FileSystemLoader, select_autoescape

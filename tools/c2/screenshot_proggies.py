@@ -52,7 +52,7 @@ VB_CLASSES = [
 
 INSTALLER_NAME_RE = re.compile(
     r'(^setup\.exe$|^install\.exe$|setup\.exe$|install\.exe$'
-    r'|installer\.exe$|[\b_ -]setup\.exe$)',
+    r'|installer\.exe$|(?:^|[_ -])setup\.exe$)',
     re.IGNORECASE)
 INSTALLER_SIGS = [b'Nullsoft', b'Inno Setup', b'InstallShield',
                   b'WISE', b'Setup Factory']
@@ -77,8 +77,12 @@ def free_process():
 # ── C2 ──
 
 def c2(cmd, timeout=10):
-    try: os.remove(RES_FILE)
-    except: pass
+    for _drain in range(5):
+        try:
+            os.remove(RES_FILE)
+            time.sleep(0.1)
+        except FileNotFoundError:
+            break
     with open(CMD_FILE, 'w') as f:
         f.write(cmd + '\n')
     os.chown(CMD_FILE, WINE_UID, WINE_GID)
@@ -90,6 +94,11 @@ def c2(cmd, timeout=10):
                 return f.read().strip().replace('\r', '')
         except FileNotFoundError:
             pass
+    time.sleep(0.3)
+    try:
+        os.remove(RES_FILE)
+    except FileNotFoundError:
+        pass
     return None
 
 def c2_healthy():
@@ -218,8 +227,8 @@ def stage_and_launch(exe_path):
     return proc, basename
 
 def kill_proggie(basename):
-    search = basename[:20] if len(basename) > 20 else basename
-    result = subprocess.run(['pgrep', '-u', WINE_USER, '-f', search],
+    # F13 FIX: Use full basename (not truncated to 20 chars), escape for regex safety
+    result = subprocess.run(['pgrep', '-u', WINE_USER, '-f', re.escape(basename)],
                            capture_output=True, text=True)
     safe = {'wineserver', 'services.exe', 'winedevice', 'explorer.exe',
             'plugplay', 'svchost', 'c2host.exe'}
@@ -228,11 +237,14 @@ def kill_proggie(basename):
         if not pid: continue
         check = subprocess.run(['ps', '-p', pid, '-o', 'args='],
                               capture_output=True, text=True)
-        if any(x in check.stdout for x in safe): continue
+        cmdline = check.stdout.strip()
+        # F13 FIX: Verify full basename appears in cmdline, not just prefix
+        if basename not in cmdline: continue
+        # F13 FIX: Match safe list against process binary name, not cmdline substring
+        cmd_parts = cmdline.split()
+        proc_bin = os.path.basename(cmd_parts[0]) if cmd_parts else ''
+        if proc_bin in safe: continue
         subprocess.run(['sudo', 'kill', pid], capture_output=True)
-
-# ── BMP→PNG ──
-
 def capture_window(hwnd, png_path):
     """Screenshot one window, convert to PNG with upscale. Returns True on success."""
     try: os.remove(BMP_TMP)
@@ -383,7 +395,7 @@ def screenshot_one(exe_path, output_path):
         kill_proggie(basename)
         time.sleep(0.5)
         if all_files:
-            return True, f'{len(all_files)} shots (dialog only)', all_files
+            return False, f'{len(all_files)} shots (dialog only, no main window)', all_files
         return False, 'No window appeared', []
 
     main_hwnd = windows[0][0]
@@ -415,6 +427,11 @@ def screenshot_one(exe_path, output_path):
     if not all_files:
         return False, 'No screenshots captured', []
 
+    if len(all_pngs) >= 2:
+        gif_path = output_path.replace('.screenshot.png', '.animated.gif')
+        if make_animated_gif(all_pngs, gif_path):
+            all_files.append(('gif', gif_path, 'Animated walkthrough'))
+
     detail = f'{len(all_pngs)} views'
     if about_shot:
         detail += ' +about'
@@ -432,8 +449,19 @@ def load_checkpoint():
 
 def save_checkpoint(ckpt):
     ckpt['updated'] = datetime.now().isoformat()
-    with open(CHECKPOINT_FILE, 'w') as f:
-        json.dump(ckpt, f, indent=2)
+    import tempfile
+    dir_name = os.path.dirname(CHECKPOINT_FILE) or '.'
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(ckpt, f, indent=2)
+        os.replace(tmp_path, CHECKPOINT_FILE)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 def _walk_exes():
     for root, dirs, files in os.walk(PROGRAMS_DIR):

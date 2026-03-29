@@ -125,6 +125,30 @@ tools/
   detect_vb_version.py          # VB version detection engine
   generate_analysis.py          # HTML analysis page generator
   generate_index.py             # Interactive search page generator
+  single_decompile.py           # Single proggie: decompile + metadata + screenshots + HTML
+  validate_decompile.py         # Validate decompiled output completeness
+  capture_walkthrough.py        # Screenshot walkthrough for a proggie in the VM
+  capture_aohell.py             # AOHell 95 screenshot capture via QMP
+  clean_code.py                 # Strip decompiler noise, resolve proc names
+  c2/
+    batch_decompile.py          # Batch decompile all VB5/VB6 exes via VM
+    screenshot_proggies.py      # Batch screenshot capture (main form, menus, about, GIF)
+    vbdecompile.py              # Single exe decompile via VB Decompiler Pro + C2 DLL
+    extract_metadata.py         # Parse metadata from decompiled .bas/.frm source
+    enumerate_controls.py       # Extract control inventory from VB6 apps
+    poc_walkthrough.py          # POC walkthrough using nav graph + ENUMCHILDREN
+  vm/
+    guest/agent.py              # C2 agent running inside Windows VM (virtio-serial)
+    guest/vbd_helper.py         # VB Decompiler automation helper (runs in GUI session)
+    host/orchestrator.py        # Host-side VM orchestration (QMP + QGA + C2)
+    host/qmp_client.py          # QMP client (screendump, input, power)
+    host/virtio_serial_client.py # Host-side C2 client (JSON over virtio-serial)
+    host/input_controller.py    # High-level UI automation via QMP input events
+    host/screen_recorder.py     # QMP screendump → ffmpeg → video
+    host/push_file.py           # Push files to VM via QEMU Guest Agent
+    host/config.py              # VM socket paths and constants
+    scripts/launch-vm.sh        # VM launcher (install + run modes)
+    scripts/launch-decompiler.sh # Decompiler VM wrapper
 
 proggie_db.sqlite               # The database (2,138 proggies, all metadata)
 exe_strings.db.zip              # 11.6M strings (unzip before querying)

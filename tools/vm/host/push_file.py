@@ -16,11 +16,19 @@ def qga_cmd(sock, cmd, args=None):
     sock.sendall(json.dumps(req).encode() + b"\n")
     buf = b""
     while True:
-        buf += sock.recv(4096)
-        try:
-            return json.loads(buf)
-        except json.JSONDecodeError:
-            continue
+        while b"\n" in buf:
+            line, buf = buf.split(b"\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+        chunk = sock.recv(4096)
+        if not chunk:
+            raise ConnectionError("QGA socket closed unexpectedly")
+        buf += chunk
 
 def push_file(local_path, guest_path):
     data = open(local_path, "rb").read()
@@ -44,8 +52,19 @@ def push_file(local_path, guest_path):
     handle = resp["return"]
 
     for i in range(0, len(data), CHUNK):
-        chunk = base64.b64encode(data[i:i+CHUNK]).decode()
-        qga_cmd(s, "guest-file-write", {"handle": handle, "buf-b64": chunk})
+        chunk_data = data[i:i+CHUNK]
+        chunk_b64 = base64.b64encode(chunk_data).decode()
+        resp = qga_cmd(s, "guest-file-write", {"handle": handle, "buf-b64": chunk_b64})
+        if "error" in resp:
+            qga_cmd(s, "guest-file-close", {"handle": handle})
+            s.close()
+            raise RuntimeError(f"guest-file-write error: {resp['error']}")
+        count = resp.get("return", {}).get("count", 0)
+        if count != len(chunk_data):
+            qga_cmd(s, "guest-file-close", {"handle": handle})
+            s.close()
+            raise RuntimeError(
+                f"Partial write: {count}/{len(chunk_data)} bytes at offset {i}")
 
     qga_cmd(s, "guest-file-close", {"handle": handle})
     s.close()

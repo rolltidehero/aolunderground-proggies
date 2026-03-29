@@ -127,13 +127,13 @@ def clean_file(raw_text: str, proc_names: dict | None = None) -> str:
         line = raw_lines[i]
         stripped = line.strip()
         # Detect start of Sub/Function body
-        if re.match(r"(?:Public |Private )?(?:Sub|Function) ", stripped) and ' Lib "' not in stripped:
+        if re.match(r"(?:Public |Private )?(?:Sub|Function|Property (?:Get|Let|Set)) ", stripped) and ' Lib "' not in stripped:
             # Collect entire block until End Sub/Function
             block = [line]
             i += 1
             while i < len(raw_lines):
                 block.append(raw_lines[i])
-                if raw_lines[i].strip().startswith(('End Sub', 'End Function')):
+                if raw_lines[i].strip().startswith(('End Sub', 'End Function', 'End Property')):
                     break
                 i += 1
             # Clean the block
