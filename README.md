@@ -6,7 +6,7 @@ Let's repopulate the Gibson!
 
 Brought to you by the [AOL Underground Podcast](https://aolunderground.com)
 
-[Browse the archive](https://ssstonebraker.github.io/aolunderground-proggies/) | [Search proggies](https://ssstonebraker.github.io/aolunderground-proggies/proggie-index.html) | [Full project status](docs/PROJECT_STATUS.md)
+[Browse the archive](https://ssstonebraker.github.io/aolunderground-proggies/) | [Search proggies](https://ssstonebraker.github.io/aolunderground-proggies/proggie-index.html) | [Full project status](docs/PROJECT_STATUS.md) | [Donate](https://buymeacoffee.com/aolunderground)
 
 ## Quick Start
 
