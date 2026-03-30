@@ -44,6 +44,98 @@ from extract_passwords import extract_passwords
 
 # ── Guest scripts for Win32 interaction ──────────────────────────────
 
+ENUM_CONTROLS_SCRIPT = r'''import ctypes, ctypes.wintypes, json, sys
+u32 = ctypes.windll.user32
+H = ctypes.wintypes.HWND
+class RECT(ctypes.Structure):
+    _fields_ = [("left",ctypes.c_long),("top",ctypes.c_long),
+                ("right",ctypes.c_long),("bottom",ctypes.c_long)]
+VB6 = {"ThunderRT6FormDC","ThunderRT6Form","ThunderRT6MDIForm",
+       "ThunderRT5FormDC","ThunderRT5Form","ThunderFormDC","ThunderForm"}
+# Find target form
+target = None
+title_arg = sys.argv[1] if len(sys.argv) > 1 else ""
+def find_form(hwnd, _):
+    global target
+    if not u32.IsWindowVisible(hwnd): return 1
+    buf = ctypes.create_unicode_buffer(256)
+    u32.GetClassNameW(hwnd, buf, 256)
+    if buf.value not in VB6: return 1
+    u32.GetWindowTextW(hwnd, buf, 256)
+    if title_arg and title_arg not in buf.value: return 1
+    target = hwnd
+    return 0
+CB = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int)
+u32.EnumWindows(CB(find_form), 0)
+if not target:
+    json.dump({"error": "no form found"}, open(r"C:\work\controls.json","w"))
+    sys.exit(0)
+# Get form rect
+frc = RECT()
+u32.GetWindowRect(target, ctypes.byref(frc))
+# Enum child controls
+children = []
+def enum_child(hwnd, _):
+    buf = ctypes.create_unicode_buffer(256)
+    u32.GetClassNameW(hwnd, buf, 256)
+    cls = buf.value
+    u32.GetWindowTextW(hwnd, buf, 256)
+    txt = buf.value
+    rc = RECT()
+    u32.GetWindowRect(hwnd, ctypes.byref(rc))
+    children.append({"hwnd": hwnd, "class": cls, "text": txt,
+                     "x": rc.left, "y": rc.top,
+                     "w": rc.right-rc.left, "h": rc.bottom-rc.top,
+                     "id": u32.GetDlgCtrlID(hwnd)})
+    return 1
+u32.EnumChildWindows(target, CB(enum_child), 0)
+# Enum menus
+menus = []
+hMenu = u32.GetMenu(target)
+if hMenu:
+    topN = u32.GetMenuItemCount(hMenu)
+    for i in range(min(topN, 20)):
+        buf = ctypes.create_string_buffer(256)
+        u32.GetMenuStringA(hMenu, i, buf, 255, 0x400)  # MF_BYPOSITION
+        hSub = u32.GetSubMenu(hMenu, i)
+        top_name = buf.value.decode(errors="replace").replace("&","")
+        if not hSub: continue
+        subN = u32.GetMenuItemCount(hSub)
+        for j in range(min(subN, 30)):
+            u32.GetMenuStringA(hSub, j, buf, 255, 0x400)
+            sub_name = buf.value.decode(errors="replace").replace("&","")
+            mid = u32.GetMenuItemID(hSub, j)
+            if mid > 0:
+                menus.append({"top": top_name, "sub": sub_name, "id": mid})
+result = {"form_hwnd": target,
+          "form_rect": {"x":frc.left,"y":frc.top,"w":frc.right-frc.left,"h":frc.bottom-frc.top},
+          "children": children, "menus": menus}
+with open(r"C:\work\controls.json","w") as f:
+    json.dump(result, f)
+'''
+ENUM_CONTROLS_GUEST = r'C:\work\enum_controls.py'
+_enum_controls_deployed = False
+
+def _deploy_enum_controls():
+    global _enum_controls_deployed
+    if _enum_controls_deployed:
+        return
+    from window_diff import _qga_write_file
+    _qga_write_file(ENUM_CONTROLS_GUEST, ENUM_CONTROLS_SCRIPT.encode())
+    _enum_controls_deployed = True
+
+def enum_runtime_controls(title_hint=''):
+    """Enumerate child controls and menus of a VB6 form on the guest. Returns dict."""
+    _deploy_enum_controls()
+    _c2gui_shell(rf'"{PYTHON_GUEST}" {ENUM_CONTROLS_GUEST} "{title_hint}"')
+    from window_diff import _qga_read_file
+    try:
+        data = _qga_read_file(r'C:\work\controls.json')
+        return json.loads(data)
+    except Exception as exc:
+        log.warning('enum_runtime_controls: failed: %s', exc)
+        return None
+
 TYPE_SECRET_SCRIPT = r'''import win32gui, win32con, sys
 keep = sys.argv[1]
 secret = sys.argv[2]
@@ -650,37 +742,157 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     log.info('run_walkthrough: targeting form=%s window="%s" nc=(%d,%d)',
              main_form_name, main_win['title'], nc_x_off, nc_y_off)
 
-    # Click each safe target on the startup form
-    for target in safe_targets:
-        if target['form'] != main_form_name:
-            continue  # Only click startup form targets for now
+    # ── Get runtime control positions + menus from Win32 API ─────────
+    rt = enum_runtime_controls(main_win['title'])
+    if rt and not rt.get('error'):
+        rt_children = {c['text']: c for c in rt.get('children', []) if c['text']}
+        rt_children_by_class = {}
+        for c in rt.get('children', []):
+            rt_children_by_class.setdefault(c['class'], []).append(c)
+        rt_menus = rt.get('menus', [])
+        form_hwnd = rt.get('form_hwnd', 0)
+        log.info('run_walkthrough: runtime enum: %d children, %d menus, hwnd=%d',
+                 len(rt.get('children', [])), len(rt_menus), form_hwnd)
+    else:
+        rt_children = {}
+        rt_menus = []
+        form_hwnd = 0
+        log.warning('run_walkthrough: runtime enum failed, falling back to .frm coords')
 
-        # Skip if action is shell/file_dialog
-        if target['action'] in ('shell', 'file_dialog'):
-            log.debug('run_walkthrough: skip %s.%s action=%s', target['form'], target['name'], target['action'])
+    # ── Phase 1: Trigger menu items via WM_COMMAND ───────────────────
+    WM_COMMAND = 0x0111
+    for mi in rt_menus:
+        caption = mi['sub']
+        menu_id = mi['id']
+        top_menu = mi['top']
+
+        # Match to decompiled targets to check if safe
+        matched_target = None
+        for t in safe_targets:
+            if t['form'] == main_form_name and t['type'] == 'Menu':
+                if t['caption'] == caption or t['name'].lower() in caption.lower():
+                    matched_target = t
+                    break
+        if not matched_target:
+            # Try fuzzy match
+            for t in safe_targets:
+                if t['form'] == main_form_name and caption.lower() in (t['caption'] or '').lower():
+                    matched_target = t
+                    break
+
+        if matched_target and matched_target.get('dangerous'):
+            log.debug('run_walkthrough: skip dangerous menu %s/%s', top_menu, caption)
+            continue
+        if not matched_target:
+            log.debug('run_walkthrough: skip unmatched menu %s/%s id=%d', top_menu, caption, menu_id)
+            continue
+        if matched_target['action'] in ('shell', 'file_dialog', 'hide_self'):
+            continue
+        if 'exit' in caption.lower() or 'quit' in caption.lower():
             continue
 
-        # Skip Form-level click handlers (clicking form background rarely does anything)
+        log.info('run_walkthrough: menu WM_COMMAND %s/%s id=%d action=%s',
+                 top_menu, caption, menu_id, matched_target['action'])
+
+        baseline = wd.snapshot()
+        # Send WM_COMMAND to trigger the menu item — no clicking needed
+        _c2gui_shell(rf'"{PYTHON_GUEST}" -c "import ctypes; ctypes.windll.user32.PostMessageW({form_hwnd}, {WM_COMMAND}, {menu_id}, 0)"')
+        _free(100)
+
+        item = {'caption': caption, 'type': matched_target['action'],
+                'image': '', 'hint': matched_target.get('hint_text', '')}
+
+        diff_result, after = wait_for_new_window(baseline)
+        if diff_result and diff_result['new']:
+            real_new = diff_result['new']
+            new_forms = [w for w in real_new if w['class'] in VB6_CLASSES]
+            new_msgboxes = [w for w in real_new if w['class'] == '#32770']
+
+            if new_msgboxes:
+                mb = new_msgboxes[0]
+                fname = unique_fname(caption, matched_target['name'])
+                QMP.park_cursor(); _free(30)
+                capture_cropped(mb, str(out_dir / fname))
+                next_frame(f'MsgBox: {caption}', 'result')
+                item['image'] = fname
+                item['type'] = 'msgbox'
+                dismiss_msgboxes()
+            elif new_forms:
+                nf = new_forms[0]
+                move_child_form(main_win['title'], child_x, child_y)
+                _free(50)
+                after2 = wd.snapshot()
+                all_vb = wd.find_vb_forms(after2)
+                moved = [w for w in all_vb if (w['x'], w['y']) != (main_win['x'], main_win['y'])]
+                if not moved:
+                    moved = [w for w in all_vb if w['title'] != main_win['title'] or w['w'] != main_win['w']]
+                cf = moved[0] if moved else nf
+                fname = unique_fname(caption, matched_target['name'])
+                QMP.park_cursor(); _free(30)
+                capture_cropped(cf, str(out_dir / fname))
+                next_frame(f'Form: {caption}', 'result')
+                item['image'] = fname
+                item['child_title'] = cf.get('title', '')
+                ch = auto_crop_child(out_dir / fname, main_win['x'] - vp_x)
+                if ch:
+                    item['child_h'] = ch
+                close_child_forms(main_win['title'])
+                _free(50)
+                dismiss_msgboxes()
+        else:
+            fname = unique_fname(caption, matched_target['name'])
+            QMP.park_cursor(); _free(30)
+            ok = capture_cropped(main_win, str(out_dir / fname))
+            if ok and not frames_are_identical(out_dir / 'main_form.png', out_dir / fname):
+                next_frame(f'{caption}', 'result')
+                item['image'] = fname
+            else:
+                (out_dir / fname).unlink(missing_ok=True)
+
+        cat_name = top_menu or main_form_name or 'Main'
+        if cat_name not in categories:
+            categories[cat_name] = []
+        if item.get('image'):
+            categories[cat_name].append(item)
+
+    # ── Phase 2: Click buttons/controls using runtime positions ──────
+    for target in safe_targets:
+        if target['form'] != main_form_name:
+            continue
+        if target['type'] == 'Menu':
+            continue  # already handled via WM_COMMAND
+        if target['action'] in ('shell', 'file_dialog'):
+            continue
         if target['type'] in ('Form', 'unknown') and target['name'] == 'Form':
-            log.debug('run_walkthrough: skip Form-level handler %s.%s', target['form'], target['name'])
             continue
 
         ctrl_name = target['name']
         caption = target['caption'] or ctrl_name
-        log.info('run_walkthrough: clicking %s (%s) action=%s', ctrl_name, caption, target['action'])
 
-        # Compute screen coords from form position + control position + nc offset
-        sx = main_win['x'] + nc_x_off + target['left_px'] + target['width_px'] // 2
-        sy = main_win['y'] + nc_y_off + target['top_px'] + target['height_px'] // 2
-        log.debug('run_walkthrough: %s screen=(%d,%d) form=(%d,%d) ctrl=(%d,%d) nc=(%d,%d)',
-                  ctrl_name, sx, sy, main_win['x'], main_win['y'], target['left_px'], target['top_px'], nc_x_off, nc_y_off)
+        # Find runtime position by matching caption or class
+        rt_ctrl = rt_children.get(caption)
+        if not rt_ctrl:
+            # Try matching by control type class name
+            vb_class_map = {'CommandButton': 'ThunderRT6CommandButton',
+                            'TextBox': 'ThunderRT6TextBox',
+                            'ListBox': 'ThunderRT6ListBox',
+                            'ComboBox': 'ThunderRT6ComboBox',
+                            'CheckBox': 'ThunderRT6CheckBox',
+                            'OptionButton': 'ThunderRT6OptionButton'}
+            rt_class = vb_class_map.get(target['type'], '')
+            candidates = rt_children_by_class.get(rt_class, [])
+            if len(candidates) == 1:
+                rt_ctrl = candidates[0]
 
-        # Skip controls with negative positions (hidden SSTab pages)
-        if target['left_px'] < 0 or target['top_px'] < 0:
-            log.debug('run_walkthrough: skip off-screen %s left=%d top=%d', ctrl_name, target['left_px'], target['top_px'])
+        if not rt_ctrl:
+            log.debug('run_walkthrough: no runtime match for %s (%s)', ctrl_name, caption)
             continue
 
-        # Skip if outside main form bounds
+        sx = rt_ctrl['x'] + rt_ctrl['w'] // 2
+        sy = rt_ctrl['y'] + rt_ctrl['h'] // 2
+        log.info('run_walkthrough: clicking %s (%s) at runtime pos (%d,%d) %dx%d',
+                 ctrl_name, caption, rt_ctrl['x'], rt_ctrl['y'], rt_ctrl['w'], rt_ctrl['h'])
+
         if sx < main_win['x'] or sx > main_win['x'] + main_win['w'] or \
            sy < main_win['y'] or sy > main_win['y'] + main_win['h']:
             log.debug('run_walkthrough: skip out-of-bounds %s screen=(%d,%d)', ctrl_name, sx, sy)
