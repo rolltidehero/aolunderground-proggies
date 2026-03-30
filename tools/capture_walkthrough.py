@@ -364,12 +364,24 @@ def _qga_send_recv(sock, msg):
         sock._buf += chunk
 
 
+class _BufSock:
+    """Socket wrapper that carries a read buffer."""
+    __slots__ = ('sock', '_buf')
+    def __init__(self, sock):
+        self.sock = sock
+        self._buf = b''
+    def sendall(self, data): return self.sock.sendall(data)
+    def recv(self, n): return self.sock.recv(n)
+    def close(self): return self.sock.close()
+    def settimeout(self, t): return self.sock.settimeout(t)
+
+
 def _qga_connect():
     """Connect to QGA and sync. Validates sync token per QGA spec."""
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(QGA_SOCK)
-    s.settimeout(10)
-    s._buf = b''
+    raw = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    raw.connect(QGA_SOCK)
+    raw.settimeout(10)
+    s = _BufSock(raw)
     sync_id = int(time.time() * 1000) % 100000
     s.sendall(json.dumps({'execute': 'guest-sync', 'arguments': {'id': sync_id}}).encode() + b'\n')
     while True:
@@ -510,6 +522,8 @@ def _gui_launch(cmdline):
     else:
         log.debug(f's1launch: {stdout.strip()}')
     return result
+_shell_seq = 0
+
 def c2gui(action, **kwargs):
     """Run commands in session 1 via QGA + s1launch_sys.py."""
     if action == 'run':
