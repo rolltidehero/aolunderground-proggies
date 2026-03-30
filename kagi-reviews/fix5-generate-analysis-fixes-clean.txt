@@ -1,0 +1,580 @@
+F1 (CRITICAL): No per-file exception isolation in batch processing
+
+Location: _process_one() and the single-thread loop in main()
+Fix: Wrap all per-file work in try/except Exception
+
+F2 (CRITICAL): Decompile fallback strings crash generation (str vs dict type mismatch + loop variable rebinding)
+
+Location: _process_one() at strings = decomp['strings'], consumed in generate_html()
+The issue is that the loop variable rebinding in the string frequency map building doesn't actually modify the original list, so stripped values aren't being used consistently downstream.
+But wait, the real problem is that strings from the decompile data could contain dicts, not just strings, so calling .strip() on them would fail with an AttributeError.
+
+Looking at where these strings originate in _process_one(), they come directly from decomp['strings'], which means they might not be plain strings at all. The fix should normalize them either at the point of assignment or at the top of generate_html() before any operations are performed on them.
+Now I'm reviewing the remaining high-priority issues: the non-deterministic database query in get_meta_from_db() needs an ORDER BY clause, find_exe_in_db() is returning incorrect executables due to basename collisions when it should return None instead, render_api_refs() has two separate logic bugs where it returns early before scanning code and uses replacement instead of union, render_hero() unconditionally overwrites the program name with the VB project name, and there's a late import of clean_code that needs addressing.
+Continuing through the remaining issues: render_code_breakdown(), render_forms(), and render_screenshots() all access external JSON metadata without checking for key existence first, get_meta_from_db() crashes when the exe_name field is NULL because it tries to construct a path with that value, _parse_frm_controls() has a dead code path from an earlier parser that's no longer used, render_functions() is defined but never actually called from generate_html(), and there's a compatibility issue with datetime.UTC which only exists in Python 3.11 and later.
+For the multiprocessing issue, find_exe_in_db() rebuilds the entire _exe_path_index in every worker process instead of reusing a shared index, which is wasteful.
+Now I'm working through the fixes. For the first issue, I need to wrap _process_one() in error handling...
+Writing error handling... I'm checking if decompiled data was found and extracting the executable name, then falling back to generating HTML from the strings data or skipping if nothing's available. After writing the HTML file and closing connections, I wrap the whole process in exception handling to log any failures.
+Now I'm realizing the main loop also needs similar isolation for each file. Looking at where strings get extracted from the decompiled data, I need to normalize them since they might be objects with a 'value' field rather than plain strings. This normalization should happen consistently wherever decomp strings are used—in the initial extraction, in the HTML generation fallback, and in the main loop. When I look at how strings are processed later in generate_html(), they're being stripped and counted, so I need to ensure they're always in string format before that point. I'm normalizing the strings list at the top of generate_html() to handle both string and dict types uniformly, which solves the inconsistency regardless of where the data enters the pipeline.
+Now looking at the remaining issues: get_meta_from_db needs deterministic ordering in its SQL query, find_exe_in_db should return None instead of guessing, and render_api_refs has two bugs—an early return that skips the code scan and a list assignment that overwrites instead of merging the found API strings.
+For render_hero, I need to add a quality check when overriding the project name, and the clean_code import in _make_proc_resolver() should be moved to the top of the file rather than imported inside the function.
+Now looking at several places where I'm accessing dictionary keys directly without safety checks. In render_code_breakdown() I'm pulling percentage and function count values from the code breakdown object, render_forms() accesses form names, and render_screenshots() pulls dimensions and captions. All of these should use .get() with sensible defaults instead of risking KeyError exceptions.
+There's also an issue in get_meta_from_db() where it crashes with a TypeError when the exe_name field is NULL...
+Parsing the form controls with nested Begin/End blocks... Parsing the container properties...
+I see the issue now—the entire stack-based loop that handles Left and Top positioning for frames and panels is actually dead code, since the function discards all those results and calls a recursive parsing function instead that rebuilds the controls list from scratch.
+Looking at the remaining fixes, I need to address several issues: the render_functions are never actually invoked, so I should add a fallback call to generate_html() when code_breakdown is missing. The datetime.UTC reference won't work in older Python versions, so I'll switch that to datetime.timezone.utc and tighten up the exception handling. And for the multiprocessing issue, the _exe_path_index gets rebuilt wastefully in every worker process—I should construct it once in the main process and pass it through the pool initializer instead.
+Let me trace through each fix carefully, starting with the single-threaded loop in main()...
+Wrapping the HTML generation loop with try/except to handle any failures gracefully. The multiprocessing path through pool.imap_unordered should also catch exceptions from workers, though if _process_one already handles them internally this becomes less critical. For F7, the import statement lives inside a closure that only gets called from render_functions() and render_code_breakdown(), but since render_functions() is never invoked, the active code path is limited.
+Moving the import to the top level with a fallback...
+Now I'm identifying all the direct dictionary key accesses that need defensive handling. In render_code_breakdown() there are several percentage and count fields being accessed directly, and I need to check render_forms() as well for similar patterns.
+Looking at render_screenshots(), I see inconsistent access patterns—some places use .get() safely while others access keys directly like form_info['width'] and item['caption']. The render_forms() function also has direct access on form['name'] within the loop over decomp['forms'].
+Fixing dictionary access patterns...
+I also need to add the logging import at the top since it's not currently there. For F13, I'm thinking through how to build the executable path index in main and pass it to worker processes via a pool initializer function that sets a global variable.
+Now I need to write out all the fixes systematically, starting with the multiprocessing approach for F13 where I build the index once in the main process, then distribute it to workers through the initializer. The index is just a dictionary mapping strings to lists of strings, so it's picklable and safe to pass around.
+For F5, let me reconsider the render_api_refs function more carefully...
+I'm scanning through the code_breakdown to find all reachable code from both app functions and reachable functions, then checking which known API names appear in that combined code to build a set of found APIs. Continuing to scan the reachable code from both app and reachable functions, I'm building a set of API names that appear in that code, then merging it with the existing api_strings using a union operation. Then I'm checking the render_hero function to see how it handles the decomp object when extracting the project name.
+I'm realizing the issue here—the proj_name needs quality validation before using it as the program name. So I'm adding checks to ensure it's not a generic placeholder like "Project1", doesn't match the executable name, and has meaningful length before accepting it as the program identifier. Refining the logic to add quality gates on the project name before using it, then falling back to the extraction method only when the project name fails those checks. I'm identifying non-visual control types to skip, then parsing nested Begin/End blocks to track parent offsets and extract control properties like position and size. Finishing up the coordinate calculations for nested controls, then realizing this whole approach is getting too complicated—I'm going to scrap it and use a cleaner recursive parser instead that properly handles the nesting structure.
+For the F11 issue, I need to modify generate_html() to fall back to rendering functions when the code breakdown doesn't produce output, checking if render_code_breakdown() returns anything before trying render_functions() as an alternative.
+Looking at render_form_layout, there's dead code sitting after a return statement—looks like a copy-paste error where render_about_text logic got duplicated, but since this isn't part of the 13 findings I'm tracking, I'll leave it alone.
+For F8, I need to systematically convert all direct dictionary key accesses to .get() calls with sensible defaults. In render_code_breakdown(), that means replacing the direct bracket notation for accessing percentage and count values. Same approach for render_forms() and render_screenshots()—I'll scan through each function and swap out the unsafe key accesses. I'm going through the code and replacing direct dictionary accesses with safer .get() calls that provide default values, so the code won't break if those keys are missing from the data structures. Fixing the inconsistency where form_info["image"] uses direct access in one place but .get('image', '') in another—I need to standardize this to use .get() throughout for safety. I'm seeing that cat["category"] also uses direct dictionary access, so I need to fix that along with the other unsafe accesses in these functions. For the F13 issue about the index building, I should set up a worker initializer function that receives the built index once and stores it globally, then pass that to the pool so each worker has access to it without rebuilding—though I also need to handle the single-threaded case properly.
+Now I'm thinking through how the different fixes interact with each other, particularly how F1's error handling and F2's string normalization both apply to the same processing function.
+Looking at the F3 fix more carefully, I need to make the SQL query deterministic by adding an ORDER BY clause. The current query doesn't guarantee which exe record gets returned when there are multiple matches, so I'm considering ordering by exe_name alphabetically as a simple way to ensure consistent results, though I'm realizing this might not pick the most meaningful record.
+A better approach would be to deprioritize installer executables by checking if the name contains "setup" or "install", then fall back to alphabetical ordering. This way the query naturally prefers the main application executable over setup files.
+For F4, the fix is simpler—when there's ambiguity in finding an exe in the database, I should return None instead of falling back to the first result in the pool.
+Refining the function signature... I need to be surgical about these fixes—applying F13 to pre-build the index and F1 to add exception handling in the single-thread loop, then combining both F1 and F2 into _process_one() where they overlap.
+For the imports, I'm adding logging at the module level for F1, and handling the clean_code import with a try/except fallback since it's not provided in the code. F7 needs the import at the top level with the closure adjusted to avoid re-importing.
+Now I'm going through render_code_breakdown line by line to fix only the direct dictionary accesses that need the safe getter pattern, providing the complete fixed function. I see the finding specifically calls out the top-level cb dictionary accesses like cb['app_pct'] and cb['reachable_pct'], so I'll add .get() for those. The nested f['name'] and f['code'] accesses within function objects are part of the internal schema and less critical, but I should also fix the cherry-picked section where f['matched_func'] and f['match_score'] are accessed directly.
+For the architectural fix, the guidance mentions schema validation as preferred but .get() with sensible defaults is the minimum, so I'll go with that approach. Let me now work through each finding systematically and apply the fixes.
+Starting with the imports at the top of the file: I need to add a fallback for the clean_for_display function in case the import fails, and also bring in logging for better error handling. For the traceback output, I'll use logging.exception() since it automatically captures the full stack trace without needing additional configuration. Still writing error handling... OK now let me write everything out systematically.
+Let me reconsider F2 fix location. The strings can come from two places: get_strings_from_db() which returns stripped strings, and decomp['strings'] which can be mixed str/dict. The normalization should happen where decomp strings enter the pipeline—either in _process_one(), the main single-thread loop, or generate_html(). The cleanest approach is normalizing at the start of generate_html() with a list comprehension that handles str, dict, and other types, since this catches all entry points with a single fix. In _process_one(), strings are extracted from decomp and passed to generate_html(), so normalizing there ensures downstream consumers always work with clean data. Now I'm mapping out which fixes apply to each function to avoid duplication. I see that several functions need updates—imports at the top, then specific fixes scattered across get_meta_from_db(), _read_pe_timestamp(), find_exe_in_db(), and the various render functions, plus generate_html() and _process_one() which I've already addressed. I'll also need to add a new worker initialization function for one of the findings.
+For the single-threaded path in main(), I need to set the global _exe_path_index variable before the loop runs, since find_exe_in_db() will check it. Python allows global declarations inside functions, so I can declare it and assign the exe_index there.
+For multiprocessing, I'll create an _init_worker function that the pool initializer calls to set the same global in each worker process. My approach is to pre-build the index once in main() before either execution path, then pass it to the initializer for multiprocessing or set it directly for single-threaded execution.
+Setting up the initializer and main function...
+Now I need to verify all the places where cb is accessed directly to ensure I'm handling the data structure correctly.  I'm finding seven direct accesses that need the .get() method for safe dictionary access, while one location already has it properly implemented. I'm tracing through how the walkthrough.json data gets processed—when it's a list versus a dictionary, and then checking the form and label info for direct dictionary accesses that should use .get() instead. I can see several places in the render_screenshots function where items are accessed directly without null checks, like cat['items'] and item['caption'], which need to be fixed. I'm realizing that since the data comes from an external JSON file, I should use .get() with defaults for all those dictionary accesses like cat['items'], cat['category'], and item['caption']. For the cases where I'm checking if a value exists before using it—like item.get('child_h') followed by accessing it again—I can store the result in a variable first to make it cleaner and safer.
+Now I need to finalize the fixes for render_screenshots, which is a long function with over 100 lines. The main changes are converting dictionary accesses to use .get() with appropriate defaults for form_info['width'], form_info['height'], form_info["image"], and the multiple item['caption'] references throughout the function.
+I'll provide the complete fixed function since these changes are scattered throughout and need to be copy-paste ready. Let me structure the response with the issues listed first, then the full corrected function for each file. I'm working through the remaining fixes now—generate_html() and _process_one() both need updates to handle the new parameters, then I'll tackle the new _init_worker() function and finally update main(). For render_screenshots, I realize it's quite long, so I'll use a diff-style approach with context lines to show exactly what changes rather than reproducing the entire function. I'm working through the priority fixes and realizing I need to balance completeness with the character limit—the critical functions like _process_one and main need full replacements, while for the larger functions affected by F8, I can show just the changed sections with enough context to locate them. Let me organize this by impact: the core logic fixes first, then the medium-length functions, then the mechanical .get() additions across the three large functions, keeping the most essential changes within the 15K character budget. 13 findings covered.
+Let me start drafting.
+I also want to double-check my understanding of the dead code in _parse_frm_controls. The dead code is the stack-based parser loop. After it, controls = [] resets, then _parse_nested is called. The form dimensions parsing (ClientWidth/ClientHeight) is NOT dead code - it's used in the return. The NONVISUAL set is also used by _parse_nested. So the fix is to remove only the stack-based loop.
+Still writing parser... Finishing the Top coordinate calculation and then simplifying the parsing logic...
+I'm extracting the form dimensions from the VB6 source using regex patterns, then defining a set of non-visual control types to filter out, and finally calling the recursive nested parser to build the controls list before returning everything together. I'm assessing the scope of changes needed across these functions. The main() function is about 50 lines with F1 and F13 modifications scattered throughout, so I'll need to provide the full replacement. For render_code_breakdown, the changes are distributed across roughly 90 lines, so that's also worth providing in full. render_screenshots has targeted fixes in specific spots, so I can use replacement blocks there. generate_html has localized changes—F2 at the top and F11 in the middle—so I'll extract just those sections. Let me write out the complete solution now.
+Actually, I need to handle the fallback logic in main() where if strings aren't found in the database, the code tries to load decompilation data from disk, searching through subdirectories for metadata, and only continues if it finds valid strings or an executable path.
+Now I'm wrapping the HTML generation in a try/except block to handle errors gracefully, and normalizing the strings data from decompilation before using it.
+Continuing with the main loop... Writing the file output and error handling...
+Now I need to make sure the error counter is initialized and then fix the form rendering function to safely access the form name and filter out shape elements properly.
+For render_forms(), the key issue is that form["name"] needs to use .get() with a fallback, and I should verify the controls filtering is already handling the shape/line exclusion correctly. The control-level dictionary accesses are more stable since they come from the decompiled output structure, so I'll focus on just the form-level access that was flagged.
+I'm organizing the fixes by function, starting with imports and then working through each function that has findings. This will be a comprehensive response covering all 13 findings, so I need to be efficient with the explanations while still showing the actual code changes where they matter most. I'm realizing render_code_breakdown is too large to include in full, so I'll extract just the surgical patches for those five dictionary access points that need the .get() method instead. Continuing to add defensive .get() calls throughout the render_code_breakdown function to safely access dictionary values with sensible defaults.
+For the generate_html function, I need to make sure the code breakdown rendering is being called properly to display that section. I'm ready to write the response now, following the user's requested format with exact drop-in replacement code blocks for each critical, high, and medium severity finding.
+
+BLOCK 1 — PROBLEMS TO FIX
+
+F1 (CRITICAL): No per-file exception isolation — one crash kills entire batch — _process_one(), main()
+F2 (CRITICAL): Dict entries in decompile strings crash .strip(); loop var rebinding — _process_one(), generate_html()
+F3 (HIGH): Non-deterministic exe from LIMIT 1 without ORDER BY — get_meta_from_db()
+F4 (HIGH): Basename collision returns wrong exe strings — find_exe_in_db()
+F5 (HIGH): Early return prevents code scan; replacement instead of union — render_api_refs()
+F6 (HIGH): Unconditional override with VB project name like "Project1" — render_hero()
+F7 (HIGH): Late import of clean_code inside closure causes opaque failures — _make_proc_resolver()
+F8 (HIGH): Direct [] key access on external JSON causes KeyError — render_code_breakdown(), render_forms(), render_screenshots()
+F9 (HIGH): TypeError when exe_name is NULL but exe_path is truthy — get_meta_from_db()
+F10 (MEDIUM): Dead first parser wastes computation, results discarded — _parse_frm_controls()
+F11 (MEDIUM): render_functions defined but never called — generate_html()
+F12 (MEDIUM): datetime.UTC requires Python 3.11+, failure silently swallowed — _read_pe_timestamp()
+F13 (MEDIUM): _exe_path_index rebuilt in every worker process — find_exe_in_db(), main()
+
+
+BLOCK 2 — DETAILED FIXES
+Fix 1: Top-level imports (F1, F7)
+File: generate_analysis.py, top of file
+What: Add logging for F1 exception reporting. Move clean_code import to module level with fallback for F7.
+Add after from pathlib import Path:
+import logging
+
+try:
+    from clean_code import clean_for_display
+except ImportError:
+    def clean_for_display(code):
+        return code
+
+
+Fix 2: get_meta_from_db (F3, F9)
+File: generate_analysis.py, function get_meta_from_db
+What: F3 — add ORDER BY to deprioritize installer exes. F9 — guard row[4] before path construction.
+def get_meta_from_db(zip_stem, conn=None):
+    """Get metadata from proggie_db.sqlite — primary source."""
+    own_conn = conn is None
+    if own_conn:
+        db = Path("proggie_db.sqlite")
+        if not db.exists(): return None
+        conn = sqlite3.connect(str(db))
+    row = conn.execute(
+        "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path, p.zip_path "
+        "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? "
+        "ORDER BY CASE WHEN e.exe_name LIKE '%setup%' OR e.exe_name LIKE '%install%' THEN 1 ELSE 0 END, e.exe_name "
+        "LIMIT 1",
+        (zip_stem,)
+    ).fetchone()
+    if own_conn: conn.close()
+    if not row: return None
+    meta = {
+        'program': row[0] or zip_stem, 'author': row[1] or 'Unknown',
+        'aol_version': row[2] or '?', 'category': row[3] or '?',
+        'exe': row[4] or '?', 'vb': row[5] or '?', 'compile': row[6] or '?',
+        'zip_path': row[8] or '',
+    }
+    # Read PE timestamp for compile date
+    if row[7] and row[4]:
+        exe_path = SORTED_DIR / '_extracted' / zip_stem / row[4]
+        if exe_path.exists():
+            meta['compile_date'] = _read_pe_timestamp(exe_path)
+    return meta
+
+
+Fix 3: _read_pe_timestamp (F12)
+File: generate_analysis.py, function _read_pe_timestamp
+What: Replace datetime.UTC (3.11+) with datetime.timezone.utc (3.3+). Narrow exception handler.
+def _read_pe_timestamp(exe_path):
+    """Read compile date from PE header TimeDateStamp field."""
+    import struct, datetime
+    try:
+        with open(exe_path, 'rb') as f:
+            f.seek(0x3C)
+            pe_off = struct.unpack(' 1893456000:  # 1990-2030 sanity check
+                return None
+            dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+            return dt.strftime('%Y-%m-%d')
+    except (OSError, struct.error, ValueError, OverflowError):
+        return None
+    except Exception:
+        logging.exception("Unexpected error reading PE timestamp from %s", exe_path)
+        return None
+
+
+Fix 4: find_exe_in_db (F4)
+File: generate_analysis.py, function find_exe_in_db
+What: Return None when ambiguous instead of guessing pool[0].
+def find_exe_in_db(conn, exe_name, archive_base):
+    global _exe_path_index
+    if not exe_name or exe_name == '?': return None
+    if _exe_path_index is None:
+        _exe_path_index = _build_exe_path_index(conn)
+    candidates = _exe_path_index.get(exe_name.lower(), [])
+    if len(candidates) == 1: return candidates[0]
+    # Prefer AOL proggies paths over AIM or other
+    aol = [p for p in candidates if 'proggies/' in p.lower()]
+    pool = aol or candidates
+    for p in pool:
+        if archive_base.lower() in p.lower(): return p
+    return None  # Ambiguous — do not guess
+
+
+Fix 5: render_hero (F6)
+File: generate_analysis.py, function render_hero
+What: Add quality gate on proj_name — reject generic names like "Project1", exe-stem matches, short names.
+Replace the if decomp: block (the first one dealing with program name) with:
+  Python# Try to extract real program name from decompiled source
+if decomp:
+    proj_name = (decomp.get('project') or {}).get('name', '')
+    # Only use VB project name if it looks like a real program name
+    proj_ok = (proj_name
+               and not re.match(r'^Project\d*$', proj_name, re.I)
+               and proj_name.lower() != meta.get('exe', '').replace('.exe', '').lower()
+               and len(proj_name) > 3)
+    if proj_ok:
+        program = proj_name
+    else:
+        extracted = _extract_program_name(decomp)
+        if extracted:
+            program = extracted
+
+
+Fix 6: render_api_refs (F5)
+File: generate_analysis.py, function render_api_refs
+What: Bug A — move early return to after code scan. Bug B — union instead of replacement.
+def render_api_refs(api_strings, decomp=None):
+    """Render API references split into AOL Classes vs Win32 Calls.
+    When decomp has code_breakdown, scan reachable code for known API strings."""
+    if api_strings is None:
+        api_strings = []
+    e = H.escape
+
+    # When we have code_breakdown, scan reachable code for all known API strings
+    cb = (decomp or {}).get('code_breakdown') or {}
+    if cb:
+        reachable_code = ''
+        for f in cb.get('app_functions', []):
+            reachable_code += f.get('code', '')
+        for f in cb.get('reachable_functions', []):
+            reachable_code += f.get('code', '')
+        if reachable_code:
+            found = set()
+            for name in AOL_API_VERSIONS:
+                if name in reachable_code:
+                    found.add(name)
+            # Merge code-found APIs with string-extracted APIs
+            api_strings = list(set(api_strings) | found)
+
+    if not api_strings:
+        return ''
+
+    aol_classes = []
+    win32_calls = []
+    other_api = []
+    for s in api_strings:
+        ver = AOL_API_VERSIONS.get(s, '')
+        if ver and ver != 'Win32 API' and ver != 'Multimedia':
+            aol_classes.append((s, ver))
+        elif ver in ('Win32 API', 'Multimedia'):
+            win32_calls.append((s, ver))
+        else:
+            other_api.append((s, ''))
+
+    total = len(aol_classes) + len(win32_calls) + len(other_api)
+    if not total:
+        return ''
+    lines = [f'&#x2699; API References ({total})']
+    if aol_classes:
+        aol_classes.sort(key=lambda x: x[0].lstrip('_').lower())
+        lines.append('AOL Window Classes')
+        for s, ver in aol_classes:
+            lines.append(f'{e(s)} {e(ver)}')
+        lines.append('')
+    if win32_calls:
+        lines.append('Win32 API Calls')
+        for s, ver in win32_calls:
+            lines.append(f'{e(s)}')
+        lines.append('')
+    if other_api:
+        lines.append('Other')
+        for s, ver in other_api:
+            lines.append(f'{e(s)}')
+        lines.append('')
+    return '\n'.join(lines)
+
+
+Fix 7: _make_proc_resolver (F7)
+File: generate_analysis.py, inner function replace_in_code inside _make_proc_resolver
+What: Remove late from clean_code import — now uses module-level import (see Fix 1).
+Replace the replace_in_code closure body:
+def replace_in_code(code_text):
+    cleaned = clean_for_display(code_text)
+    escaped = e(cleaned)
+    def _sub(m):
+        short = f'{m.group(1)}_{m.group(2)}'
+        addr = m.group(3)
+        canon = proc_names.get(short) or addr_names.get(addr)
+        if canon:
+            return f'{canon}'
+        return m.group(0)
+    return re.sub(r'(Proc_\d+)_(\d+)_([A-F0-9]+)', _sub, escaped)
+
+
+Fix 8: render_code_breakdown — safe key access (F8)
+File: generate_analysis.py, function render_code_breakdown
+What: Replace direct cb[key] accesses with .get(key, default).
+Change 1 — percentages line:
+  Python# BEFORE:
+app_pct, used_pct, dead_pct = cb['app_pct'], cb['reachable_pct'], cb['dead_pct']
+# AFTER:
+app_pct = cb.get('app_pct', 0)
+used_pct = cb.get('reachable_pct', 0)
+dead_pct = cb.get('dead_pct', 0)
+
+Change 2 — legend app funcs count:
+  Python# BEFORE:
+lines.append(f'Custom code — {cb["app_funcs_count"]} funcs ({adj_app_pct}%)')
+# AFTER:
+lines.append(f'Custom code — {cb.get("app_funcs_count", 0)} funcs ({adj_app_pct}%)')
+
+Change 3 — reachable base funcs:
+  Python# BEFORE:
+    remaining_used = cb["reachable_base_funcs"] - len(cherry)
+# AFTER:
+    remaining_used = cb.get("reachable_base_funcs", 0) - len(cherry)
+
+Change 4 — total base funcs:
+  Python# BEFORE:
+        lines.append(f'Used from {e(bas_label)} — {remaining_used} of {cb["total_base_funcs"]} funcs ({used_pct}%)')
+# AFTER:
+        lines.append(f'Used from {e(bas_label)} — {remaining_used} of {cb.get("total_base_funcs", 0)} funcs ({used_pct}%)')
+
+Change 5 — dead base funcs:
+  Python# BEFORE:
+    lines.append(f'Unused from {e(bas_label)} — {cb["dead_base_funcs"]} funcs ({dead_pct}%)')
+# AFTER:
+    lines.append(f'Unused from {e(bas_label)} — {cb.get("dead_base_funcs", 0)} funcs ({dead_pct}%)')
+
+
+Fix 9: render_forms — safe key access (F8)
+File: generate_analysis.py, function render_forms
+What: form["name"] → .get().
+  Python# BEFORE:
+    lines.append(f'{e(form["name"])}')
+# AFTER:
+    lines.append(f'{e(form.get("name", "Unknown"))}')
+
+Also fix the frm_path construction that uses the same key:
+  Python# BEFORE:
+        frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form["name"]}.frm'
+# AFTER:
+        form_name = form.get("name", "")
+        frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form_name}.frm'
+
+
+Fix 10: render_screenshots — safe key access (F8)
+File: generate_analysis.py, function render_screenshots
+Change 1 — form dimensions:
+  Python# BEFORE:
+        fw, fh = form_info['width'], form_info['height']
+# AFTER:
+        fw, fh = form_info.get('width', 0), form_info.get('height', 0)
+
+Change 2 — form image path:
+  Python# BEFORE:
+        form_img = f'{zip_stem}/{form_info["image"]}'
+# AFTER:
+        form_img = f'{zip_stem}/{form_info.get("image", "")}'
+
+Change 3 — item caption in interactive widget (walkthrough items loop):
+  Python# BEFORE:
+                d = {'caption': item['caption'],
+# AFTER:
+                d = {'caption': item.get('caption', ''),
+
+Change 4 — category tab buttons:
+  Python# BEFORE:
+            lines.append(f'{H.escape(cat["category"])}')
+# AFTER:
+            lines.append(f'{H.escape(cat.get("category", ""))}')
+
+Change 5 — fallback item caption:
+  Python# BEFORE:
+                cap = H.escape(item['caption'])
+# AFTER:
+                cap = H.escape(item.get('caption', ''))
+
+
+Fix 11: _parse_frm_controls (F10)
+File: generate_analysis.py, function _parse_frm_controls
+What: Remove the dead stack-based parser loop whose results are discarded by controls = [].
+def _parse_frm_controls(frm_path):
+    """Parse .frm file to extract control positions and sizes."""
+    text = frm_path.read_text(encoding='utf-8-sig', errors='ignore')
+    form_w = form_h = 0
+    # Get form dimensions
+    m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
+    if m: form_w = int(m.group(1))
+    m = re.search(r'ClientHeight\s*=\s*(\d+)', text)
+    if m: form_h = int(m.group(1))
+
+    # Non-visual control types to skip
+    NONVISUAL = {'Timer', 'VBMsg', 'CommonDialog', 'MCI', 'InvisibleIcon',
+                 'OLE', 'Data', 'Winsock', 'Inet', 'MAPI'}
+
+    controls = []
+    _parse_nested(text.splitlines(), controls, 0, 0, NONVISUAL)
+    return controls, form_w, form_h
+
+
+Fix 12: generate_html (F2, F11)
+File: generate_analysis.py, function generate_html
+Change 1 (F2) — normalize strings at top of function. Add after decomp = ... fallback block, before str_freq = {}:
+  Python# Normalize strings: decomp data may contain dicts with 'value' key
+strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in strings]
+
+Change 2 (F11) — call render_functions as fallback. Replace:
+  Python# Code breakdown (base module vs app code) — single code section
+lines.append(render_code_breakdown(decomp))
+
+With:
+  Python# Code breakdown (base module vs app code) — single code section
+cb_html = render_code_breakdown(decomp)
+if cb_html:
+    lines.append(cb_html)
+else:
+    fn_html = render_functions(decomp)
+    if fn_html:
+        lines.append(fn_html)
+
+
+Fix 13: _process_one (F1, F2)
+File: generate_analysis.py, function _process_one
+What: F1 — wrap in try/except with logging. F2 — normalize decomp strings.
+def _process_one(html_path_str):
+    """Worker function for multiprocessing — generates one HTML page."""
+    try:
+        html_path = Path(html_path_str)
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+
+        meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+        exe_name = meta.get('exe', '')
+        archive_name = html_path.stem + '.zip'
+        archive_base = html_path.stem
+
+        exe_path = find_exe_in_db(conn, exe_name, archive_base)
+        strings = get_strings_from_db(conn, exe_path) if exe_path else []
+
+        if not strings:
+            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+            if not decomp:
+                decomp_base = DECOMPILED_DIR / archive_base
+                if decomp_base.exists():
+                    for sub in decomp_base.iterdir():
+                        if sub.is_dir() and (sub / 'metadata.json').exists():
+                            decomp = load_decompile_data(archive_base, sub.name)
+                            if decomp:
+                                exe_name = sub.name
+                                break
+            if decomp and decomp.get('strings'):
+                strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+            elif not exe_path:
+                conn.close()
+                if pdb: pdb.close()
+                return 'skip'
+
+        page = generate_html(meta, strings, archive_name, html_path, pdb)
+        html_path.write_text(page, encoding='utf-8')
+        conn.close()
+        if pdb: pdb.close()
+        return 'ok'
+    except Exception:
+        logging.exception("Failed to process %s", html_path_str)
+        try:
+            conn.close()
+        except Exception:
+            pass
+        try:
+            if pdb: pdb.close()
+        except Exception:
+            pass
+        return 'error'
+
+
+Fix 14: _init_worker — new function (F13)
+File: generate_analysis.py, add before main()
+def _init_worker(exe_index):
+    """Pool initializer: set pre-built exe path index in each worker process."""
+    global _exe_path_index
+    _exe_path_index = exe_index
+
+
+Fix 15: main (F1, F13)
+File: generate_analysis.py, function main
+What: F1 — exception isolation in single-thread loop. F13 — pre-build exe index once, pass to workers.
+def main() -> int:
+    if not DB_PATH.exists():
+        print(f"Error: {DB_PATH} not found", file=sys.stderr)
+        return 1
+
+    # Support single-file mode
+    if len(sys.argv) > 1:
+        target = Path(sys.argv[1])
+        html_files = [target] if target.exists() else []
+    else:
+        html_files = sorted(SORTED_DIR.rglob("*.html"))
+
+    total = len(html_files)
+    print(f"Processing {total} HTML pages", file=sys.stderr)
+
+    # Pre-build exe path index once for all workers (F13)
+    global _exe_path_index
+    str_conn = sqlite3.connect(str(DB_PATH))
+    _exe_path_index = _build_exe_path_index(str_conn)
+    str_conn.close()
+
+    if total > 4:
+        import multiprocessing
+        workers = max(1, multiprocessing.cpu_count() - 1)
+        generated = skipped = errors = 0
+        with multiprocessing.Pool(workers, initializer=_init_worker, initargs=(_exe_path_index,)) as pool:
+            for i, result in enumerate(pool.imap_unordered(_process_one, [str(p) for p in html_files], chunksize=16)):
+                if result == 'ok':
+                    generated += 1
+                elif result == 'error':
+                    errors += 1
+                else:
+                    skipped += 1
+                if (i + 1) % 200 == 0:
+                    print(f"  {i+1}/{total} processed, {generated} regenerated, {errors} errors", file=sys.stderr)
+    else:
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+        generated = skipped = errors = 0
+        for html_path in html_files:
+            try:
+                meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+                exe_name = meta.get('exe', '')
+                archive_name = html_path.stem + '.zip'
+                archive_base = html_path.stem
+                exe_path = find_exe_in_db(conn, exe_name, archive_base)
+                strings = get_strings_from_db(conn, exe_path) if exe_path else []
+                if not strings:
+                    decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+                    if not decomp:
+                        decomp_base = DECOMPILED_DIR / archive_base
+                        if decomp_base.exists():
+                            for sub in decomp_base.iterdir():
+                                if sub.is_dir() and (sub / 'metadata.json').exists():
+                                    decomp = load_decompile_data(archive_base, sub.name)
+                                    if decomp:
+                                        exe_name = sub.name
+                                        break
+                    if decomp and decomp.get('strings'):
+                        strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+                    elif not exe_path:
+                        skipped += 1
+                        continue
+                page = generate_html(meta, strings, archive_name, html_path, pdb)
+                html_path.write_text(page, encoding='utf-8')
+                generated += 1
+            except Exception:
+                logging.exception("Failed to process %s", html_path)
+                errors += 1
+        conn.close()
+        if pdb: pdb.close()
+
+    print(f"Done: {generated} regenerated, {skipped} skipped, {errors} errors")
+
+    # Generate landing page
+    generate_landing_page()
+
+    return 0
+
+
+SUMMARY
+
+
+Metric
+Value
+
+
+File
+generate_analysis.py
+
+
+Total findings fixed
+13
+
+
+Critical (F1, F2)
+2 — exception isolation + string normalization
+
+
+High (F3–F9)
+7 — SQL ordering, ambiguous match, API logic, hero override, late import, KeyError guards, NULL guard
+
+
+Medium (F10–F13)
+4 — dead code removal, missing call, datetime compat, worker index sharing
+
+
+Functions modified
+12
+
+
+New functions added
+1 (_init_worker)
+
+
+New imports added
+2 (logging, clean_code with fallback)

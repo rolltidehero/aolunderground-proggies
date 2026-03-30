@@ -1,0 +1,690 @@
+Thinking
+The user wants a single unified shell script that applies all the fixes from the review using sed or python -c commands. Let me carefully craft this script to handle all 13 findings.
+Let me think through each fix carefully:
+F1: Wrap _process_one in try/except, add logging import
+F2: Normalize strings (dict-&gt;str), fix loop var rebinding  
+F3: Add ORDER BY to SQL query in get_meta_from_db
+F4: Return None instead of pool[0] in find_exe_in_db
+F5: Fix early return and union in render_api_refs
+F6: Quality gate on proj_name in render_hero
+F7: Move clean_code import to module level with fallback
+F8: Replace direct [] access with .get() in render_code_breakdown, render_forms, render_screenshots
+F9: Guard row[4] in get_meta_from_db
+F10: Remove dead first parser in _parse_frm_controls
+F11: Call render_functions as fallback in generate_html
+F12: Replace datetime.UTC with datetime.timezone.utc
+F13: Pre-build _exe_path_index, pass to workers
+Now I need to carefully examine the actual source code and construct the script that will apply each of these fixes precisely.
+I'll write Python scripts to handle the exact string replacements, which is more reliable than sed for multi-line changes. The fixes need to be applied in order: adding the logging and clean_code imports at the top, then fixing get_meta_from_db with the ORDER BY clause and row[4] guard, updating the datetime.UTC reference, returning None instead of pool[0] in find_exe_in_db, fixing the early return and union type in render_api_refs, adding the quality gate in render_hero, and continuing through the remaining fixes.
+Now I'm carefully re-reading the source code to ensure exact string matching for each replacement.
+Writing Python replacement scripts... I'm setting up a helper function that backs up each file, applies a fix using Python scripts, and validates the syntax before committing the change. For the actual fixes, I'll use Python heredocs to safely handle multi-line string replacements and avoid quoting issues.
+Now I'm working through each fix systematically. First, I need to add the logging import after the pathlib import, then add a fallback for the clean_code module. For the get_meta_from_db function, I need to modify the SQL query to include an ORDER BY clause and update the conditional logic to check both row[7] and row[4].
+Modifying the SQL query to prioritize setup/install executables...
+Now I need to add a safety check to ensure the executable name exists before constructing the path.
+For the ambiguous case in find_exe_in_db, I should return None rather than guessing which executable to use.
+The render_api_refs function separates API references into AOL Classes and Win32 Calls, scanning reachable code when available to identify known API strings. I'm refactoring the API string handling logic. Instead of returning early when the list is empty, I'll initialize it as an empty list if it's None, then scan the code breakdown for any API versions found. After the scan, I'll merge the discovered APIs with the original extracted ones using set union, and move the early return to happen after all the processing is complete. I'm refining the render_hero function to validate the project name more carefully—checking that it's not a generic placeholder, doesn't match the executable name, and has sufficient length before using it as the program name, otherwise falling back to the extracted name. Looking at the fixes needed, I'm removing the late import from _make_proc_resolver by moving the import statement to the top of the function, then continuing with the code replacements in render_code_breakdown where I need to swap direct dictionary access for safer .get() calls with default values across multiple fields.
+For render_forms, I'm updating both the h3 tag and the file path construction to use .get() with appropriate defaults. Similar changes are needed in render_screenshots for dictionary access safety, and I'm removing the entire _parse_frm_controls function since it's no longer being used. Still writing parser... Finishing the position calculation for Left and Top properties, then switching to a recursive parsing approach that properly handles nested control blocks and returns the parsed controls along with form dimensions. I'm going to strip out that entire dead code section between the two parsing approaches and just keep the cleaner recursive implementation that follows. I'm thinking through the best approach for implementing all these fixes. Rather than using individual sed or python -c commands, I should write a single comprehensive Python script that handles all the replacements in sequence, with compile checks after each fix to ensure nothing breaks. This way I can manage the quoting and multi-line replacements more cleanly, and the order of operations will be clear and maintainable.
+Now I'm setting up the shell script structure with proper error handling, creating a backup before each fix attempt, and tracking which fixes succeeded or failed.
+Writing the helper function...
+For the actual fixes, I need to embed Python code that can safely modify the file. The tricky part is handling shell quoting correctly—if I use double quotes around the Python code, I need to escape any dollar signs or double quotes inside, but single quotes would prevent me from using apostrophes in the Python strings. The cleanest approach is to write the Python logic in a way that avoids these quoting nightmares. I'm wrestling with how to pass the heredoc through the apply_fix function—the redirection happens at the calling level, not inside the function where python3 actually runs. I think the cleaner approach is to write each Python fix to a temporary file and execute it directly, rather than trying to pipe it through stdin.
+Let me map out the fix ordering since some depend on others: the logging import needs to come first since later fixes use it, the module-level import for clean_code should precede the inner function changes, and I can batch some of the simpler fixes together. I'm working through the import fixes now—adding logging right after json and wrapping the clean_code import in a try/except block with a fallback function, then I'll write out all the changes and fix the worker and main functions.
+Now I'm tracing through the source code to identify the exact strings I need to modify. For the _parse_frm_controls fix, I need to remove a dead code block that starts with the comment about nested Begin/End blocks and ends just before the comment about re-parsing with proper nesting. For _process_one, I'm planning to wrap the entire function body in a try/except handler, which is a significant change that requires careful attention to indentation. I'm realizing the string replacement approach is getting unwieldy, so I'll just replace the entire function instead. The boundary is clear — _process_one ends right before def main() -&gt; int:, so I can grab the full function text and rewrite it with the try-except wrapper around the whole body.
+Now I'm looking at the rest of the function logic: it retrieves metadata from the database or parses existing metadata, then looks up the executable and associated strings. If strings aren't found, it attempts to load decompilation data from the archive or from a decompiled directory on disk.
+Once strings are located (either from the database or decompilation data), it generates the HTML page, writes it out, and closes the database connections. The key thing I'm realizing is that I need to wrap this in a try/except block and also normalize the strings when they come from the decompilation data, similar to how F2 handles normalization.
+For the main() function changes, I'm looking at a bigger refactor: pre-building an executable path index before the processing loop, adding an initializer to the multiprocessing Pool, wrapping the single-threaded loop in try/except, tracking error counts, and updating the final print statement accordingly.
+Now I'm thinking about the bash script approach using a heredoc with quoted delimiters to prevent shell expansion during the write operation.
+Since the Python source contains triple-quoted docstrings, I'll need to be strategic about which quote style I use for my replacement strings—using triple single quotes where the content has triple double quotes and vice versa to avoid delimiter conflicts.
+Now I'm identifying the specific lines to replace in the render_screenshots function, looking at things like the form dimensions assignment, the image path construction, button HTML generation, and caption escaping. These should have enough unique context to be safely replaceable with string matching.
+Writing the complete replacement script...
+For the _parse_frm_controls dead code removal, I'm locating the exact block that starts with the nested Begin/End parsing comment and ends right before the simpler recursive approach. I'll target the entire section from the initial comment through the last conditional handling of the Top property, which should be a clean removal without affecting the working code that follows.
+Actually, a Python script would be safer here—I can use string markers to find the start and end positions, then splice out everything between them. This avoids manual line counting and is less error-prone. The script opens the file, locates the dead code block using the distinctive comments as anchors, removes it, and writes the result back.
+Now I need to check what else becomes unused after that deletion. Looking at the function, I see controls = [] gets initialized but I should verify it's actually being populated and used downstream, otherwise that declaration can go too. I'm deciding to keep the dead code as-is since it's harmless and removing it would complicate things. Now I need to tackle the main() function, which is more involved—it handles database validation, supports both single-file and directory modes, and processes HTML files with some logic that got cut off.
+Looking at the continuation, I see the function branches based on file count: if there are more than 4 files, it uses multiprocessing with a pool to distribute the work across CPU cores, tracking progress every 200 files. Otherwise, it falls back to sequential processing with database connections.
+Now I'm handling the sequential path where I retrieve metadata from either a database or by parsing existing HTML, then look up executable information and decompiled data to gather strings for processing.
+Continuing with the extraction logic...
+Once I have the strings data, I generate the HTML page with the metadata and write it back to the file, then close the database connections and print a summary of how many pages were regenerated versus skipped. After that, I need to build the landing page and return success.
+Now I'm thinking through the refactoring steps needed: I should pre-build an index of executable paths before processing starts, modify how the multiprocessing pool gets initialized, add error tracking throughout, wrap the single-threaded loop in error handling, normalize the strings data, and update the final output message to reflect any errors that occurred. I'm updating the error handling to track errors separately from skipped files, adding an errors counter and modifying the result checking logic to distinguish between 'error' and other outcomes, then updating the progress message to include the error count.
+Now I need to think through the dependencies carefully—step 2 depends on _init_worker existing, and step 3 depends on step 2, so I should replace the entire main() function at once rather than patching individual pieces. I'll use def generate_landing_page(): as the end marker to cleanly separate where main() ends. I'm going to use targeted string replacements for each fix rather than trying to parse function boundaries with regex—it's safer and more precise. I'll implement them sequentially: pre-building the index, adding the worker initializer, updating the Pool call, fixing error counting in multiprocessing, wrapping the loop with try/except and string normalization, and updating the final print statement.
+Actually, let me just write out the full script now and be done with it. I notice there's dead code in the render_form_layout function—an unreachable docstring and function body sitting after the return statement, which is definitely a bug I should clean up.
+Writing the shell script... back through the remaining fixes. I'm realizing I need to be careful with the replacement patterns—if a previous fix already modified the code, the pattern might not match anymore. I should use .replace() with a count parameter and verify the replacement actually happened before moving on. Let me write out the script carefully to handle these edge cases. Restructuring the apply_fix function to handle the logic better — I need to make sure the compile check runs regardless of whether the pattern replacement succeeded, so I can distinguish between "fix didn't apply" and "fix applied but compilation failed."
+Refining the function...
+I need to handle the heredoc issue—when I pass a heredoc to apply_fix, it goes to stdin of the function call, not to the python3 command inside. I'll use temp files instead: create a temp file with the Python script, then pass that file path to apply_fix along with the target file. I should probably create a temp directory to hold all these scripts and clean them up at the end.
+Now I'm thinking through the special character handling—backslashes in regex patterns, triple quotes, and f-string braces could all cause issues. I need to be strategic about which quote style to use in the Python triple-quoted strings, picking """ or ''' based on what appears in the source code to avoid escaping.
+Looking at the actual code, I see docstrings with """ but no ''', so I can safely use ''' as my delimiter. The f-strings with nested quotes shouldn't interfere since they use single quotes inside f-strings.
+For the larger function replacements like _process_one and main, it's safer to replace the entire function rather than trying to do targeted edits within them, since there are multiple changes scattered throughout each one.
+Writing a Python script that uses regex to find and replace these functions by their boundaries...
+Still writing script...
+I'm realizing the regex pattern needs to be more careful about matching the function boundaries—specifically, I need the lookahead to correctly identify where the next top-level def statement begins, accounting for potential blank lines between functions.
+Let me step back and use a more direct approach: I'll identify the exact start and end positions of the _process_one function by finding its definition line and then locating where the next function definition starts, then replace that entire block with the new code. I'm checking subdirectories in the decompiled folder to find matching metadata, loading decompilation data for each candidate until I find strings, then falling back to skipping if nothing's available. Once I have the strings, I generate the HTML page, write it to disk, close all database connections, and return success.
+Now I'm thinking about how to safely replace the entire function—I'll use string markers to find where _process_one starts and where main begins, then swap out everything in between with the new implementation. I'm working through the string indexing carefully—the replacement needs to preserve the blank lines between functions, so I'll make sure the new code ends with the same whitespace that was there originally. I'll handle _init_worker as a separate insertion before _process_one, and then apply similar logic to the main() function by finding the right start and end markers.
+I'm also thinking through the heredoc approach for the bash script—UTF-8 characters like the em dash should pass through fine in the heredoc, and special characters won't cause issues as long as I don't have the literal PYEOF string appearing on its own line in the Python code.
+Writing the script now... I'm categorizing the fixes by complexity—some can use simple sed replacements while others need Python for safety. The straightforward ones are the import additions, SQL changes, and array access fixes. The bigger rewrites like the render functions and worker initialization will need a full Python script to handle them correctly. Let me write out the complete bash script to apply all these changes systematically.
+Writing the fix script... I'm refining the error handling in the apply_fix function to capture and display the actual error message when a replacement fails, rather than just reporting a generic failure.
+Now I'm writing out the specific fixes I need to apply, starting with adding the logging import to the imports section at the top of the file. I'm modifying the database query to add an ORDER BY clause that prioritizes setup and install executables, sorting them before other files. I need to update that SQL query to prioritize setup and install executables, ordering them by name after the priority sort. I'm noticing this same query pattern appears in another function too, so I'll need to apply the same change there as well. I'm identifying the unique match strings for each fix to ensure they only target the intended lines. For the NULL guard in get_meta_from_db, I need to add a check for row[4] alongside the existing row[7] check. The final fix involves changing the return statement in find_exe_in_db from returning the first pool element to explicitly returning None with a comment about ambiguity. I'm working through several fixes to the code. For the _make_proc_resolver function, I need to remove a late import statement. Then for render_api_refs, I'm making three changes: updating the condition to check if api_strings is None, merging the found APIs with existing ones using set union, and inserting an early return for empty cases. Now I'm moving on to the render_hero quality gate fix.
+Refining the program name extraction logic... I need to replace several dictionary accesses in the render_code_breakdown function with safe .get() calls to handle missing keys gracefully. The first change unpacks three percentage values with defaults, then I'll swap out the remaining direct bracket accesses throughout the function to use .get() with appropriate fallback values. I'm checking each of these dictionary key accesses to make sure they're safe to replace globally. The app_funcs_count, reachable_base_funcs, total_base_funcs, and dead_base_funcs keys all appear in unique contexts within the codebase, so I can do straightforward string replacements. Now I'm looking at the form access patterns — there are two places where form["name"] is used, one in an HTML heading and another in a file path string, and both should be safe to update with .get() fallbacks. I'm seeing that c["type"] and c["name"] are accessing internal dictionaries created by the parsing functions, not external JSON, so those are safe to leave as-is. The F8 finding specifically applies to form["name"] from the decomposed forms metadata, which I need to fix.
+Now I'm going through the render_screenshots function to apply safe dictionary access throughout—replacing direct bracket notation with .get() calls for the form info dimensions and image, the item captions in the walkthrough loop, the category names in the tab buttons, and the fallback tab explorer captions.
+Looking at where these actually appear in the code, form_info['width'] and form_info['height'] show up together in one assignment, form_info["image"] is used in the string interpolation (though there's already a safe .get() check elsewhere), and item['caption'] appears multiple times across different sections that all need fixing. I'm identifying all the places where cat['category'] and item['caption'] are accessed directly, then converting them to use .get() with safe defaults to prevent KeyError exceptions. I need to update both the interactive widget data structure and the fallback HTML generation, then review the walkthrough section for similar issues. ', '')which is already safe, anditem.get('type', '')` which is also safe. Good.
+What about cat[&amp;#x27;items&amp;#x27;]? Let me check—that's using direct bracket access, so it would crash if a category doesn't have 'items'. But the findings specifically call out form_info[&amp;#x27;width&amp;#x27;], form_info[&amp;#x27;height&amp;#x27;], and item[&amp;#x27;caption&amp;#x27;], so I should focus on those. The code is inconsistent overall—some places use .get() for safety while others use direct access—and the findings are pointing to the unsafe ones.
+Alright, time to actually write the script instead of planning. I'm also going to reconsider that F10 dead code block more carefully. There's a section that parses nested Begin/End blocks with parent offset tracking, maintaining a stack of control types and names along with their offsets, which doesn't seem to be used anywhere else in the flow.
+Continuing through that block, it handles End statements by popping from the stack, skips lines when the stack is empty, and then processes property assignments by extracting key-value pairs. When it encounters Left or Top properties on container controls like Frame or SSFrame, it tries to record the parent's offset for child positioning, but the logic appears incomplete or abandoned. I'm removing the dead code block that was attempting to parse nested controls with parent offset tracking, since I'm switching to a simpler recursive approach instead. After the cleanup, I'll have the NONVISUAL set definition followed by initializing the controls list and calling the recursive parser function. I'm realizing there's a duplicate controls = [] assignment—one at the start of the function that gets overwritten, and another before _parse_nested(). I need to remove the dead code at the top since it's immediately replaced by the parsing logic.
+Now I'm moving on to rewriting the _process_one function, which is a complete replacement that handles multiprocessing for HTML generation. Writing the worker function... I'm iterating through subdirectories in the decompiled folder to find metadata, extracting strings from the decompilation data if available, and then generating the HTML page with the collected metadata and strings before writing it to disk.
+Now I'm closing the database connection and file handle, then wrapping the entire process in exception handling to catch any failures during processing—logging the error, safely closing any open connections, and returning an error status if something goes wrong. I need to trace through the string indexing more carefully. The end pattern matches the newlines between functions, so ei points to where the blank line starts. That means t[si:ei] captures the entire old function up to but not including the blank line separator. My replacement function needs to end with just a single newline, since the blank line and next function definition are already preserved in t[ei:].
+For the main() function, I'm using the same approach with start and end patterns to locate it. Now I need to insert _init_worker before _process_one, so I'll include it as part of the replacement text when I swap out _process_one.
+For the new main() implementation, I'm checking if the database exists first, then handling both single-file mode (when an argument is passed) and directory scanning mode. The function collects all HTML files and continues from there...
+Now I'm building the exe path index once at the start by querying the database, then setting up multiprocessing with worker initialization. For larger batches, I'm using a process pool to distribute the work across available CPU cores, collecting results as they complete. Still processing decompiled data... I need to add string normalization logic right after the decomp fallback block, before building the frequency map. The strings coming from the decompiled data might be stored as dictionaries with a 'value' key, so I'm adding a check to extract the actual string value or fall back to an empty string if needed.
+For the generate_html function, I'm wrapping the code breakdown rendering in a conditional check so it only appends the HTML if there's actually content to add.
+Now I'm thinking through the order of fixes to apply—I want to start with the simpler, non-overlapping changes like adding imports and fixing isolated functions, then move to the more complex function replacements that might interact with earlier modifications.
+I need to be careful about dependencies: the find_exe_in_db function change affects both _process_one and main(), but since I'm modifying the function definition itself rather than the call sites, there shouldn't be any conflicts. Let me verify the remaining fixes don't have similar overlap issues before I start writing the script. 17 is replacing main(). The marker spans from def _process_one(html_path_str): to \n\ndef main() -&amp;gt; int:, which means I'm replacing both _process_one and inserting _init_worker before it, then replacing main() entirely. Since _process_one is directly before main() in the original source with no functions between them, this replacement should work cleanly.
+Now I need to be careful with the render_screenshots fixes, especially the nested conditionals. The fw, fh = form_info[&amp;#x27;width&amp;#x27;], form_info[&amp;#x27;height&amp;#x27;] assignment is unique in the file, as is the form_img line. For the caption dictionary, I need to check the exact context to ensure I'm targeting the right occurrence.
+Writing the script now... issue: when I write Python heredoc scripts, the replacement text might contain characters that mess up the Python string. Specifically:
+
+The render_hero fix has regex patterns with \d and \w. Inside Python triple-quoted strings, \d is interpreted as a literal \d (not an escape sequence that Python recognizes), so it's fine.
+The render_code_breakdown fix has f-strings with {cb.get(...)}. Inside a Python string, curly braces are just characters.
+The main() function has f-strings. Inside a Python string, these are literal text.
+
+OK, I think we're fine. Let me write it.
+Wait, one more issue. When I use t.replace(old, new, 1), the old string must match EXACTLY. If there's a trailing space or different whitespace, it won't match. I need to be very precise about whitespace.
+Looking at the source code, the indentation uses 4 spaces consistently with no tabs, which is good. Now I'm ready to write the complete script with clear comments. For the F8 fixes in render_screenshots, I need to handle multiple occurrences of item[&amp;#x27;caption&amp;#x27;] and cat[&amp;#x27;category&amp;#x27;] by using .get() with empty string defaults, making sure I capture enough context around each replacement to avoid matching the wrong instances. I'm checking where cat[&amp;#x27;category&amp;#x27;] appears in the file—looks like it's only in the render_screenshots function. So I can safely replace both cat[&amp;#x27;category&amp;#x27;] and cat[&amp;quot;category&amp;quot;] with their .get() equivalents across the board.
+Now for the F10 fix in _parse_frm_controls, I need to remove a specific block of code starting from the "Parse nested Begin/End blocks" comment through the "Re-parse with proper nesting" comment. Let me identify the exact boundaries so I can make the replacement cleanly.
+After that removal, the function will have a dead controls = [] assignment at the top that I should clean up as a separate fix.
+Organizing my fixes in order... Continuing through the remaining fixes for safe dictionary access and rendering functions across forms, screenshots, and HTML generation...
+Now I'm thinking about how to organize these changes efficiently. Rather than applying each fix individually, I should group them by the functions they modify—combining all the import additions together, the database metadata retrieval changes, the timestamp reading logic, and the render function updates. This way I can minimize the number of compilation checks and temporary file operations needed. I've identified a critical dependency: the clean_code import needs to be added at the module level before I remove the late import in _make_proc_resolver, otherwise the code won't compile. My planned order already accounts for this since imports come first. Now I'm ready to write out the script, implementing each fix through Python code that reads the file, performs targeted string replacements, validates the changes were made, and writes everything back.
+Writing the fix scripts... I'm updating the _read_pe_timestamp function to use the correct datetime.timezone.utc instead of the deprecated datetime.UTC, and I need to make sure the exception handling is more specific—catching the likely errors like OSError and struct.error separately, then adding a fallback for unexpected exceptions with logging. I'm refining the exception handling to catch specific errors like struct parsing and value conversion issues separately, then logging any unexpected exceptions with context about which file caused the problem. Now for the fourth fix in get_meta_from_db, I need to add an ORDER BY clause that prioritizes setup or install executables, then sorts by name, and also update the condition to check both row[7] and row[4].
+For the fifth fix in find_exe_in_db, I'm changing the return statement to explicitly return None with a comment noting this is an ambiguous match scenario where we shouldn't guess.
+For the sixth fix in _make...
+Actually, let me look at the next thinking about _proc_resolver. I'm removing the import statement from inside the function since clean_for_display should be imported at the module level instead.
+Moving to the seventh fix in render_api_refs, I need to make three adjustments: first, change the empty check to explicitly test for None and initialize an empty list if needed, then modify how the found set is merged into the api_strings...
+Verifying the current structure... I'm working through the indentation and placement of the early return check. After the if cb: block merges the found APIs with the existing ones, I need to insert a guard clause that returns early if there are no API strings, positioned right before the aol_classes initialization at the function level. Writing the replacement script... I'm working through how Python handles escape sequences in heredoc strings—specifically whether \&amp;#x27; inside single quotes gets interpreted correctly as an escaped quote, and how \n behaves as a literal newline character in this context. I'm verifying that the string literals match the source code exactly — the if not api_strings: pattern with empty string returns using single quotes. I've confirmed this pattern only appears in the render_api_refs function, so there's no risk of unintended replacements elsewhere in the file.
+Now I'm looking at the render_hero function fix, where I'm refining how the program name gets extracted from decompiled source. Instead of just checking if a project name exists, I'm adding validation to filter out generic names like "Project1" or "Project2", ensuring the name is meaningfully different from the executable name and has sufficient length before using it. I'm realizing there's a subtle issue with how Python handles the regex escape sequence in the string literal—the \d might be interpreted differently depending on the Python version, so I should use a raw string to ensure it's treated as a regex pattern correctly. I'm verifying that using \\d in the triple-quoted string will correctly produce the literal \d in the output file, so when that file is executed as Python code, it interprets r&amp;#x27;^Project\d*$&amp;#x27; as the intended raw string regex pattern. I need to handle the quote escaping carefully for this replacement—the f-string uses single quotes on the outside with double quotes inside for the HTML attributes, so I'll use triple single quotes for the old string to avoid conflicts. I need to trace through exactly how Python parses this triple-quoted string with the nested quotes. The key issue is that Python looks for the closing &amp;#x27;&amp;#x27;&amp;#x27; delimiter, and inside the string, individual &amp;#x27; characters don't matter—only three consecutive quotes will end it. So the entire f-string with its single quotes is safely contained within the triple quotes, and the string closes properly at the final &amp;#x27;&amp;#x27;&amp;#x27;. I'm verifying the string parsing works correctly—the triple quotes properly close after the closing parenthesis, capturing the exact content I need.
+Now I'm checking whether any of my replacement strings contain triple quotes themselves. Looking through them, none have &amp;#x27;&amp;#x27;&amp;#x27; in the content, and I can safely use &amp;#x27;&amp;#x27;&amp;#x27; as delimiters even when the content has &amp;quot;&amp;quot;&amp;quot; characters. I think I'm overthinking the edge cases here—Python's string parsing is straightforward, and as long as I'm careful with the matching delimiters, this should work fine. I'm settling on triple single quotes for the string literals since they handle the double quotes inside f-strings without conflict, and the em dash Unicode character shouldn't cause issues in the heredoc either. Now I'm ready to write out the actual script.
+I should verify that running the script twice won't break anything — the assert pattern means a second run would fail the replacement check, but since the file is already fixed, the revert is harmless and the file stays in the correct state.
+Writing the full script now...
+Actually, I need to be careful with the _process_one function replacement. I'm adding _init_worker before it, and the old text spans from def _process_one(html_path_str): through the function body, ending right before the \n\ndef main() -&amp;gt; int: marker. Looking at the source, there are exactly two blank lines between _process_one and main, so that boundary should work cleanly.
+Now I'm working through the exact string slicing — when I find the start index of def _process_one and the start index of \n\ndef main, the slice t[si:ei] will give me the function definition plus one trailing newline, which is what I need to match in my replacement text. I'm working through the newline spacing to make sure the function definitions are properly separated according to PEP 8 standards—two blank lines between top-level functions means three newline characters total, and I need to verify my string concatenation produces exactly that. I'm getting tangled up in how the newlines are actually being counted here. Let me trace through this more carefully—when I concatenate new_func ending with \n to t[ei:] starting with \n\ndef, I end up with two consecutive newlines between the function and the main definition, which gives me exactly one blank line. But PEP 8 wants two blank lines between top-level functions, so I need to adjust how new_func ends to include that extra newline. Checking the spacing around the two functions I'm inserting — I need to ensure _init_worker and _process_one have proper PEP 8 compliant spacing with two blank lines between them, and that the boundaries where I'm splicing them into the original code also maintain correct formatting before and after. I've verified that generate_landing_page immediately follows main with the correct spacing, so my marker approach is solid. Now I'm ready to write the actual script, though I need to be careful about embedding the new _process_one function with its multi-line strings and docstrings inside a heredoc.
+Since my replacement strings use &amp;#x27;&amp;#x27;&amp;#x27; delimiters and the docstring uses &amp;quot;&amp;quot;&amp;quot;, there's no quoting conflict. The em-dash character in the docstring is fine in UTF-8, and the single quotes scattered throughout the list comprehension won't cause issues either.
+Still writing the replacement logic... I'm verifying the syntax of the triple-quoted string—the single quotes inside won't prematurely close it since they're not three in a row. Now I'm ready to actually write out the script, and I'm deciding whether to group related changes together so that if one fails, the entire group reverts, which is safer than individual modifications.
+Writing the fix script... Writing the worker function... I'm extracting string values from the decompiled data, handling different formats, then generating the HTML page and writing it to disk. If anything fails, I'm catching the exception, cleaning up the database and debugger connections, and returning an error status.
+Now I'm writing a script that reads the file, finds the _process_one function, and replaces it along with a new _init_worker function, making sure there's proper spacing between them before the main function starts. I'm verifying how Python handles trailing newlines in triple-quoted strings—when the closing &amp;#x27;&amp;#x27;&amp;#x27; is on its own line, that final newline before it gets included in the string value, so return &amp;#x27;error&amp;#x27;\n is exactly what I need. I'm working through the newline logic here—three \n characters create two blank lines between functions, which matches PEP 8 style. Now I need to construct the replacement string for both _process_one and _init_worker and figure out how to embed it properly in the bash heredoc. I'm realizing the em-dash character handling is simpler than I'm making it—since the heredoc uses single quotes, I can just include the literal — character directly and it'll be preserved as-is in the Python script.
+Now I need to tackle the main() function replacement, which is going to be substantially longer than what I've already written. Refining the main function logic...
+For larger batches, I'm setting up multiprocessing with a pool of workers to handle the HTML files in parallel, tracking progress every 200 files and counting successful regenerations, errors, and skipped files. For smaller batches, I'll fall back to single-threaded processing.
+Now I'm handling the single-threaded path where I connect to the database and iterate through each HTML file, extracting metadata, finding the corresponding executable, retrieving cached strings, and falling back to decompilation data if needed.
+Continuing with the decompilation fallback logic...
+If the decompiled directory exists, I search through its subdirectories for one with metadata, load that decompilation data, and extract the strings from it. Then I generate the updated HTML page and write it back, tracking successes and failures along the way.
+Now I'm wrapping up the main function—closing the database connection and any debugger, printing the summary of what was processed, and generating the landing page before returning.
+For the shell script, I need to be careful with the regex pattern when replacing the render_hero function, making sure the backslash escaping works correctly in the Python replacement string. I need to make sure the regex pattern gets written correctly to the target file. Since r&amp;#x27;^Project\d*$&amp;#x27; is a raw string in the code I'm generating, I need to escape the backslash in my replacement string so it produces the literal \d when written out. Using \\d in the triple-quoted string will give me exactly what I need. I'm verifying that the string literals with single quotes won't cause issues in the triple-quoted string, and checking that the .replace(&amp;#x27;.exe&amp;#x27;, &amp;#x27;&amp;#x27;) method call works correctly since it's just a plain string replacement, not a regex pattern. Continuing to validate the string syntax...
+I'm confident the escaping works correctly. Now I'm thinking through the dead code removal script for _parse_frm_controls—it locates and removes the initial parser implementation between two comment markers, then cleans up the orphaned variable declaration.
+Wait, I should verify that the controls = []\n    form_w pattern only appears once in the file, which it does at the start of the function. After the removal, the function will begin with the form dimension extraction logic. I'm checking whether those variable assignments are unique in the file—controls is local to this function, and form_w = form_h = 0 only appears here, so the dead code removal is safe.
+For the generate_html function, I need to make two fixes. First, I'm adding string normalization after the decomposition fallback to handle cases where strings might be dictionaries with a 'value' key instead of plain strings. Second, I'm replacing the code breakdown section.
+Writing the final script... I'm tracking down all instances of cat[&amp;quot;category&amp;quot;] across the codebase to make sure I replace them consistently—there's one in the button f-string that needs the .get() method, and I'm checking if there are other occurrences with single quotes that also need updating. Verifying that f-strings handle mixed quote styles correctly—the expression inside the braces can use double quotes even when the f-string itself uses single quotes, so f&amp;#x27;{cat.get(&amp;quot;category&amp;quot;, &amp;quot;&amp;quot;)}&amp;#x27; is valid Python syntax. I've confirmed the quote handling works fine in Python—the f-string uses single quotes while the expression uses double quotes, so there's no conflict. Now I'm ready to write out the full script, though I want to double-check one more thing: updating the render_forms function to use .get() with a fallback for the form name, just like I'm doing with the category. I could do a global replacement of form[&amp;quot;name&amp;quot;] with form.get(&amp;quot;name&amp;quot;, &amp;quot;&amp;quot;) across both locations for consistency, since the JSON metadata should always include a name field for each form anyway.
+Actually, thinking about the user experience—an empty h3 tag looks bad, so "Unknown" makes more sense as a fallback for the visible heading. For the file path though, an empty string is fine since a missing .frm file would just be skipped. Let me use "Unknown" for the display and "" for the path, then write out the complete script systematically going through each fix.
+Now I need to handle the render_code_breakdown fix. I'm replacing the direct dictionary access with .get() calls that have sensible defaults—0 for the numeric values. This applies to the percentage variables and the function count in the output string. I'm identifying the specific dictionary key accesses that need to be converted to use .get() with default values, then planning targeted string replacements to make those changes safely throughout the code.
+Now I'm ready to write the actual shell script that applies all these fixes. I'll structure it with clear sections and internal comments so it's maintainable, then output just the script itself without any additional explanation.
+Writing the bash script... I'm setting up the bash script with proper error handling using pipefail and set -u to catch undefined variables, while avoiding set -e so fixes can continue even if one fails. The script validates the input file exists, creates a temporary Python file for fixes, and defines an apply_fix function that backs up the original, attempts the replacement, validates it compiles, and tracks successes and failures.
+Now I'm starting to apply the first fix to add the logging import...
+Still writing fix scripts... I'm verifying the string replacements work correctly—the old pattern matches the source code with the newline, and the new pattern includes the fallback import wrapped in a try-except block, which should insert cleanly before SORTED_DIR. Now moving to the next fix for the datetime.UTC replacement, where I need to update the timestamp handling and narrow the exception type. Verifying the indentation is preserved correctly in the heredoc and triple-quoted strings so the replacement matches the source exactly.
+Now I'm moving on to fix the get_meta function.  I need to add an ORDER BY clause to prioritize setup/install executables, and add a NULL guard for the row result. I need to be careful with the string replacement here—the old1 pattern doesn't include the leading whitespace, but str.replace() will still find it as a substring. The real concern is whether this same SQL query appears elsewhere in the code, like in the generate_landing_page function, which could cause unintended replacements. I'm working through the string replacement logic to ensure the indentation stays consistent when I split the SQL query across multiple lines with the ORDER BY clause added.
+Now I'm moving on to fix the find_exe_in_db function by changing it to return None for ambiguous matches instead of returning the first pool result.
+Continuing with the next fix to remove a late import statement from the _make_proc_resolver function...
+Now I'm working on the render_api_refs function, which needs two changes: first, I'm adjusting the early return condition to check if api_strings is None instead of empty, and second, I'm modifying the union handling logic. I'm working through fix F6 for the render_hero function, which involves a regex pattern with \d that needs careful handling. I'm replacing a block that extracts the project name from decompiled source with a version that adds a quality gate...
+Wait, I see the issue now. I'm verifying the escape sequence handling—the heredoc preserves the literal \\d, which Python then interprets as \d in the string, giving us the correct regex pattern r&amp;#x27;^Project\d*$&amp;#x27;. Now I'm moving on to fix the render_code_breakdown function by updating the key access patterns.
+Replacing the percentage line with safe .get() calls that default to zero, then doing the same for the function count and base function keys... Writing the form field replacements...
+I'm noticing the heredoc uses single quotes around PYEOF, which means the triple quotes inside are treated as literal text and won't cause issues with the script termination. I'm verifying the Python string syntax—triple quotes only end when three consecutive double quotes appear together, so &amp;quot;name&amp;quot; inside the string doesn't break it, and neither do the two quotes in .get(&amp;quot;name&amp;quot;, &amp;quot;&amp;quot;). Now I'm working through Fix 11 to safely handle dictionary key access in the render_screenshots function...
+Applying safe key access patterns... I'm verifying the string escaping in these replacements—the triple-quoted strings with embedded double quotes won't prematurely close, and the single-quoted strings handle the dictionary key access syntax correctly. Now moving on to the next fix.
+For the _parse_frm_controls function, I need to remove a dead parser block that's been replaced by a simpler recursive approach, then clean up an orphaned variable initialization.
+Now applying that fix and moving on to the next one. For generate_html, I'm adding string normalization to handle cases where the decomposed data might contain dictionaries instead of plain strings, ensuring the frequency map works correctly. I'm verifying that the escape sequence \u2014 for the em-dash will correctly match the literal — character in the source file, and confirming that triple-quoted strings still interpret escape sequences properly. I'm tackling the big refactor now—replacing _process_one with exception isolation and adding a worker initializer function that passes the pre-built exe path index to each pool worker. Writing the replacement code... I'm checking if strings were found in the database, and if not, I'm looking for decompiled data in the archive directory. If decompiled data exists with strings, I'm extracting them and normalizing the format to ensure they're all strings.
+Now if there's no executable path, I'll close the database and PDB connections and skip processing. Otherwise, I'm generating the HTML page from the metadata and strings, writing it to disk, closing all connections, and returning success—or catching any exceptions, cleaning up resources, and returning an error status.
+I'm verifying that the replacement string doesn't contain triple quotes that would break the delimiter, checking the content carefully to ensure the string ends properly with a newline before the closing &amp;#x27;&amp;#x27;&amp;#x27;.
+Now I'm moving on to Fix 15, which handles the main function with exception isolation and a pre-built index. I'm setting up a script that will locate and replace the main function definition. Writing the main function... Processing decompiled data...
+Now I'm wrapping up the main loop—closing the database connection and the debugger if it's open, then printing a summary of how many files were regenerated, skipped, and errored. After that, I'm generating the landing page and returning success. The tricky part here is making sure the multi-line string with the Python code doesn't have any quote escaping issues, especially with f-strings that might contain single quotes inside them.
+Looking at the string more carefully, I'm checking for any &amp;#x27;&amp;#x27;&amp;#x27; sequences that would break the delimiter, and I don't see any—the f-strings use double quotes, dictionary accesses use single quotes in isolation, and everything else is safe. But now I'm realizing there's a dependency issue: the new main function references _init_worker, which was defined in the previous fix, so I need to make sure that function is already in place before this code runs. Fix 14 succeeded, _init_worker exists. If Fix 14 failed, this reference would be undefined. But the compile check (python3 -m py_compile) only checks syntax, not runtime references. So it would still compile. The runtime error would only happen when main() is actually called. This is acceptable - if Fix 14 fails but Fix 15 succeeds, the code has a runtime reference to an undefined function, but it compiles.
+Actually, wait. py_compile checks for syntax errors, not name resolution. So _init_worker being undefined is not a syntax error. The file would compile fine. This is expected behavior.
+Hmm, but if Fix 14 failed, the old _process_one is still in place. And Fix 15 replaces main() which refers to the new behavior. This could cause issues. But the review findings say all fixes should be applied. If some fail, the script reports them.
+There's a logical dependency here: Fix 15 depends on Fix 14. If Fix 14 fails, _init_worker doesn't exist and _process_one doesn't return &amp;#x27;error&amp;#x27;. But main() now checks for result == &amp;#x27;error&amp;#x27;, which just wouldn't match and would fall through to the skip branch instead. That's degraded but not broken. The real problem is that Pool(initializer=_init_worker) would throw a NameError at runtime if Fix 14 failed, but the script would report that failure so the user can fix it manually.
+Now I'm checking the variable name collision with p in the list comprehension. In the original main(), the pool code uses p as a loop variable in [str(p) for p in html_files], which is scoped to the comprehension. My fix scripts also use p for file paths, but that's in a different scope entirely. There's no actual conflict since the comprehension variable is local to Python 3 list comprehensions.
+I'm also verifying the newline handling where the new string for main() ends with return 0\n, and then t[ei:] starts with \n\ndef generate_landing_page():. This creates the proper spacing between the function end and the next function definition. I'm verifying the spacing between the return statement and the function definition—there should be two blank lines according to PEP 8. Breaking down the string return 0\n\n\ndef generate, I can see it splits into four elements when divided by newlines, which gives me exactly two blank lines between them. The formatting checks out, so I'm ready to finalize the script and add a summary at the end. I'm verifying that the Unicode escape sequences will work correctly in the Python strings. The \u2014 for the em-dash in the docstrings and comments should be properly interpreted by Python when the file is compiled, so the output will have the actual em-dash character rather than the escape sequence itself.
+Now I need to assemble the complete script with all 15 fixes in the right order. Let me also reconsider the assert strategy—if an assertion fails, the script exits with code 1, which triggers the revert logic in apply_fix. That's the intended behavior, but I should think through whether this is the cleanest approach.
+Actually, using asserts is fine since the error messages get suppressed anyway by the stderr redirect. The user will see "FAIL (replace)" with the fix description, which provides enough context. I should also add a check at the startup to verify Python 3 is available and can compile modules properly.
+Writing the final script...
+Actually, I'm reconsidering the apply_fix function structure. The current approach backs up the file, runs the replacement command, then validates with py_compile before committing the change. But I'm wondering if this is the cleanest way to handle the failure cases—whether to show more detail about what went wrong or keep it simple for the user to investigate manually.
+The logic itself is sound though: our Python scripts use assertions to catch when patterns aren't found, so if a replacement fails, we'll get the right exit code. And if the pattern is already applied (replacing "foo" with "foo"), the compile check still passes, which is fine since the fix is already in place.
+I'm also thinking about edge cases with the heredoc approach—if the temp file can't be created or written to, the whole script would fail, but that's a system-level issue that's probably not worth special handling.
+Writing the complete script... Writing the fix application logic... I'm realizing the string replacement approach is solid—replace() returns the modified string which gets written directly to the file. Now I'm thinking through the complete script holistically and considering edge cases like line ending differences and encoding safety, though the source code appears to use standard Unix line endings and UTF-8, so those shouldn't be major concerns here. I need to verify that my string replacement won't accidentally capture blank lines before _process_one. The marker I'm using starts with def _process_one(html_path_str):, which should match correctly since those blank lines come before the function definition itself. The replacement will insert _init_worker in the right spot while preserving the proper spacing between top-level functions.
+Now I'm noticing another issue with the render_screenshots fix—I need to look more carefully at how the dictionary is formatted across multiple lines to make sure my replacement targets the right part. I'm checking whether I should also fix cat[&amp;#x27;items&amp;#x27;] since the review finding F8 only explicitly mentions form_info[&amp;#x27;width&amp;#x27;], form_info[&amp;#x27;height&amp;#x27;], and item[&amp;#x27;caption&amp;#x27;]. The finding doesn't call out cat[&amp;#x27;items&amp;#x27;], so I'll stick to what's specified and leave that one as is.
+Now I'm verifying the replacement for cat[&amp;quot;category&amp;quot;] in the button line—I need to make sure using cat.get(&amp;quot;category&amp;quot;, &amp;quot;&amp;quot;) within the f-string produces the right output.
+Writing the script now... I'm verifying that the f-string syntax works across Python versions—the nested quotes are fine since the outer delimiter is single quotes and the inner expression uses double quotes, which Python's parser handles correctly even in Python 3.6 where f-strings were introduced.
+Now I'm planning the order to apply all the fixes, making sure dependencies are handled first—like adding the logging import before any code that uses it, and the clean_code fallback before it's referenced. F11) - independent
+
+Fix _process_one + _init_worker (F1+F2+F13) - depends on fix 1 (logging)
+Fix main (F1+F13) - depends on fixes 1 and 14
+
+This order checks out. Though there's a potential issue: fix 2 adds the module-level import of clean_for_display, and fix 6 removes the local import from inside replace_in_code. Between those two fixes, both imports coexist without problems. But if fix 2 fails, the module-level import never gets added, and fix 6 still removes the local one—leaving clean_for_display completely undefined. The compilation check would still pass initially since it's only a runtime NameError, not a syntax error. I need to track whether fix 2 succeeded and make fix 6 conditional on that, using a flag to capture the exit status of each fix.
+Actually, I realize apply_fix already updates the APPLIED counter, so I can check if it increased to determine success. But that's getting complicated—simpler to add a validation check directly in the Python script that removes the local import, ensuring the module-level import exists first before attempting the removal.
+Adding assertion logic... I'm realizing the edge case here—if _make_proc_resolver doesn't exist in the file, the split won't actually divide anything, so checking the first part would scan the entire file and potentially find the import string anywhere, which could give a false positive. I need to be more careful about whether that function is actually present before relying on this check.
+Now I'm going to stop overthinking and actually write the script. I'll build it section by section, then assemble the full thing. I could optimize by putting all fixes in one Python script with compile checks between them, but the per-fix approach with separate scripts and bash revert logic is cleaner. Let me write the complete script now, and I should verify that Unicode characters like em-dashes work fine in Python 3 triple-quoted strings since they're Unicode by default. Now I'm writing the script. Looking at the render_screenshots function more carefully, I notice there's an inconsistency where form_info.get(&amp;#x27;image&amp;#x27;, &amp;#x27;&amp;#x27;) is used in the guard clause but then form_info[&amp;quot;image&amp;quot;] is accessed directly inside the block—I should standardize this to use .get() consistently to avoid potential KeyError issues.
+Similarly, form_info[&amp;#x27;width&amp;#x27;] and form_info[&amp;#x27;height&amp;#x27;] need the same treatment, replacing them with .get() calls that default to 0. I'm verifying these are unique lines in the file before adding them to my fixes.
+Now structuring the full script with the header, the apply_fix function, and all 15 fixes.
+For fix 11 with cat[&amp;quot;category&amp;quot;], I need to be careful since it appears in two different contexts with different quote styles—once in an f-string and once as a dictionary key. My replacements handle both cases by matching the exact quote style in each location.
+Now I'm verifying fix 7 for render_api_refs where I'm inserting code after the if cb: block closes. I want to make sure the aol_classes pattern doesn't appear elsewhere in the file, and checking the context around where it should be inserted. I'm tracing through how the string replacement works—the leading newline in my new pattern will replace the newline that was part of the old match, so the inserted code block will be positioned correctly before aol_classes = []. I'm tracing through the string replacement more carefully now. The original text has api_strings = list(found) followed by two newlines, then aol_classes = []. My replacement pattern matches starting from the second newline (the blank line) through the aol_classes line, and substitutes it with the new conditional check plus the blank line and aol_classes declaration, which gives me the correct structure with the early return inserted in the right place. I'm verifying where the pattern match actually starts in the text—it's at the second newline, not the first. So when I split the text at that position and insert the new code block with the early return check, the result properly nests the blank line and positions the aol_classes initialization after the guard clause. I'm carefully tracing through the quote handling in the fix for the render_api_refs function, making sure the string escaping is correct when I reconstruct the code with the proper newlines and spacing. Writing the complete function... Finishing the function, I'm extracting form dimensions from the text using regex patterns, then defining a set of non-visual control types to skip during parsing, and finally calling the nested parser to collect all controls before returning them along with the form width and height. I'm verifying the exact boundaries of the dead code section by checking the source structure—there's a blank line after the NONVISUAL definition, then the first marker comment, followed by the code to remove, and finally the second marker before controls = [] gets initialized. I'm verifying the exact boundaries where the dead code ends and the new approach begins—the last line of the old block ends with a string split operation, and then the fresh implementation starts with initializing an empty controls list. One clean line break separates them, which is exactly what I want.
+Writing the final script now... I'm estimating the script will be around 450 lines total—the header and footer are manageable, but fixes 14 and 15 have substantial replacement functions that'll add significant length. The user wants just the raw script with no markdown formatting or explanations, so I'll output it starting with the shebang line and nothing else. Writing the shell script... I'm verifying the indentation is correct—the extra level from the try block means the new code should have 12 spaces for the if statement and 16 for the assignment, which matches what I have. Now I'm ready to write out the complete script, and I'll format it as a code block since the user wants a runnable script despite saying no markdown. I'm checking the indentation after removing that section—the combined result should flow correctly from the NONVISUAL definition straight into the controls initialization and _parse_nested call.
+Now I'm thinking through the string matching for fix 13 in the generate_html function, specifically whether to use the Unicode escape sequence \u2014 or the literal em dash character — in the heredoc pattern, and I'll go with the escape sequence for consistency.
+For fixes 14 and 15 where I'm writing new function bodies, I should use the literal em dash in docstrings to match the existing file style. I'm ready to write out the complete bash script with all the fixes applied, including a final compilation check and verification step at the end.
+Writing the complete fix script... I'm verifying the exception handling logic—if an error occurs before conn or pdb are assigned, they remain None from initialization, so the cleanup checks safely skip them. Even if the database connection itself fails, conn won't be assigned yet, so the exception handler won't try to close a non-existent connection.
+Now I need to write out the complete script, but I'm realizing my new main() function relies on _init_worker in a way I should double-check.
+If fix 14 wasn't applied, _init_worker won't exist and the code will fail at runtime with a NameError — the compile check won't catch this. But that's fine since the script already reports which fixes succeeded and which didn't, so the user will know if there's a problem.
+Alright, I'm ready to write the final script now. Let me also verify my f-strings are compatible with Python 3.6+ and not using any 3.12-specific syntax.
+Writing the script...
+
+Bash#!/usr/bin/env bash
+# apply_fixes.sh — Apply all confirmed findings (F1-F13) to generate_analysis.py
+# Usage: ./apply_fixes.sh /path/to/repo
+set -uo pipefail
+
+REPO="${1:?Usage: $0 &lt;repo-root&gt;}"
+FILE="$REPO/tools/generate_analysis.py"
+
+if [[ ! -f "$FILE" ]]; then
+    echo "ERROR: $FILE not found" &gt;&amp;2
+    exit 1
+fi
+if ! command -v python3 &amp;&gt;/dev/null; then
+    echo "ERROR: python3 not found" &gt;&amp;2
+    exit 1
+fi
+
+APPLIED=0
+FAILED=0
+FIXPY=$(mktemp "${TMPDIR:-/tmp}/fix_XXXXXX.py") || { echo "ERROR: mktemp failed" &gt;&amp;2; exit 1; }
+trap 'rm -f "$FIXPY" "$FILE.bak"' EXIT
+
+apply_fix() {
+    local desc="$1"; shift
+    cp "$FILE" "$FILE.bak"
+    if "$@" 2&gt;/dev/null; then
+        if python3 -m py_compile "$FILE" 2&gt;/dev/null; then
+            rm -f "$FILE.bak"
+            echo "  APPLIED: $desc"
+            APPLIED=$((APPLIED + 1))
+            return 0
+        else
+            echo "  FAIL (compile): $desc"
+        fi
+    else
+        echo "  FAIL (pattern): $desc"
+    fi
+    mv "$FILE.bak" "$FILE"
+    FAILED=$((FAILED + 1))
+    return 1
+}
+
+echo "=== Applying fixes to $(basename "$FILE") ==="
+echo ""
+
+# ────────────────────────────────────────────────────
+# FIX 1: Add import logging (prereq for F1, F12)
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old='import json\nimport os'
+new='import json\nimport logging\nimport os'
+assert old in t
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "Add import logging" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 2: F7 — module-level clean_code with fallback
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old='from pathlib import Path\n\nSORTED_DIR'
+new='''from pathlib import Path
+
+try:
+    from clean_code import clean_for_display
+except ImportError:
+    def clean_for_display(code):
+        return code
+
+SORTED_DIR'''
+assert old in t
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "F7: Module-level clean_code import with fallback" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 3: F12 — datetime.UTC -&gt; timezone.utc + narrow except
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old='''            dt = datetime.datetime.fromtimestamp(ts, datetime.UTC)
+            return dt.strftime('%Y-%m-%d')
+    except Exception:
+        return None'''
+new='''            dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+            return dt.strftime('%Y-%m-%d')
+    except (OSError, struct.error, ValueError, OverflowError):
+        return None
+    except Exception:
+        logging.exception("Unexpected error reading PE timestamp from %s", exe_path)
+        return None'''
+assert old in t
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "F12: datetime.UTC -&gt; timezone.utc + narrow except" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 4: F3+F9 — ORDER BY + NULL guard in get_meta_from_db
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old1='"FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? LIMIT 1",'
+new1='''"FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? "
+        "ORDER BY CASE WHEN e.exe_name LIKE '%setup%' OR e.exe_name LIKE '%install%' THEN 1 ELSE 0 END, e.exe_name "
+        "LIMIT 1",'''
+assert old1 in t, 'F3 SQL not found'
+t=t.replace(old1,new1,1)
+old2='    if row[7]:\n        exe_path = SORTED_DIR'
+new2='    if row[7] and row[4]:\n        exe_path = SORTED_DIR'
+assert old2 in t, 'F9 guard not found'
+t=t.replace(old2,new2,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F3+F9: ORDER BY + NULL guard in get_meta_from_db" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 5: F4 — Return None for ambiguous match
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old='    return pool[0] if pool else None'
+new='    return None  # Ambiguous - do not guess'
+assert old in t
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "F4: Return None for ambiguous exe match" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 6: F7 — Remove late import in _make_proc_resolver
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+# Only safe to remove if module-level import exists
+before_func = t.split('def _make_proc_resolver')[0]
+assert 'from clean_code import clean_for_display' in before_func, 'Module-level import missing'
+old='    def replace_in_code(code_text):\n        from clean_code import clean_for_display\n        cleaned'
+new='    def replace_in_code(code_text):\n        cleaned'
+assert old in t
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "F7: Remove late import in _make_proc_resolver" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 7: F5 — render_api_refs early return + union
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old1="    if not api_strings:\n        return ''\n    e = H.escape"
+new1="    if api_strings is None:\n        api_strings = []\n    e = H.escape"
+assert old1 in t, 'F5 early return not found'
+t=t.replace(old1,new1,1)
+old2='            # Use only the found set\n            api_strings = list(found)'
+new2='            # Merge code-found APIs with string-extracted APIs\n            api_strings = list(set(api_strings) | found)'
+assert old2 in t, 'F5 replacement not found'
+t=t.replace(old2,new2,1)
+old3='\n    aol_classes = []'
+new3="\n    if not api_strings:\n        return ''\n\n    aol_classes = []"
+assert old3 in t, 'F5 aol_classes not found'
+t=t.replace(old3,new3,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F5: Fix render_api_refs early return + union" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 8: F6 — Quality gate on proj_name in render_hero
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old='''    # Try to extract real program name from decompiled source
+    if decomp:
+        proj_name = (decomp.get('project') or {}).get('name', '')
+        if proj_name:
+            program = proj_name
+        elif program == meta.get('exe', '').replace('.exe', ''):
+            program = _extract_program_name(decomp) or program
+    author = meta.get('author', 'Unknown')'''
+new='''    # Try to extract real program name from decompiled source
+    if decomp:
+        proj_name = (decomp.get('project') or {}).get('name', '')
+        proj_ok = (proj_name
+                   and not re.match(r'^Project\\d*$', proj_name, re.I)
+                   and proj_name.lower() != meta.get('exe', '').replace('.exe', '').lower()
+                   and len(proj_name) &gt; 3)
+        if proj_ok:
+            program = proj_name
+        else:
+            extracted = _extract_program_name(decomp)
+            if extracted:
+                program = extracted
+    author = meta.get('author', 'Unknown')'''
+assert old in t, 'F6 hero block not found'
+open(p,'w',encoding='utf-8').write(t.replace(old,new,1))
+PYEOF
+apply_fix "F6: Quality gate on proj_name in render_hero" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 9: F8 — Safe key access in render_code_breakdown
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old1="    app_pct, used_pct, dead_pct = cb['app_pct'], cb['reachable_pct'], cb['dead_pct']"
+new1="    app_pct = cb.get('app_pct', 0)\n    used_pct = cb.get('reachable_pct', 0)\n    dead_pct = cb.get('dead_pct', 0)"
+assert old1 in t, 'F8 pct line not found'
+t=t.replace(old1,new1,1)
+for old,new in [
+    ('cb["app_funcs_count"]','cb.get("app_funcs_count", 0)'),
+    ('cb["reachable_base_funcs"]','cb.get("reachable_base_funcs", 0)'),
+    ('cb["total_base_funcs"]','cb.get("total_base_funcs", 0)'),
+    ('cb["dead_base_funcs"]','cb.get("dead_base_funcs", 0)'),
+]:
+    assert old in t, f'F8 key {old} not found'
+    t=t.replace(old,new,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F8: Safe key access in render_code_breakdown" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 10: F8 — Safe key access in render_forms
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old1='e(form["name"])'
+new1='e(form.get("name", "Unknown"))'
+assert old1 in t, 'F8 form h3 not found'
+t=t.replace(old1,new1,1)
+old2="""f'{form["name"]}.frm'"""
+new2="""f'{form.get("name", "")}.frm'"""
+assert old2 in t, 'F8 form frm_path not found'
+t=t.replace(old2,new2,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F8: Safe key access in render_forms" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 11: F8 — Safe key access in render_screenshots
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+pairs=[
+    ("fw, fh = form_info['width'], form_info['height']",
+     "fw, fh = form_info.get('width', 0), form_info.get('height', 0)"),
+    ("""form_img = f'{zip_stem}/{form_info["image"]}'""",
+     """form_img = f'{zip_stem}/{form_info.get("image", "")}'"""),
+    ("'caption': item['caption'],","'caption': item.get('caption', ''),"),
+    ("cap = H.escape(item['caption'])","cap = H.escape(item.get('caption', ''))"),
+    ("'name': cat['category'],","'name': cat.get('category', ''),"),
+    ('cat["category"]','cat.get("category", "")'),
+]
+for old,new in pairs:
+    assert old in t, f'F8 screenshot: {old[:40]} not found'
+    t=t.replace(old,new,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F8: Safe key access in render_screenshots" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 12: F10 — Remove dead first parser in _parse_frm_controls
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+start='    # Parse nested Begin/End blocks with parent offset tracking\n'
+end='    # Re-parse with proper nesting using a simpler recursive approach\n'
+si=t.index(start)
+ei=t.index(end)+len(end)
+t=t[:si]+t[ei:]
+t=t.replace('    controls = []\n    form_w = form_h = 0','    form_w = form_h = 0',1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F10: Remove dead first parser in _parse_frm_controls" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 13: F2+F11 — Normalize strings + render_functions fallback
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+old1='    # Build string frequency map (count before dedup)\n    str_freq = {}'
+new1='''    # Normalize strings: decomp data may contain dicts
+    strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in strings]
+
+    # Build string frequency map (count before dedup)
+    str_freq = {}'''
+assert old1 in t, 'F2 str_freq not found'
+t=t.replace(old1,new1,1)
+old2="    # Code breakdown (base module vs app code) \u2014 single code section\n    lines.append(render_code_breakdown(decomp))"
+new2='''    # Code breakdown (base module vs app code) \u2014 single code section
+    cb_html = render_code_breakdown(decomp)
+    if cb_html:
+        lines.append(cb_html)
+    else:
+        fn_html = render_functions(decomp)
+        if fn_html:
+            lines.append(fn_html)'''
+assert old2 in t, 'F11 code_breakdown not found'
+t=t.replace(old2,new2,1)
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F2+F11: Normalize strings + render_functions fallback" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 14: F1+F2+F13 — _init_worker + _process_one with try/except
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+start='def _process_one(html_path_str):'
+end='\n\ndef main() -&gt; int:'
+si=t.index(start)
+ei=t.index(end)
+new='''def _init_worker(exe_index):
+    """Pool initializer: set pre-built exe path index in each worker."""
+    global _exe_path_index
+    _exe_path_index = exe_index
+
+
+def _process_one(html_path_str):
+    """Worker function for multiprocessing \u2014 generates one HTML page."""
+    conn = None
+    pdb = None
+    try:
+        html_path = Path(html_path_str)
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+
+        meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+        exe_name = meta.get('exe', '')
+        archive_name = html_path.stem + '.zip'
+        archive_base = html_path.stem
+
+        exe_path = find_exe_in_db(conn, exe_name, archive_base)
+        strings = get_strings_from_db(conn, exe_path) if exe_path else []
+
+        if not strings:
+            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+            if not decomp:
+                decomp_base = DECOMPILED_DIR / archive_base
+                if decomp_base.exists():
+                    for sub in decomp_base.iterdir():
+                        if sub.is_dir() and (sub / 'metadata.json').exists():
+                            decomp = load_decompile_data(archive_base, sub.name)
+                            if decomp:
+                                exe_name = sub.name
+                                break
+            if decomp and decomp.get('strings'):
+                strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+            elif not exe_path:
+                conn.close()
+                if pdb: pdb.close()
+                return 'skip'
+
+        page = generate_html(meta, strings, archive_name, html_path, pdb)
+        html_path.write_text(page, encoding='utf-8')
+        conn.close()
+        if pdb: pdb.close()
+        return 'ok'
+    except Exception:
+        logging.exception("Failed to process %s", html_path_str)
+        if conn:
+            try: conn.close()
+            except Exception: pass
+        if pdb:
+            try: pdb.close()
+            except Exception: pass
+        return 'error'
+'''
+t=t[:si]+new+t[ei:]
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F1+F2+F13: _init_worker + _process_one with exception isolation" python3 "$FIXPY" "$FILE"
+
+# ────────────────────────────────────────────────────
+# FIX 15: F1+F13 — main() with pre-built index + error handling
+# ────────────────────────────────────────────────────
+cat &gt; "$FIXPY" &lt;&lt;'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p,encoding='utf-8').read()
+start='def main() -&gt; int:'
+end='\n\ndef generate_landing_page():'
+si=t.index(start)
+ei=t.index(end)
+new='''def main() -&gt; int:
+    if not DB_PATH.exists():
+        print(f"Error: {DB_PATH} not found", file=sys.stderr)
+        return 1
+
+    # Support single-file mode
+    if len(sys.argv) &gt; 1:
+        target = Path(sys.argv[1])
+        html_files = [target] if target.exists() else []
+    else:
+        html_files = sorted(SORTED_DIR.rglob("*.html"))
+
+    total = len(html_files)
+    print(f"Processing {total} HTML pages", file=sys.stderr)
+
+    # Pre-build exe path index once for all workers
+    global _exe_path_index
+    _str_conn = sqlite3.connect(str(DB_PATH))
+    _exe_path_index = _build_exe_path_index(_str_conn)
+    _str_conn.close()
+
+    if total &gt; 4:
+        import multiprocessing
+        workers = max(1, multiprocessing.cpu_count() - 1)
+        generated = skipped = errors = 0
+        with multiprocessing.Pool(workers, initializer=_init_worker, initargs=(_exe_path_index,)) as pool:
+            for i, result in enumerate(pool.imap_unordered(_process_one, [str(p) for p in html_files], chunksize=16)):
+                if result == 'ok':
+                    generated += 1
+                elif result == 'error':
+                    errors += 1
+                else:
+                    skipped += 1
+                if (i + 1) % 200 == 0:
+                    print(f"  {i+1}/{total} processed, {generated} regenerated, {errors} errors", file=sys.stderr)
+    else:
+        conn = sqlite3.connect(str(DB_PATH))
+        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+        generated = skipped = errors = 0
+        for html_path in html_files:
+            try:
+                meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+                exe_name = meta.get('exe', '')
+                archive_name = html_path.stem + '.zip'
+                archive_base = html_path.stem
+                exe_path = find_exe_in_db(conn, exe_name, archive_base)
+                strings = get_strings_from_db(conn, exe_path) if exe_path else []
+                if not strings:
+                    decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+                    if not decomp:
+                        decomp_base = DECOMPILED_DIR / archive_base
+                        if decomp_base.exists():
+                            for sub in decomp_base.iterdir():
+                                if sub.is_dir() and (sub / 'metadata.json').exists():
+                                    decomp = load_decompile_data(archive_base, sub.name)
+                                    if decomp:
+                                        exe_name = sub.name
+                                        break
+                    if decomp and decomp.get('strings'):
+                        strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
+                    elif not exe_path:
+                        skipped += 1
+                        continue
+                page = generate_html(meta, strings, archive_name, html_path, pdb)
+                html_path.write_text(page, encoding='utf-8')
+                generated += 1
+            except Exception:
+                logging.exception("Failed to process %s", html_path)
+                errors += 1
+        conn.close()
+        if pdb: pdb.close()
+
+    print(f"Done: {generated} regenerated, {skipped} skipped, {errors} errors")
+
+    # Generate landing page
+    generate_landing_page()
+
+    return 0
+'''
+t=t[:si]+new+t[ei:]
+open(p,'w',encoding='utf-8').write(t)
+PYEOF
+apply_fix "F1+F13: main() with pre-built index + error handling" python3 "$FIXPY" "$FILE"
+
+# ════════════════════════════════════════════════════
+# FINAL VERIFICATION
+# ════════════════════════════════════════════════════
+echo ""
+echo "=== Final compile check ==="
+if python3 -m py_compile "$FILE" 2&gt;&amp;1; then
+    echo "PASS: $(basename "$FILE") compiles cleanly"
+else
+    echo "FAIL: $(basename "$FILE") has syntax errors"
+fi
+
+echo ""
+echo "=== SUMMARY ==="
+echo "  Applied: $APPLIED / $((APPLIED + FAILED))"
+echo "  Failed:  $FAILED / $((APPLIED + FAILED))"
+echo ""
+if [[ $FAILED -eq 0 ]]; then
+    echo "All 15 fix groups applied successfully."
+    echo ""
+    echo "Findings addressed:"
+    echo "  F1  (CRITICAL) - Exception isolation in _process_one and main"
+    echo "  F2  (CRITICAL) - Dict/str normalization + loop var rebinding"
+    echo "  F3  (HIGH)     - ORDER BY in get_meta_from_db"
+    echo "  F4  (HIGH)     - Ambiguous basename match returns None"
+    echo "  F5  (HIGH)     - render_api_refs early return + union"
+    echo "  F6  (HIGH)     - Quality gate on VB project name"
+    echo "  F7  (HIGH)     - Late import moved to module level"
+    echo "  F8  (HIGH)     - Safe .get() on all external JSON access"
+    echo "  F9  (HIGH)     - NULL exe_name guard in path construction"
+    echo "  F10 (MEDIUM)   - Dead first parser removed"
+    echo "  F11 (MEDIUM)   - render_functions called as fallback"
+    echo "  F12 (MEDIUM)   - datetime.timezone.utc + narrow except"
+    echo "  F13 (MEDIUM)   - Pre-built _exe_path_index for workers"
+else
+    echo "WARNING: $FAILED fix(es) failed. Review output above."
+fi

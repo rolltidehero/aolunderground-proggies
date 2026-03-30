@@ -77,8 +77,6 @@ summary:hover{color:#58a6ff}
 <div class="topnav">
 <a href="../../../../proggie-index.html">&#x2190; All Proggies</a>
 <a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/main/programming/vb/Visual-Basic-Tools/mav-spy.zip">&#x2b07; Download mav-spy.zip</a>
-<a class="dl-btn" href="https://github.com/ssstonebraker/aolunderground-proggies/raw/main/programs/AOL/proggies-sorted-deduped/tools/mav-spy/mav-spy-source.zip" style="background:#238636">&#x1f4c4; Download Source</a>
-<a class="dl-btn" href="https://buymeacoffee.com/aolunderground" style="background:#f0883e">Donate</a>
 </div>
 <div class="hero">
 <div><h1>Mav-Spy 4</h1><span class="author">by <b>Mavness</b></span></div>
@@ -96,18 +94,18 @@ summary:hover{color:#58a6ff}
 <div class="app-stage" id="app-stage">
 <div class="app-form" id="app-form" style="width:370px;height:288px;position:relative;flex-shrink:0">
 <img src="mav-spy/main_form.png" width="370" height="288" draggable="false">
-<div class="app-label" data-cat="0" style="left:-4973px;top:74px;width:313px;height:17px"></div>
+<div class="app-label" data-cat="0" style="left:131px;top:58px;width:32px;height:32px"></div>
 <div class="app-popup" id="app-popup"></div>
 </div>
 <div class="app-child" id="app-child" data-cw="-8"></div>
 </div>
-<details class="app-gif-toggle"><summary>&#x25b6; Watch animated walkthrough</summary><img src="mav-spy/animated.gif" loading="lazy"></details>
 </div>
-<script>var appCats=[{"name": "Main", "items": [{"caption": "Form", "image": "mav-spy/screen_form.png", "type": "action"}, {"caption": "Image1", "image": "mav-spy/screen_image1.png", "type": "action"}, {"caption": "Options", "image": "mav-spy/screen_options.png", "type": "show_form"}, {"caption": "Text1", "image": "mav-spy/screen_text1.png", "type": "show_form"}], "label": {"left": -4976, "top": 48, "width": 313, "height": 17}}],mainX=0,greetNames=[];
+<script>var appCats=[{"name": "Main", "items": [{"caption": "Tab 1", "image": "mav-spy/screen_tab_1.png", "type": "tab"}, {"caption": "Image1", "image": "mav-spy/screen_image1.png", "type": "action"}, {"caption": "Options", "image": "mav-spy/screen_options.png", "type": "show_form"}, {"caption": "Text1", "image": "mav-spy/screen_text1.png", "type": "show_form"}], "label": {"left": 128, "top": 32, "width": 32, "height": 32}}],mainX=0,greetNames=[];
 
 var openCat=-1,popup=document.getElementById("app-popup"),
     childEl=document.getElementById("app-child");
 var cw=+childEl.dataset.cw;
+if(cw<=0)cw=600;
 document.querySelectorAll(".app-label").forEach(function(el){
   el.addEventListener("click",function(e){
     e.stopPropagation();
@@ -184,6 +182,58 @@ function hideChild(){childEl.innerHTML=""}
 .greets-track span{flex-shrink:0}
 @keyframes greets-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 </style>
+<div class="frame-player" id="fp" style="margin-top:16px">
+<h3 style="color:#c9d1d9;margin:0 0 8px">Walkthrough</h3>
+<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px">
+<canvas id="fp-canvas" width="370" height="288" style="display:block;max-width:100%;border-radius:4px;background:#000"></canvas>
+<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+<button id="fp-play" style="background:#238636;color:#fff;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:13px">Play</button>
+<input id="fp-slider" type="range" min="0" max="1" value="0" style="flex:1">
+<span id="fp-counter" style="color:#8b949e;font-size:.8em;white-space:nowrap">1 / 2</span>
+</div>
+<div id="fp-label" style="color:#8b949e;font-size:.8em;margin-top:4px"></div>
+</div></div>
+<script>
+(function(){
+var frames=[{"file": "mav-spy/frames/frame_000.png", "label": "Main form", "type": "main"}, {"file": "mav-spy/frames/frame_001.png", "label": "Tab 1", "type": "result"}];
+var canvas=document.getElementById("fp-canvas"),ctx=canvas.getContext("2d"),
+    slider=document.getElementById("fp-slider"),
+    counter=document.getElementById("fp-counter"),label=document.getElementById("fp-label"),
+    playBtn=document.getElementById("fp-play");
+var cur=0,timer=null,imgs={};
+function loadImg(i,cb){
+  if(imgs[i]){if(cb)cb(imgs[i]);return;}
+  var im=new Image();
+  im.onload=function(){imgs[i]=im;if(cb)cb(im);};
+  im.src=frames[i].file;
+}
+function show(i){
+  if(i<0)i=frames.length-1;
+  if(i>=frames.length)i=0;
+  cur=i;slider.value=i;
+  counter.textContent=(i+1)+" / "+frames.length;
+  label.textContent=frames[i].label;
+  loadImg(i,function(im){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(im,0,0,canvas.width,canvas.height);
+  });
+  // Preload neighbors
+  for(var j=Math.max(0,i-2);j<=Math.min(frames.length-1,i+2);j++)loadImg(j);
+}
+slider.addEventListener("input",function(){show(+this.value);});
+playBtn.addEventListener("click",function(){
+  if(timer){clearInterval(timer);timer=null;playBtn.textContent="Play";}
+  else{timer=setInterval(function(){show(cur+1);},1500);playBtn.textContent="Pause";}
+});
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT"&&e.target.type!=="range")return;
+  if(e.code==="Space"){e.preventDefault();playBtn.click();}
+  else if(e.code==="ArrowLeft"){show(cur-1);}
+  else if(e.code==="ArrowRight"){show(cur+1);}
+});
+show(0);
+})();
+</script>
 </section>
 <h2>&#x1f58a; Author Evidence (1)</h2>
 <span class="s author-str">My site  Mavness.com, Check for updates and other good stuff</span>
@@ -194,12 +244,27 @@ function hideChild(){childEl.innerHTML=""}
 Startup: Main · Version: 4.00.0 · Company: Mavness
 </div>
 
-<h2>&#x2699; API References (3)</h2>
-<div class="card"><h3>Win32 API Calls</h3>
-<div class="api-item"><span class="api-name">GetCursorPos</span></div>
-<div class="api-item"><span class="api-name">ShowWindow</span></div>
-<div class="api-item"><span class="api-name">ReleaseCapture</span></div>
-</div>
+&#x2699; API References (16)
+Win32 API Calls
+ShowWindow
+ReleaseCapture
+FindWindowExA
+GetCursorPos
+FindWindowA
+SendMessageA
+
+Other
+&amp; = FindWindowEx(
+SendMessageByString
+&amp; = FindWindow(
+= FindWindowEx(
+Call SendMessageByString(
+Tko&#x27;s site, he taught me findwindow, and findwindowex, he is a great friend. Check out his site.
+SendMessageLong
+Count&amp; = SendMessageLong(
+TL&amp; = SendMessageLong(
+SendMessage
+
 <h2>&#x1f5bc; Forms &amp; Controls</h2>
 <details><summary>6 forms, 123 controls</summary>
 <div class="card">
@@ -415,12 +480,12 @@ End Sub</pre>
   var_34 = var_24
   var_18 = Text3.Text
   var_28 = CLng(Val(var_18))
-  var_1C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_28, var_20, var_24)
+  var_1C = call GetClass(var_28, var_20, var_24)
   Text3.Text = var_1C
   var_34 = var_20
   var_18 = Text3.Text
   var_28 = CLng(Val(var_18))
-  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_28, var_20, Me)
+  var_1C = call GetCaption(var_28, var_20, Me)
   Text3.Text = var_1C
   var_18 = Text3.Text
   GetParent(CLng(Val(var_18)))
@@ -520,7 +585,7 @@ End Sub</pre>
 <details class="fn-item"><summary>Form_MouseDown(Button <span class="sz">382b → calls: GetListText</span></summary>
 <pre>Private Sub Form_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
   call __vbaCastObj(Me, var_00407424, edi, Me, ebx)
-  call <span style="color:#d2a8ff" title="Proc_3_1_414B30">GetListText</span>(var_18, var_18, __vbaCastObj(Me, var_00407424, edi, Me, ebx))
+  call GetListText(var_18, var_18, __vbaCastObj(Me, var_00407424, edi, Me, ebx))
   Exit Sub
 End Sub</pre>
 </details>
@@ -1329,19 +1394,19 @@ End Sub</pre>
   var_58 = var_2C
   var_18 = APItxt.Text
   var_30 = var_18
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 0)
-  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 0)
+  call GetClass(var_30, var_20, 0)
+  APItxt.Text = call GetClass(var_30, var_20, 0)
   var_18 = APItxt.Text
   var_30 = var_18
-  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 0)
+  var_1C = call GetCaption(var_30, var_20, 0)
   If (var_1C = vbNullString) + 1 = 0 Then GoTo loc_00411E2C
   APItxt.Text = &quot;VbNullString&quot;
   GoTo loc_00411F34
   var_58 = var_2C
   var_18 = APItxt.Text
   var_30 = var_18
-  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, Me, 0)
-  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, Me, 0)
+  call GetCaption(var_30, Me, 0)
+  APItxt.Text = call GetCaption(var_30, Me, 0)
   var_3C = call Proc_414D10(var_20, Me, )
   call Proc_414D40(call Proc_414D10(var_20, Me, ), 3, var_24)
   var_34 = call Proc_414D40(call Proc_414D10(var_20, Me, ), 3, var_24)
@@ -1352,17 +1417,17 @@ End Sub</pre>
   var_58 = var_2C
   var_18 = APItxt.Text
   var_30 = var_18
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 3)
-  APItxt.Text = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_30, var_20, 3)
+  call GetClass(var_30, var_20, 3)
+  APItxt.Text = call GetClass(var_30, var_20, 3)
   var_18 = APItxt.Text
   var_30 = var_18
-  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 3)
+  var_1C = call GetCaption(var_30, var_20, 3)
   If (var_1C = vbNullString) + 1 = 0 Then GoTo loc_00412222
   APItxt.Text = &quot;VbNullString&quot;
   GoTo loc_0041231B
   var_18 = APItxt.Text
   var_30 = var_18
-  var_1C = call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(var_30, var_20, 3)
+  var_1C = call GetCaption(var_30, var_20, 3)
   APItxt.Text = var_1C
   Exit Sub
 End Sub</pre>
@@ -1519,7 +1584,7 @@ GetClass = Buffer$</pre>
 End Sub</pre>
 </details>
 <details class="fn-item"><summary>GetCaption() <span style="color:#484f58">(Proc_3_2_414BF0)</span> <span class="sz">537b</span></summary>
-<pre>Public Sub <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>
+<pre>Public Sub GetCaption
   GetWindowTextLength(Me)
   var_ret_1 = GetWindowTextLength(Me)
   var_24 = String$(si, &quot;&quot;)
@@ -1548,38 +1613,38 @@ End Sub</pre>
   var_21C = call Proc_414D40(ebx, , )
   var_218 = var_ret_3
   var_84 = call Proc_414D70(var_218, var_21C, )
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, , )
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, , )
+  call GetClass(var_84, , )
+  call GetClass(var_84, , )
   ecx = eax
   var_C0 = vbNullString
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
   var_C0 = vbNullString
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
   var_BC = Chr(34)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
+  call ReplaceString(var_0042406C, var_BC, var_C0)
   var_214 = Options.Option19.Value
   If var_22C = 0 Then GoTo loc_00416672
   If (var_80 &lt;&gt; True) &lt;&gt; 0 Then GoTo loc_004216A0
@@ -1595,8 +1660,8 @@ End Sub</pre>
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004166FE
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, var_EC, var_004240D0)
-  call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_84, var_EC, var_004240D0)
+  call GetClass(var_84, var_EC, var_004240D0)
+  call GetClass(var_84, var_EC, var_004240D0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416748
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416748
@@ -1607,100 +1672,100 @@ End Sub</pre>
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416791
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   var_C0 = vbNullString
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416819
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416819
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004168A1
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004168A1
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416929
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416929
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004169B1
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_004169B1
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416A39
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416A39
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416AC1
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416AC1
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416B49
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416B49
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   var_BC = Chr(34)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416BEA
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416BEA
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(edx+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(edx+edi*4, var_BC, var_C0)
+  call ReplaceString(edx+edi*4, var_BC, var_C0)
+  call ReplaceString(edx+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416C80
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416C80
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(ecx+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(ecx+edi*4, var_BC, var_C0)
+  call ReplaceString(ecx+edi*4, var_BC, var_C0)
+  call ReplaceString(ecx+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D09
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D09
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D91
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416D91
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416E19
   var_eax = Err.Raise
   If edi+&amp;h00000001 &lt; 1001 Then GoTo loc_00416E19
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
+  call ReplaceString(eax+edi*4, var_BC, var_C0)
   GoTo loc_00416672
   var_214 = Options.Option19.Value
   If var_22C = 0 Then GoTo loc_00417189
   InputBox(&quot;Please name the function?&quot;, var_110, 10, 10, 10, 10, 10)
   If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
   var_C0 = vbNullString
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, var_BC, var_C0)
+  call ReplaceString(vbNullString, var_BC, var_C0)
+  call ReplaceString(vbNullString, var_BC, var_C0)
+  call ReplaceString(vbNullString, var_BC, var_C0)
+  call ReplaceString(vbNullString, var_BC, var_C0)
   var_BC = Options.Option19.MousePointer
   var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Public Function &quot; &amp; var_00424098 &amp; &quot;() As Long&quot; &amp; &quot;vbCrLf&quot;
   GoTo loc_004176AB
   var_214 = Options.Option4.Value
   If var_22C = 0 Then GoTo loc_00417397
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call ReplaceString(vbNullString, &amp;h00407BE4, vbNullString)
   call var_2C4(var_EC, var_004240D0, var_004240D0, var_2C4, var_D0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call ReplaceString(vbNullString, &amp;h004078B0, &amp;h00407BEC)
   call var_2C4
   var_BC = Options.Option4.MousePointer
   var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Public Function &quot; &amp; var_00424098 &amp; &quot;() As String&quot; &amp; &quot;vbCrLf&quot;
@@ -1710,9 +1775,9 @@ End Sub</pre>
   var_100 = &quot;Enter the name of the sub&quot;
   call var_2C4(var_EC, var_004240D0, var_004240D0, var_2C4, var_D0)
   If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call ReplaceString(vbNullString, &amp;h00407BE4, vbNullString)
   call var_2C4
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call ReplaceString(vbNullString, &amp;h004078B0, &amp;h00407BEC)
   call var_2C4
   var_BC = Options.Option3.MousePointer
   var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Sub &quot; &amp; var_00424098 &amp; &quot;(TheText As String)&quot; &amp; &quot;vbCrLf&quot;
@@ -1726,9 +1791,9 @@ End Sub</pre>
   var_100 = &quot;Enter the name of the sub&quot;
   call var_2C4(var_EC, var_004240D0, var_004240D0)
   If (var_00424098 = 0) = 0 Then GoTo loc_004216A0
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h00407BE4, vbNullString)
+  call ReplaceString(vbNullString, &amp;h00407BE4, vbNullString)
   call var_2C4
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(vbNullString, &amp;h004078B0, &amp;h00407BEC)
+  call ReplaceString(vbNullString, &amp;h004078B0, &amp;h00407BEC)
   call var_2C4
   var_BC = Options.Option5.MousePointer
   var_D0 = var_BC &amp; &quot;vbCrLf&quot; &amp; &quot;Sub &quot; &amp; var_00424098 &amp; &quot;()&quot; &amp; &quot;vbCrLf&quot;
@@ -1774,21 +1839,21 @@ End Sub</pre>
   var_88 = FindWindowEx(4341812, 0, 0, 0)
   If var_218 = 0 Then GoTo loc_004184DF
   If ebx = 9 Then GoTo loc_004184DF
-  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, var_EC, var_004240D0)
+  var_3C = call GetClass(var_88, var_EC, var_004240D0)
   var_1A8 = var_3C
   Len(var_3C) = Len(var_3C) - &amp;h00000001
   var_C0 = vbNullString
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(Left(var_3C, Len(var_3C)), var_BC, var_C0)
+  call ReplaceString(Left(var_3C, Len(var_3C)), var_BC, var_C0)
   var_C0 = vbNullString
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0), var_BC, var_C0)
-  call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0), var_BC, var_C0)
-  var_3C = call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0)
+  call ReplaceString(call ReplaceString(var_3C, var_BC, var_C0), var_BC, var_C0)
+  call ReplaceString(call ReplaceString(var_3C, var_BC, var_C0), var_BC, var_C0)
+  var_3C = call ReplaceString(var_3C, var_BC, var_C0)
   Set var_EC = Me
   var_1A8 = var_EC
   var_100 = LCase(var_EC)
   call __vbaCastObj(var_EC, var_00406B74)
-  var_1B8 = call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0)
-  var_110 = LCase(call <span style="color:#d2a8ff" title="Proc_3_4_414ED0">ReplaceString</span>(var_3C, var_BC, var_C0))
+  var_1B8 = call ReplaceString(var_3C, var_BC, var_C0)
+  var_110 = LCase(call ReplaceString(var_3C, var_BC, var_C0))
   call InStr(var_120, &amp;h00000000, var_110, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74))
   If CBool(InStr(var_120, &amp;h00000000, var_110, var_100, &amp;h00000001, Me, __vbaCastObj(var_EC, var_00406B74))) = 0 Then GoTo loc_00418347
   var_3C = var_3C &amp; 0
@@ -1819,8 +1884,8 @@ End Sub</pre>
   var_40 = var_40 - &amp;h00000001
   If var_40 &lt; 1001 Then GoTo loc_00418507
   var_eax = Err.Raise
-  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(ecx+ebx*4, , )
-  call <span style="color:#d2a8ff" title="Proc_3_2_414BF0">GetCaption</span>(ecx+ebx*4, , )
+  call GetCaption(ecx+ebx*4, , )
+  call GetCaption(ecx+ebx*4, , )
   var_40 = var_40 - &amp;h00000001
   If var_40 &lt; 1001 Then GoTo loc_0041853C
   var_eax = Err.Raise
@@ -1908,7 +1973,7 @@ End Sub</pre>
   If edx = 0 Then GoTo loc_00418F3C
   If var_40 &lt; 1001 Then GoTo loc_00418C82
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(eax+esi*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_00418D80
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2054,7 +2119,7 @@ End Sub</pre>
   If eax = 0 Then GoTo loc_0041A079
   If var_38 &lt; 1001 Then GoTo loc_00419D97
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(ecx+esi*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(ecx+esi*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_00419EC0
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2106,7 +2171,7 @@ End Sub</pre>
   If edx = 0 Then GoTo loc_0041A9AA
   If var_38 &lt; 1001 Then GoTo loc_0041A658
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(eax+esi*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041A7B0
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2154,7 +2219,7 @@ End Sub</pre>
   If edx = 0 Then GoTo loc_0041B159
   If var_38 &lt; 1001 Then GoTo loc_0041AE78
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(eax+esi*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041AFA0
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2210,7 +2275,7 @@ End Sub</pre>
   If edx = 0 Then GoTo loc_0041BB1D
   If esi &lt; 1001 Then GoTo loc_0041B7E2
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+ebx*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(eax+ebx*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041B937
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2274,7 +2339,7 @@ End Sub</pre>
   If edx = 0 Then GoTo loc_0041C5F5
   If var_38 &lt; 1001 Then GoTo loc_0041C288
   var_eax = Err.Raise
-  var_70 = call <span style="color:#d2a8ff" title="Proc_3_7_415CF0">GetCaption</span>(eax+esi*4, var_EC, var_004240D0)
+  var_70 = call GetCaption(eax+esi*4, var_EC, var_004240D0)
   If (var_70 &lt;&gt; 0) &lt;&gt; 0 Then GoTo loc_0041C3E7
   var_BC = Options.Check4.MousePointer
   var_108 = var_BC
@@ -2614,7 +2679,7 @@ End Sub</pre>
   If esi = 9 Then GoTo loc_0041FD7F
   var_BC = Options.Option19.MousePointer
   Options.Option19.MousePointer = var_BC &amp; &quot;vbCrLf&quot; &amp; ecx+esi*4
-  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, , )
+  var_3C = call GetClass(var_88, , )
   var_BC = Options.Option19.MousePointer
   var_C0 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot;
   var_C4 = var_C0 &amp; 4341868
@@ -2694,7 +2759,7 @@ End Sub</pre>
   var_464 = var_2C4
   var_C4 = var_BC &amp; &quot;vbCrLf&quot; &amp; edx+esi*4
   Options.Option19.MousePointer = var_C4
-  var_3C = call <span style="color:#d2a8ff" title="Proc_3_3_414DC0">GetClass</span>(var_88, , )
+  var_3C = call GetClass(var_88, , )
   var_BC = Options.Option19.MousePointer
   var_C4 = var_BC &amp; &quot;&amp; = FindWindowEx(&quot; &amp; 4341868
   Options.Option19.MousePointer = var_C4
@@ -2862,5 +2927,4 @@ End Sub</pre>
 <span class="s plain-str">VbNullString</span>
 </details>
 <div class="stats">Total unique strings: 193 · Interesting: 64 · Noise filtered: 67</div>
-<div style="text-align:center;padding:24px 0 12px;border-top:1px solid #21262d;margin-top:32px;color:#8b949e;font-size:0.9em">Preserving the AOL underground, one proggie at a time. <a href="https://buymeacoffee.com/aolunderground" style="color:#f0883e">Donate</a> · <a href="https://aolunderground.com" style="color:#58a6ff">Podcast</a></div>
 </div></body></html>
