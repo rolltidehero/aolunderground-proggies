@@ -23,6 +23,17 @@ sys.path.insert(0, str(REPO / 'tools' / 'vm' / 'host'))
 from virtio_serial_client import VirtioSerialClient
 from push_file import push_file
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 sys.path.insert(0, str(REPO / 'tools'))
 
 log = logging.getLogger('single_decompile')
@@ -44,11 +55,17 @@ def decompile_exe(zip_stem, exe_name, exe_path):
     c2g.close()
     push_file(str(exe_path), guest_exe)
 
-    # Also push bundled deps from the same zip
+    # Also push bundled deps from the same zip (skip VB runtimes already on VM)
+    SKIP_DLLS = {'msvbvm60.dll', 'msvbvm50.dll', 'vb40032.dll', 'vb40016.dll'}
     dep_dir = exe_path.parent
     for f in dep_dir.iterdir():
         if f.suffix.lower() in ('.dll', '.ocx') and f.name.lower() != exe_name.lower():
-            push_file(str(f), rf'C:\work\{f.name}')
+            if f.name.lower() in SKIP_DLLS:
+                continue
+            try:
+                push_file(str(f), rf'C:\work\{f.name}')
+            except Exception as exc:
+                log.warning(f'Failed to push dep {f.name}: {exc}')
 
     log.info('Decompiling via C2 agent...')
     c2 = VirtioSerialClient('/tmp/vm-c2.sock')
@@ -758,30 +775,24 @@ def _find_passwords(strings):
 # ── Step 3: Screenshots ─────────────────────────────────────────────
 
 def run_screenshots(zip_stem, exe_name, meta):
-    """Run capture_walkthrough if the proggie has menus, or basic screenshot if not."""
-    has_menus = any(f.get('menus') for f in meta.get('forms', []))
-    if has_menus:
-        log.info('Running screenshot walkthrough...')
-        r = subprocess.run(
-            [sys.executable, str(REPO / 'tools' / 'capture_walkthrough.py'), zip_stem],
-            capture_output=True, text=True, timeout=300
-        )
-        if r.returncode != 0:
-            log.error(f'Screenshot walkthrough failed:\n{r.stdout}\n{r.stderr}')
-            return None
-        log.info(r.stdout.strip().split('\n')[-1])
-        return True
-
-    # No menus — just capture a basic screenshot of the main form
-    log.info('No menus, capturing basic screenshot...')
+    """Run smart_walkthrough for full walkthrough, or screenshot-only if no targets."""
+    log.info('Running smart walkthrough...')
     r = subprocess.run(
-        [sys.executable, str(REPO / 'tools' / 'capture_walkthrough.py'), zip_stem, '--screenshot-only'],
-        capture_output=True, text=True, timeout=120
+        [sys.executable, str(REPO / 'tools' / 'smart_walkthrough.py'), zip_stem],
+        capture_output=True, text=True, timeout=600
     )
     if r.returncode != 0:
-        log.error(f'Basic screenshot failed:\n{r.stdout}\n{r.stderr}')
-        return None
-    log.info(r.stdout.strip().split('\n')[-1])
+        log.error(f'Smart walkthrough failed:\n{r.stdout[-500:]}\n{r.stderr[-500:]}')
+        # Fallback to screenshot-only
+        log.info('Falling back to screenshot-only...')
+        r = subprocess.run(
+            [sys.executable, str(REPO / 'tools' / 'smart_walkthrough.py'), zip_stem, '--screenshot-only'],
+            capture_output=True, text=True, timeout=120
+        )
+        if r.returncode != 0:
+            log.error(f'Screenshot-only also failed:\n{r.stdout[-500:]}\n{r.stderr[-500:]}')
+            return None
+    log.info(r.stdout.strip().split('\n')[-1] if r.stdout.strip() else 'done')
     return True
 
 

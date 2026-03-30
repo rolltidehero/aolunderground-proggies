@@ -10,6 +10,16 @@ Usage:
 import argparse, json, logging, os, re, shutil, sqlite3, subprocess, sys, time
 from pathlib import Path
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from datetime import datetime, timezone
+_hunter_log = (Path.home() / 'traces' / Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s.%(msecs)03d [%(levelname)-8s] %(name)s: %(message)s',
@@ -31,6 +41,182 @@ from window_diff import (WindowDiff, QMP, capture_cropped, capture_context,
 from bezier_mouse import bezier_move
 from discover_targets import discover_targets
 from extract_passwords import extract_passwords
+
+# ── Guest scripts for Win32 interaction ──────────────────────────────
+
+TYPE_SECRET_SCRIPT = r'''import win32gui, win32con, sys
+keep = sys.argv[1]
+secret = sys.argv[2]
+form_classes = {"ThunderRT6FormDC", "ThunderRT6Form", "ThunderRT5FormDC", "ThunderRT5Form"}
+
+target = None
+def find_form(h, _):
+    global target
+    if not win32gui.IsWindowVisible(h):
+        return True
+    cls = win32gui.GetClassName(h)
+    t = win32gui.GetWindowText(h)
+    if cls in form_classes and t != keep:
+        target = h
+        return False
+    if cls == "#32770":
+        target = h
+        return False
+    return True
+win32gui.EnumWindows(find_form, None)
+if not target:
+    print("No child form found")
+    sys.exit(1)
+
+textbox = None
+button = None
+def find_controls(h, _):
+    global textbox, button
+    cls = win32gui.GetClassName(h)
+    if "TextBox" in cls or "Edit" in cls:
+        textbox = h
+    if "CommandButton" in cls or "Button" in cls:
+        button = h
+    return True
+win32gui.EnumChildWindows(target, find_controls, None)
+
+if textbox:
+    win32gui.SendMessage(textbox, win32con.WM_SETTEXT, 0, secret)
+    print(f"Set text on {textbox}")
+else:
+    print("No TextBox found")
+if button:
+    win32gui.SendMessage(button, win32con.BM_CLICK, 0, 0)
+    print(f"Clicked button {button}")
+else:
+    print("No CommandButton found")
+'''
+TYPE_SECRET_GUEST = r'C:\work\type_secret.py'
+_type_secret_deployed = False
+
+
+def _deploy_type_secret():
+    global _type_secret_deployed
+    if _type_secret_deployed:
+        return
+    from window_diff import _qga_write_file
+    _qga_write_file(TYPE_SECRET_GUEST, TYPE_SECRET_SCRIPT.encode())
+    _type_secret_deployed = True
+
+
+def _type_secret_win32(main_title, secret):
+    """Type a secret into a child form's TextBox via Win32 WM_SETTEXT + BM_CLICK."""
+    _deploy_type_secret()
+    result = _c2gui_shell(rf'"{PYTHON_GUEST}" {TYPE_SECRET_GUEST} "{main_title}" "{secret}"')
+    log.info('type_secret_win32: %s', result.strip())
+    return result
+
+
+def extract_form_secrets(zip_stem, exe_name):
+    """Extract passwords from decompiled source patterns like If Text1.Text = "pw"."""
+    secrets = {}
+    cleaned = DECOMPILED / zip_stem / exe_name / 'cleaned'
+    if cleaned.exists():
+        for frm in cleaned.glob('*.frm'):
+            src = frm.read_text(errors='replace')
+            for m in re.finditer(r'If\b.*Text\d*\.Text\s*=\s*"([^"]+)"', src):
+                cap_m = re.search(r'Caption\s*=\s*"([^"]+)"', src)
+                if cap_m:
+                    secrets[cap_m.group(1)] = m.group(1)
+    # Also scan raw .frm files
+    for layout in [DECOMPILED / zip_stem / exe_name / 'forms', DECOMPILED / zip_stem / exe_name]:
+        if not layout.exists():
+            continue
+        for frm in layout.glob('*.frm'):
+            src = frm.read_text(errors='replace')
+            for m in re.finditer(r'If\b.*Text\d*\.Text\s*=\s*"([^"]+)"', src):
+                cap_m = re.search(r'Caption\s*=\s*"([^"]+)"', src)
+                if cap_m and cap_m.group(1) not in secrets:
+                    secrets[cap_m.group(1)] = m.group(1)
+    if secrets:
+        log.info('extract_form_secrets: found %d secrets', len(secrets))
+    return secrets
+
+
+def auto_crop_child(img_path, main_win_x_in_viewport):
+    """Crop a child form screenshot to just the form content using numpy edge detection."""
+    try:
+        from PIL import Image
+        import numpy as np
+    except ImportError:
+        return None
+    try:
+        img = Image.open(str(img_path)).convert('RGB')
+        arr = np.array(img)
+        clip_x = min(main_win_x_in_viewport, arr.shape[1])
+        if clip_x <= 0:
+            return img.height
+        region = arr[:, :clip_x, :]
+        mask = region.max(axis=2) > 25
+        rows = mask.any(axis=1)
+        cols = mask.any(axis=0)
+        if not rows.any():
+            return img.height
+        y0, y1 = int(np.where(rows)[0][0]), int(np.where(rows)[0][-1])
+        x0, x1 = int(np.where(cols)[0][0]), int(np.where(cols)[0][-1])
+        pad = 2
+        cropped = img.crop((max(x0 - pad, 0), max(y0 - pad, 0),
+                            min(x1 + pad + 1, img.width), min(y1 + pad + 1, img.height)))
+        cropped.save(str(img_path))
+        return cropped.height
+    except Exception as exc:
+        log.warning('auto_crop_child: failed %s: %s', img_path, exc)
+        return None
+
+
+def detect_cutoff(gif_path):
+    """Check if GIF frames have content cut off at edges (white edge > 40%)."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return []
+    results = []
+    gif = Image.open(str(gif_path))
+    idx = 0
+    while True:
+        try:
+            gif.seek(idx)
+        except EOFError:
+            break
+        frame = gif.convert('RGB')
+        w, h = frame.size
+        for name, coords, span in [
+            ('TOP', [(x, 0) for x in range(w)], w),
+            ('BOTTOM', [(x, h - 1) for x in range(w)], w),
+            ('LEFT', [(0, y) for y in range(h)], h),
+            ('RIGHT', [(w - 1, y) for y in range(h)], h),
+        ]:
+            white = sum(1 for c in coords if min(frame.getpixel(c)) > 200)
+            if white > span * 0.4:
+                results.append((idx, name))
+        idx += 1
+    if results:
+        log.warning('detect_cutoff: %d frames have edge cutoff: %s', len(results), results[:5])
+    return results
+
+
+def _extract_greet_names(zip_stem, exe_name):
+    """Extract greet names from Timer code in decompiled source."""
+    names, seen = [], set()
+    for search_dir in [DECOMPILED / zip_stem / exe_name / 'modules',
+                       DECOMPILED / zip_stem / exe_name]:
+        if not search_dir.exists():
+            continue
+        for vb_file in search_dir.rglob('*Timer*'):
+            if not vb_file.is_file():
+                continue
+            code = vb_file.read_text(errors='replace')
+            for m in re.finditer(r'var_\w+ = "([^"]+)"', code):
+                n = m.group(1)
+                if n not in seen and len(n) < 30:
+                    seen.add(n)
+                    names.append(n)
+    return names
 
 
 def _free(n=100):
@@ -87,8 +273,8 @@ def launch_proggie(zip_stem, exe_name):
         if f.suffix.lower() in ('.dll', '.ocx', '.vbx') and f.name.lower() != exe_name.lower():
             try:
                 push_file(str(f), rf'C:\work\{f.name}')
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning('launch_proggie: failed to push dep %s: %s', f.name, exc)
 
     _c2gui_shell(rf'start "" "{guest_exe}"')
     log.info('launch_proggie: EXIT elapsed=%.1fs', time.monotonic() - _t0)
@@ -96,7 +282,8 @@ def launch_proggie(zip_stem, exe_name):
 
 
 def wait_for_main_form(wd, timeout=30):
-    """Poll for a VB6 form to appear. Returns window dict or None."""
+    """Poll for a VB6 form to appear. Also detects non-VB6 dialogs (password gates, splash screens).
+    Returns (window_dict, is_vb6_form) or (None, False)."""
     _t0 = time.monotonic()
     log.debug('wait_for_main_form: ENTER timeout=%d', timeout)
     for attempt in range(timeout * 2):
@@ -104,14 +291,26 @@ def wait_for_main_form(wd, timeout=30):
         windows = wd.snapshot()
         forms = wd.find_vb_forms(windows)
         if forms:
-            log.info('wait_for_main_form: found "%s" at %d,%d %dx%d (attempt %d, %.1fs)',
+            # F8: prefer largest form by area to avoid splash/tool windows
+            forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            log.info('wait_for_main_form: VB6 form "%s" at %d,%d %dx%d (attempt %d, %.1fs)',
                      forms[0]['title'], forms[0]['x'], forms[0]['y'],
                      forms[0]['w'], forms[0]['h'], attempt, time.monotonic() - _t0)
-            return forms[0]
+            return forms[0], True
+        # F4: Check for ANY non-VB6 visible window (not just #32770)
+        non_vb = [w for w in windows
+                  if w['class'] not in VB6_CLASSES
+                  and w['class'] not in ('ConsoleWindowClass', 'Progman', 'Shell_TrayWnd',
+                                         'tooltips_class32', 'TaskManagerWindow')
+                  and w['w'] > 50 and w['h'] > 50]
+        if non_vb and attempt > 6:  # give VB6 form a few seconds to appear first
+            log.info('wait_for_main_form: non-VB6 window "%s" class=%s (attempt %d)',
+                     non_vb[0].get('title', ''), non_vb[0]['class'], attempt)
+            return non_vb[0], False
         if attempt % 10 == 0:
             log.debug('wait_for_main_form: waiting... attempt=%d', attempt)
     log.error('wait_for_main_form: TIMEOUT')
-    return None
+    return None, False
 
 
 def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
@@ -127,15 +326,43 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     passwords = passwords or []
     seen_forms = set()
     seen_msgboxes = set()
+    used_fnames = set()  # track used screenshot filenames to prevent collisions
     IGNORE_CLASSES = frozenset({'ConsoleWindowClass', 'Progman', 'Shell_TrayWnd', 'tooltips_class32'})
     last_frame_path = [None]  # track last saved frame for dedup
 
+    def unique_fname(caption, ctrl_name):
+        """Generate a unique screenshot filename."""
+        base = re.sub(r'[^a-z0-9]', '_', (caption or ctrl_name).lower()).strip('_')[:40]
+        if not base:
+            base = ctrl_name.lower()
+        fname = f'screen_{base}.png'
+        if fname in used_fnames:
+            fname = f'screen_{base}_{ctrl_name.lower()}.png'
+        i = 2
+        while fname in used_fnames:
+            fname = f'screen_{base}_{i}.png'
+            i += 1
+        used_fnames.add(fname)
+        return fname
+
     viewport = [None]  # mutable container, set after main form found
 
-    def crop_to_proggies(path, extra_rect=None):
-        """Capture cropped to the fixed viewport. Same size every frame."""
+    def crop_to_proggies(path):
+        """Capture cropped to the viewport. Recalculates if main form moved."""
         if viewport[0] is None:
             return capture_cropped(main_win, str(path))
+        # F13: Refresh viewport from current main form position
+        cur_windows = wd.snapshot()
+        cur_forms = wd.find_vb_forms(cur_windows)
+        if cur_forms:
+            cur_forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            mf = cur_forms[0]
+            if (mf['x'], mf['y']) != (viewport[0]['x'] + 2, viewport[0]['y'] + 2):
+                vp_x = max(mf['x'] - 2, 0)
+                vp_y = max(mf['y'] - 2, 0)
+                vp_w = min(mf['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(mf['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
         return capture_cropped(viewport[0], str(path))
 
     def frames_are_identical(path_a, path_b):
@@ -145,6 +372,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
         try:
             from PIL import Image
             import numpy as np
+        except ImportError as exc:
+            log.warning('frames_are_identical: dedup disabled, missing dependency: %s', exc)
+            return False
+        try:
             a = np.array(Image.open(str(path_a)).convert('RGB'))
             b = np.array(Image.open(str(path_b)).convert('RGB'))
             if a.shape != b.shape:
@@ -155,11 +386,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
         except Exception:
             return False
 
-    def next_frame(label, ftype='result', extra_rect=None):
+    def next_frame(label, ftype='result'):
         path = frame_dir / f'frame_{frame_idx[0]:03d}.png'
         QMP.park_cursor()
         _free(30)
-        ok = crop_to_proggies(path, extra_rect)
+        ok = crop_to_proggies(path)
         if not ok:
             frame_idx[0] += 1
             return False
@@ -191,10 +422,40 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     if not launch_proggie(zip_stem, exe_name):
         return None
 
-    # Wait for main form
-    main_win = wait_for_main_form(wd)
+    # Wait for main form (or startup dialog)
+    main_win, is_vb6 = wait_for_main_form(wd)
     if not main_win:
         return None
+
+    # F1+F4: Handle non-VB6 startup dialogs (password gates)
+    if not is_vb6:
+        log.info('run_walkthrough: startup dialog detected, attempting password injection')
+        pw_typed = False
+        for pw in passwords:
+            log.info('run_walkthrough: typing password (len=%d, gate=%s)',
+                     len(pw['password']), pw.get('gate_type', 'unknown'))
+            # Try Win32 WM_SETTEXT first (more reliable), fall back to QMP keyboard
+            _deploy_type_secret()
+            # Use empty keep_title since main form isn't visible yet
+            result = _c2gui_shell(
+                rf'"{PYTHON_GUEST}" {TYPE_SECRET_GUEST} "" "{pw["password"]}"')
+            if 'Set text' in result:
+                log.info('run_walkthrough: Win32 password injection succeeded')
+            else:
+                log.info('run_walkthrough: Win32 failed, trying QMP keyboard')
+                QMP.send_text(pw['password'])
+                time.sleep(0.2)
+                QMP.send_key(['ret'])
+            pw_typed = True
+            break
+        if not pw_typed:
+            dismiss_msgboxes()
+        # Wait for the real VB6 form
+        _free(100)
+        main_win, is_vb6 = wait_for_main_form(wd, timeout=15)
+        if not main_win:
+            log.error('run_walkthrough: no VB6 form appeared after startup dialog')
+            return None
 
     # Dismiss startup MsgBoxes
     dismiss_msgboxes()
@@ -204,13 +465,18 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     windows = wd.snapshot()
     forms = wd.find_vb_forms(windows)
     if forms:
+        forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
         main_win = forms[0]
 
     # Capture main form
     QMP.park_cursor()
     _free(30)
-    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
-    capture_cropped(main_win, str(out_dir / 'main_form.png'))
+    if not capture_cropped(main_win, str(out_dir / 'screenshot.png')):
+        log.error('run_walkthrough: failed to capture main form screenshot')
+        return None
+    if not capture_cropped(main_win, str(out_dir / 'main_form.png')):
+        log.error('run_walkthrough: failed to capture main_form.png')
+        return None
     next_frame('Main form', 'main')
     log.info('run_walkthrough: main form captured "%s" %dx%d', main_win['title'], main_win['w'], main_win['h'])
 
@@ -227,17 +493,52 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
     log.info('run_walkthrough: fixed viewport (%d,%d) %dx%d', vp_x, vp_y, vp_w, vp_h)
 
-    # Discover click targets from source
+    # ── Resolve decompiled source tree ──────────────────────────────
+    # F7: Match exe name precisely, fall back to best-match directory
     decomp_base = DECOMPILED / zip_stem / exe_name
     if not decomp_base.exists():
-        # Try to find it
-        for d in (DECOMPILED / zip_stem).iterdir() if (DECOMPILED / zip_stem).exists() else []:
-            if d.is_dir() and not d.name.startswith('.') and d.name != 'cleaned':
-                decomp_base = d; break
+        exe_stem = Path(exe_name).stem.lower()
+        best = None
+        if (DECOMPILED / zip_stem).exists():
+            for d in (DECOMPILED / zip_stem).iterdir():
+                if not d.is_dir() or d.name.startswith('.') or d.name == 'cleaned':
+                    continue
+                if d.name.lower() == exe_stem:
+                    best = d; break  # exact stem match
+                if best is None:
+                    best = d  # fallback to first valid dir
+        if best:
+            decomp_base = best
+            log.info('run_walkthrough: decomp_base fallback %s (wanted %s)', best.name, exe_name)
 
     targets = discover_targets(decomp_base) if decomp_base.exists() else []
     safe_targets = [t for t in targets if not t['dangerous']]
     log.info('run_walkthrough: %d targets (%d safe)', len(targets), len(safe_targets))
+
+    # Compute nc_offset from .frm ClientWidth/ClientHeight vs runtime GetWindowRect
+    nc_x_off, nc_y_off = 3, 26  # defaults
+    if decomp_base.exists():
+        startup_frm = None
+        for t in safe_targets:
+            if t['is_startup_form']:
+                startup_frm = t['form']; break
+        if startup_frm:
+            frm_candidates = list(decomp_base.glob(f'{startup_frm}.frm'))
+            if (decomp_base / 'forms').exists():
+                frm_candidates += list((decomp_base / 'forms').glob(f'{startup_frm}.frm'))
+            for frm in frm_candidates:
+                text = frm.read_text(errors='replace')
+                cw_m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
+                ch_m = re.search(r'ClientHeight\s*=\s*(\d+)', text)
+                if cw_m and ch_m:
+                    client_w = int(cw_m.group(1)) // TWIPS_PER_PX
+                    client_h = int(ch_m.group(1)) // TWIPS_PER_PX
+                    nc_x_off = max((main_win['w'] - client_w) // 2, 0)
+                    nc_y_off = max(main_win['h'] - client_h - nc_x_off, 0)
+                    log.info('nc_offset: computed nc_x=%d nc_y=%d (client %dx%d, window %dx%d)',
+                             nc_x_off, nc_y_off, client_w, client_h, main_win['w'], main_win['h'])
+                break
+    log.debug('nc_offset: using nc_x=%d nc_y=%d', nc_x_off, nc_y_off)
 
     # Build categories for walkthrough.json
     categories = {}  # form_name → list of items
@@ -271,13 +572,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
         log.info('run_walkthrough: clicking %s (%s) action=%s', ctrl_name, caption, target['action'])
 
         # Compute screen coords from form position + control position + nc offset
-        # GetWindowRect includes title bar, control positions are relative to client area
-        nc_x_off = 3   # border width
-        nc_y_off = 26  # title bar height (Win10 classic theme)
         sx = main_win['x'] + nc_x_off + target['left_px'] + target['width_px'] // 2
         sy = main_win['y'] + nc_y_off + target['top_px'] + target['height_px'] // 2
-        log.debug('run_walkthrough: %s screen=(%d,%d) form=(%d,%d) ctrl=(%d,%d)',
-                  ctrl_name, sx, sy, main_win['x'], main_win['y'], target['left_px'], target['top_px'])
+        log.debug('run_walkthrough: %s screen=(%d,%d) form=(%d,%d) ctrl=(%d,%d) nc=(%d,%d)',
+                  ctrl_name, sx, sy, main_win['x'], main_win['y'], target['left_px'], target['top_px'], nc_x_off, nc_y_off)
 
         # Skip controls with negative positions (hidden SSTab pages)
         if target['left_px'] < 0 or target['top_px'] < 0:
@@ -322,7 +620,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                 mb_key = mb.get('title', '')
                 if mb_key not in seen_msgboxes:
                     seen_msgboxes.add(mb_key)
-                    fname = f'screen_{re.sub(r"[^a-z0-9]", "_", caption.lower())}.png'
+                    fname = unique_fname(caption, ctrl_name)
                     QMP.park_cursor()
                     _free(30)
                     capture_cropped(mb, str(out_dir / fname))
@@ -339,10 +637,18 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     move_child_form(main_win['title'], child_x, child_y)
                     _free(50)
                     after2 = wd.snapshot()
-                    moved = [w for w in wd.find_vb_forms(after2) if w['title'] != main_win['title']]
+                    # F10: Find child form by excluding main form's position, not just title
+                    # (handles same-title children and avoids picking stale windows)
+                    all_vb = wd.find_vb_forms(after2)
+                    moved = [w for w in all_vb
+                             if (w['x'], w['y']) != (main_win['x'], main_win['y'])]
+                    if not moved:
+                        # fallback: any VB form that isn't the exact main window
+                        moved = [w for w in all_vb
+                                 if w['title'] != main_win['title'] or w['w'] != main_win['w']]
                     child_rect = moved[0] if moved else nf
 
-                    fname = f'screen_{re.sub(r"[^a-z0-9]", "_", caption.lower())}.png'
+                    fname = unique_fname(caption, ctrl_name)
                     QMP.park_cursor()
                     _free(30)
                     capture_cropped(child_rect, str(out_dir / fname))
@@ -350,6 +656,33 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     item['image'] = fname
                     item['child_h'] = child_rect['h']
                     item['child_title'] = nf.get('title', '')
+
+                    # F5: Explore child form controls (buttons/tabs on the child)
+                    child_form_name = nf.get('title', '')
+                    child_targets = [t for t in safe_targets
+                                     if t['form'] != main_form_name
+                                     and t['action'] not in ('shell', 'file_dialog')
+                                     and t['type'] not in ('Form', 'unknown')
+                                     and t['left_px'] >= 0 and t['top_px'] >= 0]
+                    for ct in child_targets[:6]:  # cap at 6 to avoid runaway
+                        cx = child_rect['x'] + nc_x_off + ct['left_px'] + ct['width_px'] // 2
+                        cy = child_rect['y'] + nc_y_off + ct['top_px'] + ct['height_px'] // 2
+                        if cx < child_rect['x'] or cx > child_rect['x'] + child_rect['w']:
+                            continue
+                        if cy < child_rect['y'] or cy > child_rect['y'] + child_rect['h']:
+                            continue
+                        ct_caption = ct['caption'] or ct['name']
+                        log.info('run_walkthrough: child click %s (%s)', ct['name'], ct_caption)
+                        bezier_move(QMP.move, QMP._last_x, QMP._last_y, cx, cy)
+                        _free(30)
+                        QMP.click(cx, cy)
+                        _free(80)
+                        dismiss_msgboxes()
+                        ct_fname = unique_fname(ct_caption, ct['name'])
+                        QMP.park_cursor()
+                        _free(30)
+                        capture_cropped(child_rect, str(out_dir / ct_fname))
+                        next_frame(f'Child: {ct_caption}', 'result')
 
                 close_child_forms(main_win['title'])
                 _free(50)
@@ -359,11 +692,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                 # New window but not VB6 form or MsgBox — capture it anyway
                 nw = other_new[0]
                 log.info('run_walkthrough: new non-VB window class=%s title="%s"', nw['class'], nw.get('title', ''))
-                fname = f'screen_{re.sub(r"[^a-z0-9]", "_", caption.lower())}.png'
+                fname = unique_fname(caption, ctrl_name)
                 QMP.park_cursor()
                 _free(30)
                 capture_cropped(nw, str(out_dir / fname))
-                next_frame(f'Window: {nw.get("title", caption)}', 'result', extra_rect=nw)
+                next_frame(f'Window: {nw.get("title", caption)}', 'result')
                 item['image'] = fname
                 dismiss_msgboxes()
 
@@ -372,7 +705,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
             if target['action'] == 'show_form':
                 log.warning('run_walkthrough: EXPECTED new form from %s but none appeared', ctrl_name)
             # Only capture if something visually changed (dedup will catch identical frames)
-            fname = f'screen_{re.sub(r"[^a-z0-9]", "_", caption.lower())}.png'
+            fname = unique_fname(caption, ctrl_name)
             QMP.park_cursor()
             _free(30)
             ok = capture_cropped(main_win, str(out_dir / fname))
@@ -391,6 +724,215 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
             categories[cat_name] = []
         if item.get('image'):
             categories[cat_name].append(item)
+
+    # ── Phase 2: Label-based popup menu navigation ─────────────────────
+    # Many proggies use clickable labels that open #32768 popup menus
+    label_targets = [t for t in safe_targets
+                     if t['form'] == main_form_name
+                     and t['type'] in ('Label', 'Image', 'PictureBox')
+                     and t['left_px'] >= 0 and t['top_px'] >= 0]
+    popup_labels = []  # (target, popup_rect)
+    if label_targets:
+        log.info('run_walkthrough: Phase 2 — probing %d labels for popup menus', len(label_targets))
+        for lt in label_targets:
+            sx = main_win['x'] + nc_x_off + lt['left_px'] + lt['width_px'] // 2
+            sy = main_win['y'] + nc_y_off + lt['top_px'] + lt['height_px'] // 2
+            if sx < main_win['x'] or sx > main_win['x'] + main_win['w']:
+                continue
+            if sy < main_win['y'] or sy > main_win['y'] + main_win['h']:
+                continue
+            baseline = wd.snapshot()
+            QMP.click(sx, sy)
+            _free(80)
+            after = wd.snapshot()
+            diff = wd.diff(baseline, after)
+            popups = [w for w in diff['new'] if w['class'] == '#32768' and w['w'] > 20]
+            if popups:
+                log.info('run_walkthrough: label %s → popup %dx%d', lt['name'], popups[0]['w'], popups[0]['h'])
+                popup_labels.append((lt, popups[0]))
+                next_frame(f'Menu: {lt["caption"] or lt["name"]}', 'menu')
+                # Close popup
+                QMP.send_key(['escape'])
+                _free(50)
+            else:
+                # Close any accidental form/msgbox
+                dismiss_msgboxes()
+
+    # Click through popup menu items
+    form_secrets = extract_form_secrets(zip_stem, exe_name)
+    greet_names = _extract_greet_names(zip_stem, exe_name)
+    # Compute main form position within viewport for auto-crop
+    main_in_vp_x = main_win['x'] - vp_x
+
+    if popup_labels:
+        log.info('run_walkthrough: Phase 2b — clicking %d popup menus', len(popup_labels))
+        # Parse menu tree from .frm for item count matching
+        from capture_walkthrough import parse_menu_tree_from_frm
+        menu_frm = None
+        for frm_candidate in [decomp_base / f'{main_form_name}.frm',
+                               decomp_base / 'forms' / f'{main_form_name}.frm'] if main_form_name else []:
+            if frm_candidate.exists():
+                menu_frm = frm_candidate; break
+        menu_roots = parse_menu_tree_from_frm(menu_frm) if menu_frm else []
+        matched_roots = set()
+
+        # Sort labels left-to-right to match menu category order
+        popup_labels.sort(key=lambda pl: pl[0]['left_px'])
+
+        for lt, prect in popup_labels:
+            # Re-open popup (may have been closed)
+            sx = main_win['x'] + nc_x_off + lt['left_px'] + lt['width_px'] // 2
+            sy = main_win['y'] + nc_y_off + lt['top_px'] + lt['height_px'] // 2
+            QMP.click(sx, sy)
+            _free(100)
+            # Re-detect popup position
+            after = wd.snapshot()
+            cur_popups = [w for w in after if w['class'] == '#32768' and w['w'] > 20]
+            p = cur_popups[0] if cur_popups else prect
+
+            # Match to menu tree root by item count
+            visible_count = p['h'] // 20
+            matched_items = None
+            root_caption = lt['caption'] or lt['name']
+            for ri, root in enumerate(menu_roots):
+                if ri in matched_roots:
+                    continue
+                if abs(len(root.children) - visible_count) <= 3:
+                    matched_items = root.children
+                    matched_roots.add(ri)
+                    root_caption = root.caption
+                    break
+
+            if not matched_items:
+                # No tree match — estimate items from popup height
+                n_items = max(visible_count, 1)
+                item_h = p['h'] // n_items
+                log.info('run_walkthrough: popup %s — no tree match, ~%d items', lt['name'], n_items)
+                QMP.send_key(['escape'])
+                _free(50)
+                continue
+
+            item_h = p['h'] // len(matched_items)
+            cat_name_popup = root_caption
+            if cat_name_popup not in categories:
+                categories[cat_name_popup] = []
+
+            for idx, menu_item in enumerate(matched_items):
+                if menu_item.is_separator:
+                    continue
+                cap = menu_item.caption
+                if 'exit' in menu_item.name.lower() or 'quit' in cap.lower():
+                    continue
+
+                # Re-open popup for each item
+                QMP.click(sx, sy)
+                _free(100)
+                after = wd.snapshot()
+                cur_popups = [w for w in after if w['class'] == '#32768' and w['w'] > 20]
+                p = cur_popups[0] if cur_popups else prect
+
+                iy = p['y'] + idx * item_h + item_h // 2
+                if iy > p['y'] + p['h']:
+                    QMP.send_key(['escape']); _free(50); continue
+
+                # Hover + capture
+                bezier_move(QMP.move, QMP._last_x, QMP._last_y, p['x'] + p['w'] // 2, iy)
+                _free(30)
+                next_frame(f'Hover: {cap}', 'hover')
+
+                # Click menu item
+                QMP.click(p['x'] + p['w'] // 2, iy)
+                _free(100)
+                dismiss_msgboxes()
+                _free(50)
+
+                # Move child form next to main
+                move_child_form(main_win['title'], child_x, child_y)
+                _free(50)
+
+                # Capture result
+                QMP.park_cursor()
+                _free(30)
+                fname = unique_fname(cap, menu_item.name)
+                item = {'caption': cap, 'type': 'menu_item', 'image': '', 'hint': ''}
+
+                # Check for new child form
+                after2 = wd.snapshot()
+                all_vb = wd.find_vb_forms(after2)
+                child_forms = [w for w in all_vb
+                               if (w['x'], w['y']) != (main_win['x'], main_win['y'])]
+                if not child_forms:
+                    child_forms = [w for w in all_vb
+                                   if w['title'] != main_win['title'] or w['w'] != main_win['w']]
+
+                if child_forms:
+                    cf = child_forms[0]
+                    capture_cropped(cf, str(out_dir / fname))
+                    next_frame(f'Form: {cap}', 'result')
+                    item['image'] = fname
+                    item['child_title'] = cf.get('title', '')
+                    # Auto-crop
+                    ch = auto_crop_child(out_dir / fname, main_in_vp_x)
+                    if ch:
+                        item['child_h'] = ch
+
+                    # Greets: capture animation frames
+                    if cap.lower() == 'greets':
+                        QMP.park_cursor()
+                        greet_frames_list = []
+                        for gi in range(60):
+                            time.sleep(0.2)
+                            gf_path = frame_dir / f'greets_{gi:02d}.png'
+                            capture_cropped(cf, str(gf_path))
+                            greet_frames_list.append(gf_path)
+                        # Build greets GIF
+                        try:
+                            from PIL import Image
+                            imgs = [Image.open(str(gf)) for gf in greet_frames_list if gf.exists()]
+                            if len(imgs) > 1:
+                                delays = [960] * len(imgs)
+                                delays[-1] = 3000
+                                imgs[0].save(str(out_dir / 'screen_greets.gif'), save_all=True,
+                                             append_images=imgs[1:], duration=delays, loop=0)
+                                item['image'] = 'screen_greets.gif'
+                                log.info('run_walkthrough: greets GIF %d frames', len(imgs))
+                        except Exception as exc:
+                            log.warning('run_walkthrough: greets GIF failed: %s', exc)
+
+                    # Form secrets: type password if known
+                    secret = form_secrets.get(cap)
+                    if not secret:
+                        for fk, fv in form_secrets.items():
+                            if cap.lower() in fk.lower() or fk.lower() in cap.lower():
+                                secret = fv; break
+                    if secret:
+                        log.info('run_walkthrough: typing secret for %s (len=%d)', cap, len(secret))
+                        _type_secret_win32(main_win['title'], secret)
+                        _free(100)
+                        QMP.park_cursor()
+                        _free(30)
+                        secret_fname = unique_fname(f'secret_{cap}', f'secret_{menu_item.name}')
+                        capture_cropped(cf, str(out_dir / secret_fname))
+                        next_frame(f'Secret: {cap}', 'result')
+                        categories.setdefault(cat_name_popup, []).append(
+                            {'caption': f'{cap} (unlocked)', 'type': 'secret',
+                             'image': secret_fname, 'hint': ''})
+                else:
+                    # No child form — capture main form state change
+                    ok = capture_cropped(main_win, str(out_dir / fname))
+                    if ok and not frames_are_identical(out_dir / 'main_form.png', out_dir / fname):
+                        next_frame(f'{cap}', 'result')
+                        item['image'] = fname
+                    else:
+                        (out_dir / fname).unlink(missing_ok=True)
+
+                if item.get('image'):
+                    categories.setdefault(cat_name_popup, []).append(item)
+
+                # Cleanup
+                close_child_forms(main_win['title'])
+                _free(50)
+                dismiss_msgboxes()
 
     # ── Post-walkthrough validation ──────────────────────────────────
     expected_forms = sum(1 for t in safe_targets if t['form'] == main_form_name and t['action'] == 'show_form' and not t['dangerous'])
@@ -412,11 +954,23 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     if len(frames) > 1:
         try:
             from PIL import Image
-            imgs = [Image.open(str(out_dir / f['file'])) for f in frames if (out_dir / f['file']).exists()]
+            imgs = []
+            durations = []
+            for f in frames:
+                fp = out_dir / f['file']
+                if fp.exists():
+                    imgs.append(Image.open(str(fp)))
+                    # Hover frames get short duration, results get longer
+                    durations.append(80 if f['type'] == 'hover' else 250 if f['type'] == 'result' else 200)
             if len(imgs) > 1:
+                durations[-1] = 2000  # pause on last frame before loop
                 imgs[0].save(str(gif_path), save_all=True, append_images=imgs[1:],
-                             duration=1000, loop=0, optimize=True)
+                             duration=durations, loop=0, optimize=True)
                 log.info('run_walkthrough: GIF %s (%d frames)', gif_path, len(imgs))
+                # Cutoff detection
+                cutoffs = detect_cutoff(gif_path)
+                if cutoffs:
+                    log.warning('run_walkthrough: GIF has %d frames with edge cutoff', len(cutoffs))
             else:
                 log.warning('run_walkthrough: only 1 frame, skipping GIF')
         except Exception as exc:
@@ -428,10 +982,6 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     _c2gui_shell(f'taskkill /f /im "{exe_name}" 2>nul')
 
     # Build manifest
-    # Compute nc_offset from main form
-    nc_x = 3  # default border width
-    nc_y = 26  # default title bar height
-
     cat_list = []
     for cat_name, items in categories.items():
         cat_list.append({'category': cat_name, 'items': items})
@@ -452,10 +1002,14 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     manifest = {
         'form': {
             'width': main_win['w'], 'height': main_win['h'],
-            'image': 'main_form.png', 'nc_x': nc_x, 'nc_y': nc_y,
+            'image': 'main_form.png',
+            'nc_x': nc_x_off, 'nc_y': nc_y_off,
+            'screen_x': main_win['x'], 'screen_y': main_win['y'],
+            'crop_x0': vp_x, 'crop_y0': vp_y,
         },
         'labels': labels,
         'categories': cat_list,
+        'greets': greet_names,
         'passwords': passwords,
         'frames': frames,
         'files': files,
@@ -478,10 +1032,17 @@ def screenshot_only(zip_stem, exe_name, out_dir):
     if not launch_proggie(zip_stem, exe_name):
         return None
 
-    main_win = wait_for_main_form(wd)
+    main_win, is_vb6 = wait_for_main_form(wd)
     if not main_win:
         _c2gui_shell(f'taskkill /f /im "{exe_name}" 2>nul')
         return None
+    if not is_vb6:
+        dismiss_msgboxes()
+        _free(100)
+        main_win, is_vb6 = wait_for_main_form(wd, timeout=15)
+        if not main_win:
+            _c2gui_shell(f'taskkill /f /im "{exe_name}" 2>nul')
+            return None
 
     dismiss_msgboxes()
     _free(50)

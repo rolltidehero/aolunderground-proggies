@@ -13,6 +13,17 @@ Auto-recovers: if Xvfb, VB Decompiler, or C2 die, spins them back up.
 import sys, os, time, json, subprocess, argparse, logging, re, hashlib, struct
 from datetime import datetime
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 REPO_ROOT = '/home/braker/git/aolunderground-proggies'
 PROGRAMS_DIR = os.path.join(REPO_ROOT, 'programs')
 CHECKPOINT_FILE = os.path.join(REPO_ROOT, 'tools/c2/decompile_checkpoint.json')

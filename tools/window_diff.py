@@ -15,6 +15,16 @@ Usage as module:
 import json, logging, os, re, socket, subprocess, time, base64
 from pathlib import Path
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from datetime import datetime, timezone
+_hunter_log = (Path.home() / 'traces' / Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 log = logging.getLogger(__name__)
 
 SCREEN_W, SCREEN_H = 1280, 800
@@ -267,6 +277,36 @@ class QMP:
     @staticmethod
     def park_cursor():
         QMP.move(*CURSOR_PARK)
+
+    @staticmethod
+    def send_key(keys):
+        """Send key combo via QMP send-key. keys: list of qcode strings."""
+        key_list = [{"type": "qcode", "data": k} for k in keys]
+        QMP._cmd("send-key", {"keys": key_list})
+
+    @staticmethod
+    def send_text(text):
+        """Type text character by character via QMP key events."""
+        SHIFT_CHARS = '~!@#$%^&*()_+{}|:"<>?'
+        SHIFT_MAP = dict(zip(SHIFT_CHARS, '`1234567890-=[]\\;\',./?'))
+        SPECIAL = {' ': 'spc', '\n': 'ret', '\t': 'tab', '-': 'minus',
+                   '=': 'equal', '[': 'bracket_left', ']': 'bracket_right',
+                   '\\': 'backslash', ';': 'semicolon', "'": 'apostrophe',
+                   ',': 'comma', '.': 'dot', '/': 'slash', '`': 'grave_accent'}
+        for ch in text:
+            if ch in SHIFT_CHARS:
+                base = SHIFT_MAP[ch]
+                qcode = SPECIAL.get(base, base)
+                QMP.send_key(['shift', qcode])
+            elif ch in SPECIAL:
+                QMP.send_key([SPECIAL[ch]])
+            elif ch.isupper():
+                QMP.send_key(['shift', ch.lower()])
+            elif ch.isalnum():
+                QMP.send_key([ch.lower()])
+            else:
+                log.warning("QMP.send_text: unmapped char %r", ch)
+            time.sleep(0.05)
 
 
 class WindowDiff:

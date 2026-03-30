@@ -6,6 +6,17 @@ Example: python3 push_file.py ./app.exe 'C:\Users\lab\Desktop\app.exe'
 """
 import sys, socket, json, base64, os
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 QGA_SOCK = "/tmp/vm-qga.sock"
 CHUNK = 1024 * 1024  # 1MB chunks
 
