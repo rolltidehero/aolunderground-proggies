@@ -515,7 +515,10 @@ def render_screenshots(zip_stem, html_path):
             nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
             form_img = f'{zip_stem}/{form_info.get("image", "")}'
             main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
-            sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
+            sorted_labels = sorted(
+                [(k, v) for k, v in label_info.items() if v.get('left', 0) >= 0 and v.get('top', 0) >= 0],
+                key=lambda kv: kv[1]['left']
+            )
 
             cat_data = []
             for ci, cat in enumerate(categories):
@@ -560,6 +563,7 @@ def render_screenshots(zip_stem, html_path):
 var openCat=-1,popup=document.getElementById("app-popup"),
     childEl=document.getElementById("app-child");
 var cw=+childEl.dataset.cw;
+if(cw<=0)cw=600;
 document.querySelectorAll(".app-label").forEach(function(el){
   el.addEventListener("click",function(e){
     e.stopPropagation();
@@ -702,6 +706,74 @@ function wtShow(el){var i=el.querySelector('.wt-img');if(i)i.style.display=i.sty
                 lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
             lines.append('</details>')
             found = True
+    # Frame player — renders whenever walkthrough.json has frames
+    if wt_path.exists():
+        wt = _json.loads(wt_path.read_text())
+        wt_frames = wt.get('frames', []) if isinstance(wt, dict) else []
+
+        if wt_frames:
+            # Frame-by-frame player
+            valid_frames = [f for f in wt_frames if (img_dir / f['file']).exists()]
+            if valid_frames:
+                # Get dimensions from first frame
+                from PIL import Image as _PILImg
+                _first = _PILImg.open(str(img_dir / valid_frames[0]['file']))
+                fw, fh = _first.width, _first.height
+                frame_data = _json.dumps([{'file': f'{zip_stem}/{f["file"]}', 'label': f['label'], 'type': f['type']} for f in valid_frames])
+                lines.append(f'''<div class="frame-player" id="fp" style="margin-top:16px">
+<h3 style="color:#c9d1d9;margin:0 0 8px">Walkthrough</h3>
+<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px">
+<canvas id="fp-canvas" width="{fw}" height="{fh}" style="display:block;max-width:100%;border-radius:4px;background:#000"></canvas>
+<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+<button id="fp-play" style="background:#238636;color:#fff;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:13px">Play</button>
+<input id="fp-slider" type="range" min="0" max="{len(valid_frames)-1}" value="0" style="flex:1">
+<span id="fp-counter" style="color:#8b949e;font-size:.8em;white-space:nowrap">1 / {len(valid_frames)}</span>
+</div>
+<div id="fp-label" style="color:#8b949e;font-size:.8em;margin-top:4px"></div>
+</div></div>
+<script>
+(function(){{
+var frames={frame_data};
+var canvas=document.getElementById("fp-canvas"),ctx=canvas.getContext("2d"),
+    slider=document.getElementById("fp-slider"),
+    counter=document.getElementById("fp-counter"),label=document.getElementById("fp-label"),
+    playBtn=document.getElementById("fp-play");
+var cur=0,timer=null,imgs={{}};
+function loadImg(i,cb){{
+  if(imgs[i]){{if(cb)cb(imgs[i]);return;}}
+  var im=new Image();
+  im.onload=function(){{imgs[i]=im;if(cb)cb(im);}};
+  im.src=frames[i].file;
+}}
+function show(i){{
+  if(i<0)i=frames.length-1;
+  if(i>=frames.length)i=0;
+  cur=i;slider.value=i;
+  counter.textContent=(i+1)+" / "+frames.length;
+  label.textContent=frames[i].label;
+  loadImg(i,function(im){{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(im,0,0,canvas.width,canvas.height);
+  }});
+  // Preload neighbors
+  for(var j=Math.max(0,i-2);j<=Math.min(frames.length-1,i+2);j++)loadImg(j);
+}}
+slider.addEventListener("input",function(){{show(+this.value);}});
+playBtn.addEventListener("click",function(){{
+  if(timer){{clearInterval(timer);timer=null;playBtn.textContent="Play";}}
+  else{{timer=setInterval(function(){{show(cur+1);}},1500);playBtn.textContent="Pause";}}
+}});
+document.addEventListener("keydown",function(e){{
+  if(e.target.tagName==="INPUT"&&e.target.type!=="range")return;
+  if(e.code==="Space"){{e.preventDefault();playBtn.click();}}
+  else if(e.code==="ArrowLeft"){{show(cur-1);}}
+  else if(e.code==="ArrowRight"){{show(cur+1);}}
+}});
+show(0);
+}})();
+</script>''')
+                found = True
+
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 

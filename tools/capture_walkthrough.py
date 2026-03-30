@@ -444,6 +444,52 @@ def _qga_exec(cmd, args, safety_max=200):
     return {'status': 'error', 'returncode': -1, 'stdout': '', 'stderr': 'QGA exec failed', 'exited': True}
 
 
+def _qga_read_file(guest_path):
+    """Read a file from the guest via QGA."""
+    for attempt in range(3):
+        try:
+            s = _qga_connect()
+            r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': guest_path, 'mode': 'r'}})
+            if 'error' in r:
+                s.close(); _free_process(100); continue
+            handle = r['return']
+            data = b''
+            while True:
+                r = _qga_send_recv(s, {'execute': 'guest-file-read', 'arguments': {'handle': handle, 'count': 65536}})
+                chunk = base64.b64decode(r['return']['buf-b64']) if r['return'].get('buf-b64') else b''
+                data += chunk
+                if r['return'].get('eof', False) or not chunk: break
+            _qga_send_recv(s, {'execute': 'guest-file-close', 'arguments': {'handle': handle}})
+            s.close()
+            return data.decode(errors='replace')
+        except Exception as e:
+            log.warning('_qga_read_file: attempt %d exc=%s', attempt, e)
+            try: s.close()
+            except: pass
+            _free_process(100)
+    return ''
+
+
+def _qga_write_file(guest_path, data):
+    """Write data to a file on the guest via QGA."""
+    for attempt in range(3):
+        try:
+            s = _qga_connect()
+            r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': guest_path, 'mode': 'w'}})
+            if 'error' in r:
+                s.close(); _free_process(100); continue
+            handle = r['return']
+            _qga_send_recv(s, {'execute': 'guest-file-write', 'arguments': {'handle': handle, 'buf-b64': base64.b64encode(data).decode()}})
+            _qga_send_recv(s, {'execute': 'guest-file-close', 'arguments': {'handle': handle}})
+            s.close()
+            return
+        except Exception as e:
+            log.warning('_qga_write_file: attempt %d exc=%s', attempt, e)
+            try: s.close()
+            except: pass
+            _free_process(100)
+
+
 def _gui_launch(cmdline):
     """Launch a process in session 1 via QGA → s1launch_sys.py. Polls for completion."""
     s = _qga_connect()
