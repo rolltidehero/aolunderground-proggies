@@ -552,6 +552,79 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     if not main_form_name and safe_targets:
         main_form_name = safe_targets[0]['form']
 
+    # Detect splash screen: startup form where ALL targets are show_form (just transitions)
+    startup_targets = [t for t in safe_targets if t['form'] == main_form_name]
+    is_splash = (startup_targets and
+                 all(t['action'] == 'show_form' or t['type'] in ('Form', 'unknown')
+                     for t in startup_targets))
+    if is_splash:
+        log.info('run_walkthrough: startup form %s looks like a splash screen, clicking to dismiss', main_form_name)
+        # Click center of the form to trigger the show_form transition
+        QMP.click(main_win['x'] + main_win['w'] // 2, main_win['y'] + main_win['h'] // 2)
+        _free(150)
+        # Dismiss any nag screens / msgboxes that appear
+        dismiss_msgboxes()
+        _free(50)
+        # Wait for a new/different VB6 form to appear
+        old_title = main_win['title']
+        for _attempt in range(30):
+            _free(50)
+            windows = wd.snapshot()
+            forms = wd.find_vb_forms(windows)
+            forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            new_forms = [f for f in forms if f['title'] != old_title]
+            if new_forms:
+                main_win = new_forms[0]
+                log.info('run_walkthrough: splash dismissed, new main form "%s" %dx%d',
+                         main_win['title'], main_win['w'], main_win['h'])
+                # Recapture main form
+                QMP.park_cursor()
+                _free(30)
+                capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+                capture_cropped(main_win, str(out_dir / 'main_form.png'))
+                next_frame('Main form', 'main')
+                # Recompute viewport
+                child_x = main_win['x'] + main_win['w'] + 10
+                child_y = main_win['y']
+                vp_x = max(main_win['x'] - 2, 0)
+                vp_y = max(main_win['y'] - 2, 0)
+                vp_w = min(main_win['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(main_win['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+                # Find the new main form name from targets
+                target_form = startup_targets[0].get('target_form', '')
+                if target_form and target_form.lower() not in ('me', 'self', ''):
+                    main_form_name = target_form
+                else:
+                    form_counts = {}
+                    for t in safe_targets:
+                        if t['form'] != main_form_name:
+                            form_counts[t['form']] = form_counts.get(t['form'], 0) + 1
+                    if form_counts:
+                        main_form_name = max(form_counts, key=form_counts.get)
+                log.info('run_walkthrough: now targeting form %s', main_form_name)
+                # Recompute nc_offset for the new main form
+                nc_x_off, nc_y_off = 3, 26
+                if decomp_base.exists():
+                    for frm_candidate in [decomp_base / f'{main_form_name}.frm',
+                                          decomp_base / 'forms' / f'{main_form_name}.frm']:
+                        if not frm_candidate.exists():
+                            continue
+                        text = frm_candidate.read_text(errors='replace')
+                        cw_m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
+                        ch_m = re.search(r'ClientHeight\s*=\s*(\d+)', text)
+                        if cw_m and ch_m:
+                            client_w = int(cw_m.group(1)) // TWIPS_PER_PX
+                            client_h = int(ch_m.group(1)) // TWIPS_PER_PX
+                            nc_x_off = max((main_win['w'] - client_w) // 2, 0)
+                            nc_y_off = max(main_win['h'] - client_h - nc_x_off, 0)
+                            log.info('nc_offset: recomputed nc_x=%d nc_y=%d for %s',
+                                     nc_x_off, nc_y_off, main_form_name)
+                        break
+                break
+        else:
+            log.warning('run_walkthrough: splash click did not produce a new form')
+
     # Click each safe target on the startup form
     for target in safe_targets:
         if target['form'] != main_form_name:
