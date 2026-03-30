@@ -521,7 +521,7 @@ def render_screenshots(zip_stem, html_path):
             categories = wt.get('categories', [])
             form_info, label_info = wt.get('form'), wt.get('labels', {})
 
-        if form_info and label_info and (img_dir / form_info.get('image', '')).exists():
+        if form_info and (label_info or categories) and (img_dir / form_info.get('image', '')).exists():
             fw, fh = form_info.get('width', 0), form_info.get('height', 0)
             nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
             form_img = f'{zip_stem}/{form_info.get("image", "")}'
@@ -529,7 +529,8 @@ def render_screenshots(zip_stem, html_path):
             sorted_labels = sorted(
                 [(k, v) for k, v in label_info.items() if v.get('left', 0) >= 0 and v.get('top', 0) >= 0],
                 key=lambda kv: kv[1]['left']
-            )
+            ) if label_info else []
+            has_labels = len(sorted_labels) > 0
 
             cat_data = []
             for ci, cat in enumerate(categories):
@@ -550,17 +551,30 @@ def render_screenshots(zip_stem, html_path):
 
             # Stage: flexbox — main form left, child forms right
             lines.append(f'<div class="app-sim">')
-            lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
+            if has_labels:
+                lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
+            else:
+                lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu items to explore this proggie</div>')
             lines.append(f'<div class="app-stage" id="app-stage">')
+            lines.append(f'<div class="app-form-wrap">')
+            # Menu bar for apps without label hotspots
+            if not has_labels and categories:
+                lines.append('<div class="app-menubar">')
+                for ci, cd in enumerate(cat_data):
+                    lines.append(f'<button class="app-menutop" data-cat="{ci}">{H.escape(cd["name"])}</button>')
+                lines.append('</div>')
             lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
             lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
-            for ci, cd in enumerate(cat_data):
-                if cd['label']:
-                    l = cd['label']
-                    lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
+            if has_labels:
+                for ci, cd in enumerate(cat_data):
+                    if cd['label']:
+                        l = cd['label']
+                        lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
             lines.append('<div class="app-popup" id="app-popup"></div>')
             lines.append('</div>')
-            lines.append(f'<div class="app-child" id="app-child" data-cw="{main_in_shot_x - 8}"></div>')
+            lines.append('</div>')
+            child_max_w = max(main_in_shot_x - 8, fw + 100) if main_in_shot_x > 0 else fw + 200
+            lines.append(f'<div class="app-child" id="app-child" data-cw="{child_max_w}"></div>')
             lines.append('</div>')
             gif_path = img_dir / 'animated.gif'
             if gif_path.exists():
@@ -569,36 +583,47 @@ def render_screenshots(zip_stem, html_path):
             lines.append('</div>')
 
             greets = wt.get('greets', [])
-            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)};')
+            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)},hasLabels={"true" if has_labels else "false"};')
             lines.append(r'''
 var openCat=-1,popup=document.getElementById("app-popup"),
     childEl=document.getElementById("app-child");
 var cw=+childEl.dataset.cw;
 if(cw<=0)cw=600;
-document.querySelectorAll(".app-label").forEach(function(el){
-  el.addEventListener("click",function(e){
-    e.stopPropagation();
-    var ci=+this.dataset.cat;
-    if(openCat===ci){closePopup();return}
-    openCat=ci;
-    var cat=appCats[ci],lbl=cat.label,h="";
-    cat.items.forEach(function(it,i){
-      if(it.type==="secret")return;
-      h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
-        it.caption.replace(/</g,"&lt;")+'</div>';
-    });
-    popup.innerHTML=h;
-    popup.style.left=(lbl.left+3)+"px";
-    popup.style.top=(lbl.top+lbl.height+6)+"px";
-    popup.style.display="block";
-    popup.querySelectorAll(".app-mi").forEach(function(mi){
-      mi.addEventListener("click",function(ev){
-        ev.stopPropagation();
-        showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
-        closePopup();
-      });
+function openMenu(ci){
+  if(openCat===ci){closePopup();return}
+  openCat=ci;
+  var cat=appCats[ci],h="";
+  cat.items.forEach(function(it,i){
+    if(it.type==="secret")return;
+    h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
+      it.caption.replace(/</g,"&lt;")+'</div>';
+  });
+  popup.innerHTML=h;
+  if(hasLabels&&cat.label){
+    popup.style.left=(cat.label.left+3)+"px";
+    popup.style.top=(cat.label.top+cat.label.height+6)+"px";
+    popup.style.position="absolute";
+  } else {
+    // Position below the menu bar button
+    var btn=document.querySelector('.app-menutop[data-cat="'+ci+'"]');
+    if(btn){var r=btn.getBoundingClientRect(),p=popup.parentElement.getBoundingClientRect();
+      popup.style.left=(r.left-p.left)+"px";popup.style.top=(r.bottom-p.top)+"px";
+      popup.style.position="absolute";}
+  }
+  popup.style.display="block";
+  popup.querySelectorAll(".app-mi").forEach(function(mi){
+    mi.addEventListener("click",function(ev){
+      ev.stopPropagation();
+      showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
+      closePopup();
     });
   });
+}
+document.querySelectorAll(".app-label").forEach(function(el){
+  el.addEventListener("click",function(e){e.stopPropagation();openMenu(+this.dataset.cat)});
+});
+document.querySelectorAll(".app-menutop").forEach(function(el){
+  el.addEventListener("click",function(e){e.stopPropagation();openMenu(+this.dataset.cat)});
 });
 document.addEventListener("click",function(){closePopup()});
 function closePopup(){popup.style.display="none";openCat=-1}
@@ -627,6 +652,10 @@ function hideChild(){childEl.innerHTML=""}
 .app-sim{margin:16px 0}
 .app-sim-hint{color:#8b949e;font-size:0.8em;margin-bottom:8px}
 .app-stage{display:flex;align-items:flex-start;gap:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px}
+.app-form-wrap{flex-shrink:0}
+.app-menubar{display:flex;background:#d4d0c8;border:1px solid #808080;border-bottom:none;padding:0}
+.app-menutop{background:none;border:none;color:#000;padding:2px 10px;font:13px/1.4 "Segoe UI",Tahoma,sans-serif;cursor:pointer}
+.app-menutop:hover{background:#0078d4;color:#fff}
 .app-form{user-select:none;position:relative}
 .app-form>img{display:block}
 .app-label{position:absolute;cursor:pointer;border-radius:2px}

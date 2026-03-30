@@ -560,6 +560,9 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
         forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
         main_win = forms[0]
 
+    # Move main form to a known position with room for child forms to the right
+    FORM_X, FORM_Y = 50, 50
+
     # Capture main form
     QMP.park_cursor()
     _free(30)
@@ -722,6 +725,28 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
             log.info('run_walkthrough: fallback to form with most targets: %s (%d)',
                      main_form_name, form_target_counts[main_form_name])
 
+    # Move the REAL main form to a known position with room for child forms
+    title_esc = main_win['title'].replace('"', '""')
+    move_cmd = (f'import ctypes; u=ctypes.windll.user32; '
+                f'u.MoveWindow(u.FindWindowW(None, "{title_esc}"), '
+                f'{FORM_X}, {FORM_Y}, {main_win["w"]}, {main_win["h"]}, 1)')
+    _c2gui_shell(rf'"{PYTHON_GUEST}" -c "{move_cmd}"')
+    _free(50)
+    main_win['x'] = FORM_X
+    main_win['y'] = FORM_Y
+    # Recapture after move
+    QMP.park_cursor(); _free(30)
+    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+    capture_cropped(main_win, str(out_dir / 'main_form.png'))
+    # Recompute viewport after move
+    child_x = main_win['x'] + main_win['w'] + 10
+    child_y = main_win['y']
+    vp_x = max(main_win['x'] - 2, 0)
+    vp_y = max(main_win['y'] - 2, 0)
+    vp_w = min(main_win['w'] + max_child_w + 20, SCREEN_W - vp_x)
+    vp_h = min(max(main_win['h'], max_child_h) + 4, SCREEN_H - vp_y)
+    viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+
     # Recompute nc_offset for the actual main form
     if main_form_name:
         for frm_candidate in [decomp_base / f'{main_form_name}.frm',
@@ -833,9 +858,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                 next_frame(f'Form: {caption}', 'result')
                 item['image'] = fname
                 item['child_title'] = cf.get('title', '')
-                ch = auto_crop_child(out_dir / fname, main_win['x'] - vp_x)
-                if ch:
-                    item['child_h'] = ch
+                item['child_h'] = cf.get('h', 200)
                 close_child_forms(main_win['title'])
                 _free(50)
                 dismiss_msgboxes()
@@ -1181,10 +1204,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     next_frame(f'Form: {cap}', 'result')
                     item['image'] = fname
                     item['child_title'] = cf.get('title', '')
-                    # Auto-crop
-                    ch = auto_crop_child(out_dir / fname, main_in_vp_x)
-                    if ch:
-                        item['child_h'] = ch
+                    item['child_h'] = cf.get('h', 200)
 
                     # Greets: capture animation frames
                     if cap.lower() == 'greets':
