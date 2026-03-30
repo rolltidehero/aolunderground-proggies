@@ -561,7 +561,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
         main_win = forms[0]
 
     # Move main form to a known position with room for child forms to the right
-    FORM_X, FORM_Y = 50, 50
+    FORM_X, FORM_Y = 400, 300
 
     # Capture main form
     QMP.park_cursor()
@@ -832,36 +832,46 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
             real_new = diff_result['new']
             new_forms = [w for w in real_new if w['class'] in VB6_CLASSES]
             new_msgboxes = [w for w in real_new if w['class'] == '#32770']
+            new_win = None
 
             if new_msgboxes:
-                mb = new_msgboxes[0]
-                fname = unique_fname(caption, matched_target['name'])
-                QMP.park_cursor(); _free(30)
-                capture_cropped(mb, str(out_dir / fname))
-                next_frame(f'MsgBox: {caption}', 'result')
-                item['image'] = fname
+                new_win = new_msgboxes[0]
                 item['type'] = 'msgbox'
-                dismiss_msgboxes()
             elif new_forms:
-                nf = new_forms[0]
-                move_child_form(main_win['title'], child_x, child_y)
-                _free(50)
-                after2 = wd.snapshot()
-                all_vb = wd.find_vb_forms(after2)
-                moved = [w for w in all_vb if (w['x'], w['y']) != (main_win['x'], main_win['y'])]
-                if not moved:
-                    moved = [w for w in all_vb if w['title'] != main_win['title'] or w['w'] != main_win['w']]
-                cf = moved[0] if moved else nf
+                new_win = new_forms[0]
+
+            if new_win:
+                # Move child to top-left so it doesn't overlap main form
+                CHILD_X, CHILD_Y = 10, 10
+                if new_win['class'] in VB6_CLASSES:
+                    move_child_form(main_win['title'], CHILD_X, CHILD_Y)
+                    _free(50)
+                    # Re-detect child position after move
+                    after2 = wd.snapshot()
+                    all_vb = wd.find_vb_forms(after2)
+                    moved = [w for w in all_vb if (w['x'], w['y']) != (main_win['x'], main_win['y'])]
+                    if not moved:
+                        moved = [w for w in all_vb if w['title'] != main_win['title'] or w['w'] != main_win['w']]
+                    if moved:
+                        new_win = moved[0]
+
+                # Capture just the child window at its own rect
                 fname = unique_fname(caption, matched_target['name'])
                 QMP.park_cursor(); _free(30)
-                capture_cropped(cf, str(out_dir / fname))
-                next_frame(f'Form: {caption}', 'result')
+                capture_cropped(new_win, str(out_dir / fname))
+                label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
+                next_frame(label, 'result')
                 item['image'] = fname
-                item['child_title'] = cf.get('title', '')
-                item['child_h'] = cf.get('h', 200)
-                close_child_forms(main_win['title'])
-                _free(50)
-                dismiss_msgboxes()
+                item['child_title'] = new_win.get('title', '')
+                item['child_h'] = new_win.get('h', 200)
+
+                # Cleanup
+                if item['type'] == 'msgbox':
+                    dismiss_msgboxes()
+                else:
+                    close_child_forms(main_win['title'])
+                    _free(50)
+                    dismiss_msgboxes()
         else:
             fname = unique_fname(caption, matched_target['name'])
             QMP.park_cursor(); _free(30)

@@ -559,10 +559,19 @@ def render_screenshots(zip_stem, html_path):
             lines.append(f'<div class="app-form-wrap">')
             # Menu bar for apps without label hotspots
             if not has_labels and categories:
-                lines.append('<div class="app-menubar">')
-                for ci, cd in enumerate(cat_data):
-                    lines.append(f'<button class="app-menutop" data-cat="{ci}">{H.escape(cd["name"])}</button>')
-                lines.append('</div>')
+                # If only 1 category, show items directly as menu bar buttons
+                if len(cat_data) == 1:
+                    lines.append('<div class="app-menubar">')
+                    for ii, it in enumerate(cat_data[0]['items']):
+                        if it.get('type') == 'secret':
+                            continue
+                        lines.append(f'<button class="app-menutop" onclick="showChild(appCats[0].items[{ii}])">{H.escape(it["caption"])}</button>')
+                    lines.append('</div>')
+                else:
+                    lines.append('<div class="app-menubar">')
+                    for ci, cd in enumerate(cat_data):
+                        lines.append(f'<button class="app-menutop" data-cat="{ci}">{H.escape(cd["name"])}</button>')
+                    lines.append('</div>')
             lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
             lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
             if has_labels:
@@ -667,7 +676,7 @@ function hideChild(){childEl.innerHTML=""}
 .app-ct{color:#8b949e;font-size:.78em;margin-bottom:3px;display:flex;align-items:center;gap:6px}
 .app-ct button{background:none;border:none;color:#8b949e;cursor:pointer;font-size:.95em;padding:0}
 .app-ct button:hover{color:#f85149}
-.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d;max-height:350px}
+.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d}
 .app-noshot{color:#8b949e;font-size:.85em;padding:24px 16px;border:1px dashed #30363d;border-radius:4px}
 .app-cc img{display:block}
 .app-gif-toggle{margin-top:8px;color:#8b949e;font-size:.85em}
