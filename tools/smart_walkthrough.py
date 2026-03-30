@@ -575,28 +575,21 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
 
     if is_splash:
         log.info('run_walkthrough: current form looks like splash/nag, clicking to dismiss')
-        QMP.click(main_win['x'] + main_win['w'] // 2, main_win['y'] + main_win['h'] // 2)
-        _free(200)
+        # Click rapidly via QMP (fast) BEFORE entering the slow QGA poll loop
+        for _ in range(5):
+            QMP.click(main_win['x'] + main_win['w'] // 2, main_win['y'] + main_win['h'] // 2)
+            time.sleep(0.3)
+        # Dismiss any msgboxes that appeared from the clicks
         dismiss_msgboxes()
         _free(100)
-        # Click again in case first click just focused the window
-        QMP.click(main_win['x'] + main_win['w'] // 2, main_win['y'] + main_win['h'] // 2)
-        _free(200)
-        dismiss_msgboxes()
-        close_child_forms(main_win['title'])
-        _free(100)
-
-        # Poll for the app to settle — look for a form with a different title
-        old_title = main_win['title']
-        for _attempt in range(40):
+        # Now poll (slow QGA) for a target-rich form to appear
+        for _attempt in range(20):
             _free(50)
-            dismiss_msgboxes()
             windows = wd.snapshot()
             forms = wd.find_vb_forms(windows)
             if not forms:
                 continue
             forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
-            # Prefer a form whose caption matches a form with many targets
             for f in forms:
                 matched = form_captions.get(f['title'])
                 if matched and form_target_counts.get(matched, 0) >= 5:
@@ -606,18 +599,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                              f['title'], matched, form_target_counts[matched])
                     break
             else:
-                # No target-rich form yet — dismiss whatever's on top and try again
-                if forms and forms[0]['title'] != old_title:
-                    # New form appeared but it's not target-rich — click it to dismiss
-                    nag = forms[0]
-                    log.info('run_walkthrough: dismissing intermediate form "%s"', nag['title'])
-                    QMP.click(nag['x'] + nag['w'] // 2, nag['y'] + nag['h'] // 2)
-                    _free(100)
-                    close_child_forms(nag['title'])
-                    _free(100)
-                    old_title = nag['title']
+                # Not found yet — click again and dismiss
+                QMP.click(main_win['x'] + main_win['w'] // 2, main_win['y'] + main_win['h'] // 2)
+                dismiss_msgboxes()
                 continue
-            break  # found target-rich form
+            break
         else:
             log.warning('run_walkthrough: no target-rich form appeared after splash dismiss')
 
