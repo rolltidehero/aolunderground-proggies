@@ -6,7 +6,6 @@ loads decompile metadata.json when available, and generates rich analysis pages
 with progressive disclosure, version-annotated API refs, and structured forms.
 """
 import json
-import logging
 import os
 import re
 import sqlite3
@@ -14,23 +13,6 @@ import subprocess
 import sys
 import html as H
 from pathlib import Path
-
-# Hunter deep tracing — always on, timestamped per-run, file only
-import hunter
-from pathlib import Path as _Path
-from datetime import datetime, timezone
-_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
-               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-               / 'hunter.log')
-_hunter_log.parent.mkdir(parents=True, exist_ok=True)
-hunter.trace(stdlib=False, action=hunter.CallPrinter(
-    stream=open(_hunter_log, 'a')))
-
-try:
-    from clean_code import clean_for_display
-except ImportError:
-    def clean_for_display(code):
-        return code
 
 SORTED_DIR = Path("programs/AOL/proggies-sorted-deduped")
 DB_PATH = Path("exe_strings.db")
@@ -212,9 +194,7 @@ def get_meta_from_db(zip_stem, conn=None):
         conn = sqlite3.connect(str(db))
     row = conn.execute(
         "SELECT p.name, p.author, p.aol_version, p.category, e.exe_name, e.vb_version, e.compile_type, e.exe_path, p.zip_path "
-        "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? "
-        "ORDER BY CASE WHEN e.exe_name LIKE '%setup%' OR e.exe_name LIKE '%install%' THEN 1 ELSE 0 END, e.exe_name "
-        "LIMIT 1",
+        "FROM proggies p LEFT JOIN exes e ON e.proggie_id = p.id WHERE p.zip_stem = ? LIMIT 1",
         (zip_stem,)
     ).fetchone()
     if own_conn: conn.close()
@@ -226,11 +206,13 @@ def get_meta_from_db(zip_stem, conn=None):
         'zip_path': row[8] or '',
     }
     # Read PE timestamp for compile date
-    if row[7] and row[4]:
+    if row[7]:
         exe_path = SORTED_DIR / '_extracted' / zip_stem / row[4]
         if exe_path.exists():
             meta['compile_date'] = _read_pe_timestamp(exe_path)
     return meta
+
+
 def _read_pe_timestamp(exe_path):
     """Read compile date from PE header TimeDateStamp field."""
     import struct, datetime
@@ -242,12 +224,9 @@ def _read_pe_timestamp(exe_path):
             ts = struct.unpack('<I', f.read(4))[0]
             if ts < 631152000 or ts > 1893456000:  # 1990-2030 sanity check
                 return None
-            dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+            dt = datetime.datetime.fromtimestamp(ts, datetime.UTC)
             return dt.strftime('%Y-%m-%d')
-    except (OSError, struct.error, ValueError, OverflowError):
-        return None
     except Exception:
-        logging.exception("Unexpected error reading PE timestamp from %s", exe_path)
         return None
 
 
@@ -280,7 +259,9 @@ def find_exe_in_db(conn, exe_name, archive_base):
     pool = aol or candidates
     for p in pool:
         if archive_base.lower() in p.lower(): return p
-    return None  # Ambiguous — do not guess
+    return pool[0] if pool else None
+
+
 def load_decompile_data(zip_stem, exe_name):
     """Load metadata.json and function code from decompiled output."""
     meta_path = DECOMPILED_DIR / zip_stem / exe_name / "metadata.json"
@@ -420,16 +401,10 @@ def render_hero(meta, archive_name, decomp):
     # Try to extract real program name from decompiled source
     if decomp:
         proj_name = (decomp.get('project') or {}).get('name', '')
-        proj_ok = (proj_name
-                   and not re.match(r'^Project\d*$', proj_name, re.I)
-                   and proj_name.lower() != meta.get('exe', '').replace('.exe', '').lower()
-                   and len(proj_name) > 3)
-        if proj_ok:
+        if proj_name:
             program = proj_name
-        else:
-            extracted = _extract_program_name(decomp)
-            if extracted:
-                program = extracted
+        elif program == meta.get('exe', '').replace('.exe', ''):
+            program = _extract_program_name(decomp) or program
     author = meta.get('author', 'Unknown')
     version = meta.get('aol_version', '?')
     cat = meta.get('category', '?')
@@ -521,16 +496,12 @@ def render_screenshots(zip_stem, html_path):
             categories = wt.get('categories', [])
             form_info, label_info = wt.get('form'), wt.get('labels', {})
 
-        if form_info and (label_info or categories) and (img_dir / form_info.get('image', '')).exists():
-            fw, fh = form_info.get('width', 0), form_info.get('height', 0)
+        if form_info and label_info and (img_dir / form_info.get('image', '')).exists():
+            fw, fh = form_info['width'], form_info['height']
             nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
-            form_img = f'{zip_stem}/{form_info.get("image", "")}'
+            form_img = f'{zip_stem}/{form_info["image"]}'
             main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
-            sorted_labels = sorted(
-                [(k, v) for k, v in label_info.items() if v.get('left', 0) >= 0 and v.get('top', 0) >= 0],
-                key=lambda kv: kv[1]['left']
-            ) if label_info else []
-            has_labels = len(sorted_labels) > 0
+            sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
 
             cat_data = []
             for ci, cat in enumerate(categories):
@@ -538,7 +509,7 @@ def render_screenshots(zip_stem, html_path):
                 for item in cat['items']:
                     img_name = item.get('image', '')
                     exists = (img_dir / img_name).exists() if img_name else False
-                    d = {'caption': item.get('caption', ''),
+                    d = {'caption': item['caption'],
                          'image': f'{zip_stem}/{img_name}' if exists else '',
                          'type': item.get('type', '')}
                     if item.get('child_h') and item['child_h'] < 460:
@@ -547,43 +518,21 @@ def render_screenshots(zip_stem, html_path):
                         d['ct'] = item['child_title']
                     items_js.append(d)
                 lbl = sorted_labels[ci][1] if ci < len(sorted_labels) else None
-                cat_data.append({'name': cat.get('category', ''), 'items': items_js, 'label': lbl})
+                cat_data.append({'name': cat['category'], 'items': items_js, 'label': lbl})
 
             # Stage: flexbox — main form left, child forms right
             lines.append(f'<div class="app-sim">')
-            if has_labels:
-                lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
-            else:
-                lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu items to explore this proggie</div>')
+            lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
             lines.append(f'<div class="app-stage" id="app-stage">')
-            lines.append(f'<div class="app-form-wrap">')
-            # Menu bar for apps without label hotspots
-            if not has_labels and categories:
-                # If only 1 category, show items directly as menu bar buttons
-                if len(cat_data) == 1:
-                    lines.append('<div class="app-menubar">')
-                    for ii, it in enumerate(cat_data[0]['items']):
-                        if it.get('type') == 'secret':
-                            continue
-                        lines.append(f'<button class="app-menutop" onclick="showChild(appCats[0].items[{ii}])">{H.escape(it["caption"])}</button>')
-                    lines.append('</div>')
-                else:
-                    lines.append('<div class="app-menubar">')
-                    for ci, cd in enumerate(cat_data):
-                        lines.append(f'<button class="app-menutop" data-cat="{ci}">{H.escape(cd["name"])}</button>')
-                    lines.append('</div>')
             lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
             lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
-            if has_labels:
-                for ci, cd in enumerate(cat_data):
-                    if cd['label']:
-                        l = cd['label']
-                        lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
+            for ci, cd in enumerate(cat_data):
+                if cd['label']:
+                    l = cd['label']
+                    lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
             lines.append('<div class="app-popup" id="app-popup"></div>')
             lines.append('</div>')
-            lines.append('</div>')
-            child_max_w = max(main_in_shot_x - 8, fw + 100) if main_in_shot_x > 0 else fw + 200
-            lines.append(f'<div class="app-child" id="app-child" data-cw="{child_max_w}"></div>')
+            lines.append(f'<div class="app-child" id="app-child" data-cw="{main_in_shot_x - 8}"></div>')
             lines.append('</div>')
             gif_path = img_dir / 'animated.gif'
             if gif_path.exists():
@@ -592,47 +541,35 @@ def render_screenshots(zip_stem, html_path):
             lines.append('</div>')
 
             greets = wt.get('greets', [])
-            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)},hasLabels={"true" if has_labels else "false"};')
+            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)};')
             lines.append(r'''
 var openCat=-1,popup=document.getElementById("app-popup"),
     childEl=document.getElementById("app-child");
 var cw=+childEl.dataset.cw;
-if(cw<=0)cw=600;
-function openMenu(ci){
-  if(openCat===ci){closePopup();return}
-  openCat=ci;
-  var cat=appCats[ci],h="";
-  cat.items.forEach(function(it,i){
-    if(it.type==="secret")return;
-    h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
-      it.caption.replace(/</g,"&lt;")+'</div>';
-  });
-  popup.innerHTML=h;
-  if(hasLabels&&cat.label){
-    popup.style.left=(cat.label.left+3)+"px";
-    popup.style.top=(cat.label.top+cat.label.height+6)+"px";
-    popup.style.position="absolute";
-  } else {
-    // Position below the menu bar button
-    var btn=document.querySelector('.app-menutop[data-cat="'+ci+'"]');
-    if(btn){var r=btn.getBoundingClientRect(),p=popup.parentElement.getBoundingClientRect();
-      popup.style.left=(r.left-p.left)+"px";popup.style.top=(r.bottom-p.top)+"px";
-      popup.style.position="absolute";}
-  }
-  popup.style.display="block";
-  popup.querySelectorAll(".app-mi").forEach(function(mi){
-    mi.addEventListener("click",function(ev){
-      ev.stopPropagation();
-      showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
-      closePopup();
+document.querySelectorAll(".app-label").forEach(function(el){
+  el.addEventListener("click",function(e){
+    e.stopPropagation();
+    var ci=+this.dataset.cat;
+    if(openCat===ci){closePopup();return}
+    openCat=ci;
+    var cat=appCats[ci],lbl=cat.label,h="";
+    cat.items.forEach(function(it,i){
+      if(it.type==="secret")return;
+      h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
+        it.caption.replace(/</g,"&lt;")+'</div>';
+    });
+    popup.innerHTML=h;
+    popup.style.left=(lbl.left+3)+"px";
+    popup.style.top=(lbl.top+lbl.height+6)+"px";
+    popup.style.display="block";
+    popup.querySelectorAll(".app-mi").forEach(function(mi){
+      mi.addEventListener("click",function(ev){
+        ev.stopPropagation();
+        showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
+        closePopup();
+      });
     });
   });
-}
-document.querySelectorAll(".app-label").forEach(function(el){
-  el.addEventListener("click",function(e){e.stopPropagation();openMenu(+this.dataset.cat)});
-});
-document.querySelectorAll(".app-menutop").forEach(function(el){
-  el.addEventListener("click",function(e){e.stopPropagation();openMenu(+this.dataset.cat)});
 });
 document.addEventListener("click",function(){closePopup()});
 function closePopup(){popup.style.display="none";openCat=-1}
@@ -661,10 +598,6 @@ function hideChild(){childEl.innerHTML=""}
 .app-sim{margin:16px 0}
 .app-sim-hint{color:#8b949e;font-size:0.8em;margin-bottom:8px}
 .app-stage{display:flex;align-items:flex-start;gap:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px}
-.app-form-wrap{flex-shrink:0}
-.app-menubar{display:flex;background:#d4d0c8;border:1px solid #808080;border-bottom:none;padding:0}
-.app-menutop{background:none;border:none;color:#000;padding:2px 10px;font:13px/1.4 "Segoe UI",Tahoma,sans-serif;cursor:pointer}
-.app-menutop:hover{background:#0078d4;color:#fff}
 .app-form{user-select:none;position:relative}
 .app-form>img{display:block}
 .app-label{position:absolute;cursor:pointer;border-radius:2px}
@@ -676,7 +609,7 @@ function hideChild(){childEl.innerHTML=""}
 .app-ct{color:#8b949e;font-size:.78em;margin-bottom:3px;display:flex;align-items:center;gap:6px}
 .app-ct button{background:none;border:none;color:#8b949e;cursor:pointer;font-size:.95em;padding:0}
 .app-ct button:hover{color:#f85149}
-.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d}
+.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d;max-height:350px}
 .app-noshot{color:#8b949e;font-size:.85em;padding:24px 16px;border:1px dashed #30363d;border-radius:4px}
 .app-cc img{display:block}
 .app-gif-toggle{margin-top:8px;color:#8b949e;font-size:.85em}
@@ -696,14 +629,14 @@ function hideChild(){childEl.innerHTML=""}
             lines.append('<div class="wt-tabs">')
             for ci, cat in enumerate(categories):
                 active = ' active' if ci == 0 else ''
-                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat.get("category", ""))}</button>')
+                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat["category"])}</button>')
             lines.append('</div>')
             for ci, cat in enumerate(categories):
                 vis = '' if ci == 0 else ' style="display:none"'
                 lines.append(f'<div class="wt-panel" id="wt-panel-{ci}"{vis}>')
                 for item in cat['items']:
                     img_name = item.get('image', '')
-                    cap = H.escape(item.get('caption', ''))
+                    cap = H.escape(item['caption'])
                     lines.append(f'<div class="wt-item" onclick="wtShow(this)"><span class="wt-label">{cap}</span>')
                     if (img_dir / img_name).exists():
                         lines.append(f'<img class="wt-img" src="{zip_stem}/{img_name}" alt="{cap}" loading="lazy" style="display:none">')
@@ -755,74 +688,6 @@ function wtShow(el){var i=el.querySelector('.wt-img');if(i)i.style.display=i.sty
                 lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
             lines.append('</details>')
             found = True
-    # Frame player — renders whenever walkthrough.json has frames
-    if wt_path.exists():
-        wt = _json.loads(wt_path.read_text())
-        wt_frames = wt.get('frames', []) if isinstance(wt, dict) else []
-
-        if wt_frames:
-            # Frame-by-frame player
-            valid_frames = [f for f in wt_frames if (img_dir / f['file']).exists()]
-            if valid_frames:
-                # Get dimensions from first frame
-                from PIL import Image as _PILImg
-                _first = _PILImg.open(str(img_dir / valid_frames[0]['file']))
-                fw, fh = _first.width, _first.height
-                frame_data = _json.dumps([{'file': f'{zip_stem}/{f["file"]}', 'label': f['label'], 'type': f['type']} for f in valid_frames])
-                lines.append(f'''<div class="frame-player" id="fp" style="margin-top:16px">
-<h3 style="color:#c9d1d9;margin:0 0 8px">Walkthrough</h3>
-<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px">
-<canvas id="fp-canvas" width="{fw}" height="{fh}" style="display:block;max-width:100%;border-radius:4px;background:#000"></canvas>
-<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-<button id="fp-play" style="background:#238636;color:#fff;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:13px">Play</button>
-<input id="fp-slider" type="range" min="0" max="{len(valid_frames)-1}" value="0" style="flex:1">
-<span id="fp-counter" style="color:#8b949e;font-size:.8em;white-space:nowrap">1 / {len(valid_frames)}</span>
-</div>
-<div id="fp-label" style="color:#8b949e;font-size:.8em;margin-top:4px"></div>
-</div></div>
-<script>
-(function(){{
-var frames={frame_data};
-var canvas=document.getElementById("fp-canvas"),ctx=canvas.getContext("2d"),
-    slider=document.getElementById("fp-slider"),
-    counter=document.getElementById("fp-counter"),label=document.getElementById("fp-label"),
-    playBtn=document.getElementById("fp-play");
-var cur=0,timer=null,imgs={{}};
-function loadImg(i,cb){{
-  if(imgs[i]){{if(cb)cb(imgs[i]);return;}}
-  var im=new Image();
-  im.onload=function(){{imgs[i]=im;if(cb)cb(im);}};
-  im.src=frames[i].file;
-}}
-function show(i){{
-  if(i<0)i=frames.length-1;
-  if(i>=frames.length)i=0;
-  cur=i;slider.value=i;
-  counter.textContent=(i+1)+" / "+frames.length;
-  label.textContent=frames[i].label;
-  loadImg(i,function(im){{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(im,0,0,canvas.width,canvas.height);
-  }});
-  // Preload neighbors
-  for(var j=Math.max(0,i-2);j<=Math.min(frames.length-1,i+2);j++)loadImg(j);
-}}
-slider.addEventListener("input",function(){{show(+this.value);}});
-playBtn.addEventListener("click",function(){{
-  if(timer){{clearInterval(timer);timer=null;playBtn.textContent="Play";}}
-  else{{timer=setInterval(function(){{show(cur+1);}},1500);playBtn.textContent="Pause";}}
-}});
-document.addEventListener("keydown",function(e){{
-  if(e.target.tagName==="INPUT"&&e.target.type!=="range")return;
-  if(e.code==="Space"){{e.preventDefault();playBtn.click();}}
-  else if(e.code==="ArrowLeft"){{show(cur-1);}}
-  else if(e.code==="ArrowRight"){{show(cur+1);}}
-}});
-show(0);
-}})();
-</script>''')
-                found = True
-
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 
@@ -847,10 +712,10 @@ def render_forms(decomp, zip_stem=None, exe_name=None):
     lines.append(f'<details><summary>{form_count} forms, {ctrl_count} controls</summary>')
     for form in decomp['forms']:
         lines.append('<div class="card">')
-        lines.append(f'<h3>{e(form.get("name", "Unknown"))}</h3>')
+        lines.append(f'<h3>{e(form["name"])}</h3>')
         # SVG layout from .frm file
         if zip_stem and exe_name:
-            frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form.get("name", "")}.frm'
+            frm_path = DECOMPILED_DIR / zip_stem / exe_name / 'forms' / f'{form["name"]}.frm'
             if frm_path.exists():
                 svg = render_form_layout(form['name'], frm_path)
                 if svg:
@@ -940,6 +805,7 @@ def _make_proc_resolver(decomp):
         return proc_names.get(short) or addr_names.get(m.group(3)) or raw_name
 
     def replace_in_code(code_text):
+        from clean_code import clean_for_display
         cleaned = clean_for_display(code_text)
         escaped = e(cleaned)
         def _sub(m):
@@ -947,9 +813,10 @@ def _make_proc_resolver(decomp):
             addr = m.group(3)
             canon = proc_names.get(short) or addr_names.get(addr)
             if canon:
-                return f'{canon}'
+                return f'<span style="color:#d2a8ff" title="{m.group(0)}">{canon}</span>'
             return m.group(0)
         return re.sub(r'(Proc_\d+)_(\d+)_([A-F0-9]+)', _sub, escaped)
+
     return replace_in_code, resolve_name
 
 
@@ -996,9 +863,7 @@ def render_code_breakdown(decomp):
     lines = ['<h2>&#x1f4ca; Code Breakdown</h2>']
 
     # Stacked bar
-    app_pct = cb.get('app_pct', 0)
-    used_pct = cb.get('reachable_pct', 0)
-    dead_pct = cb.get('dead_pct', 0)
+    app_pct, used_pct, dead_pct = cb['app_pct'], cb['reachable_pct'], cb['dead_pct']
     cherry = cb.get('cherry_picked', [])
     cherry_size = sum(f['size'] for f in cherry)
     total_size = cb.get('total_size', 1)
@@ -1019,16 +884,16 @@ def render_code_breakdown(decomp):
 
     # Legend
     lines.append('<div class="breakdown-legend">')
-    lines.append(f'<span><span class="dot dot-app"></span>Custom code — {cb.get("app_funcs_count", 0)} funcs ({adj_app_pct}%)</span>')
+    lines.append(f'<span><span class="dot dot-app"></span>Custom code — {cb["app_funcs_count"]} funcs ({adj_app_pct}%)</span>')
     if cherry_pct > 0:
         mods = sorted(set(f['matched_module'] for f in cherry))
         lines.append(f'<span><span class="dot" style="background:#3fb950"></span>Cherry-picked from {", ".join(mods)}.bas — {len(cherry)} funcs ({cherry_pct}%)</span>')
     if used_pct > 0:
-        remaining_used = cb.get("reachable_base_funcs", 0) - len(cherry)
+        remaining_used = cb["reachable_base_funcs"] - len(cherry)
         if remaining_used > 0:
-            lines.append(f'<span><span class="dot dot-used"></span>Used from {e(bas_label)} — {remaining_used} of {cb.get("total_base_funcs", 0)} funcs ({used_pct}%)</span>')
+            lines.append(f'<span><span class="dot dot-used"></span>Used from {e(bas_label)} — {remaining_used} of {cb["total_base_funcs"]} funcs ({used_pct}%)</span>')
     if dead_pct > 0:
-        lines.append(f'<span><span class="dot dot-dead"></span>Unused from {e(bas_label)} — {cb.get("dead_base_funcs", 0)} funcs ({dead_pct}%)</span>')
+        lines.append(f'<span><span class="dot dot-dead"></span>Unused from {e(bas_label)} — {cb["dead_base_funcs"]} funcs ({dead_pct}%)</span>')
     lines.append('</div>')
 
     # App functions section (unique code)
@@ -1120,8 +985,8 @@ def render_code_breakdown(decomp):
 def render_api_refs(api_strings, decomp=None):
     """Render API references split into AOL Classes vs Win32 Calls.
     When decomp has code_breakdown, scan reachable code for known API strings."""
-    if api_strings is None:
-        api_strings = []
+    if not api_strings:
+        return ''
     e = H.escape
 
     # When we have code_breakdown, scan reachable code for all known API strings
@@ -1137,11 +1002,8 @@ def render_api_refs(api_strings, decomp=None):
             for name in AOL_API_VERSIONS:
                 if name in reachable_code:
                     found.add(name)
-            # Merge code-found APIs with string-extracted APIs
-            api_strings = list(set(api_strings) | found)
-
-    if not api_strings:
-        return ''
+            # Use only the found set
+            api_strings = list(found)
 
     aol_classes = []
     win32_calls = []
@@ -1158,24 +1020,26 @@ def render_api_refs(api_strings, decomp=None):
     total = len(aol_classes) + len(win32_calls) + len(other_api)
     if not total:
         return ''
-    lines = [f'&#x2699; API References ({total})']
+    lines = [f'<h2>&#x2699; API References ({total})</h2>']
     if aol_classes:
         aol_classes.sort(key=lambda x: x[0].lstrip('_').lower())
-        lines.append('AOL Window Classes')
+        lines.append('<div class="card"><h3>AOL Window Classes</h3>')
         for s, ver in aol_classes:
-            lines.append(f'{e(s)} {e(ver)}')
-        lines.append('')
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span> <span class="badge-api">{e(ver)}</span></div>')
+        lines.append('</div>')
     if win32_calls:
-        lines.append('Win32 API Calls')
+        lines.append('<div class="card"><h3>Win32 API Calls</h3>')
         for s, ver in win32_calls:
-            lines.append(f'{e(s)}')
-        lines.append('')
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
+        lines.append('</div>')
     if other_api:
-        lines.append('Other')
+        lines.append('<div class="card"><h3>Other</h3>')
         for s, ver in other_api:
-            lines.append(f'{e(s)}')
-        lines.append('')
+            lines.append(f'<div class="api-item"><span class="api-name">{e(s)}</span></div>')
+        lines.append('</div>')
     return '\n'.join(lines)
+
+
 def render_greets(greet_names, greet_text):
     """Render greet names as tags and closing text."""
     if not greet_names and not greet_text:
@@ -1229,6 +1093,7 @@ def render_deps_from_db(zip_stem, conn=None):
 def _parse_frm_controls(frm_path):
     """Parse .frm file to extract control positions and sizes."""
     text = frm_path.read_text(encoding='utf-8-sig', errors='ignore')
+    controls = []
     form_w = form_h = 0
     # Get form dimensions
     m = re.search(r'ClientWidth\s*=\s*(\d+)', text)
@@ -1240,9 +1105,46 @@ def _parse_frm_controls(frm_path):
     NONVISUAL = {'Timer', 'VBMsg', 'CommonDialog', 'MCI', 'InvisibleIcon',
                  'OLE', 'Data', 'Winsock', 'Inet', 'MAPI'}
 
+    # Parse nested Begin/End blocks with parent offset tracking
+    lines = text.splitlines()
+    stack = []  # (ctrl_type, ctrl_name, offset_x, offset_y)
+    ox, oy = 0, 0
+    for line in lines:
+        stripped = line.strip()
+        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
+        if m:
+            raw_type = m.group(1).split('.')[-1] if '.' in m.group(1) else m.group(1)
+            stack.append((raw_type, m.group(2), ox, oy))
+            continue
+        if stripped == 'End' and stack:
+            _, _, ox, oy = stack.pop()
+            continue
+        if not stack:
+            continue
+        pm = re.match(r'(\w+)\s*=\s*(.+)', stripped)
+        if not pm:
+            continue
+        key, val = pm.group(1), pm.group(2).strip()
+        cur_type, cur_name = stack[-1][0], stack[-1][1]
+        # When we see Left/Top of a container (Frame/SSFrame/SSPanel), record its offset for children
+        if key == 'Left' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            try:
+                parent_ox, parent_oy = stack[-2][2], stack[-2][3] if len(stack) > 1 else (0, 0)
+            except IndexError:
+                parent_ox = 0
+            # Update stack entry with this container's absolute position
+            pox = stack[-2][2] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, pox + int(val.split("'")[0].strip()), stack[-1][3])
+        elif key == 'Top' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            poy = stack[-2][3] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, stack[-1][2], poy + int(val.split("'")[0].strip()))
+
+    # Re-parse with proper nesting using a simpler recursive approach
     controls = []
     _parse_nested(text.splitlines(), controls, 0, 0, NONVISUAL)
     return controls, form_w, form_h
+
+
 def _parse_nested(lines, controls, ox, oy, nonvisual, start=0):
     """Recursively parse Begin/End blocks, accumulating parent offsets."""
     i = start
@@ -1416,9 +1318,6 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
                         exe_name = sub.name
                         break
 
-    # Normalize strings: decomp data may contain dicts
-    strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in strings]
-
     # Build string frequency map (count before dedup)
     str_freq = {}
     for s in strings:
@@ -1585,13 +1484,7 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     lines.append(render_forms(decomp, zip_stem, exe_name))
 
     # Code breakdown (base module vs app code) — single code section
-    cb_html = render_code_breakdown(decomp)
-    if cb_html:
-        lines.append(cb_html)
-    else:
-        fn_html = render_functions(decomp)
-        if fn_html:
-            lines.append(fn_html)
+    lines.append(render_code_breakdown(decomp))
 
     # Interesting strings with frequency
     if interesting:
@@ -1618,61 +1511,43 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     return '\n'.join(lines)
 
 
-def _init_worker(exe_index):
-    """Pool initializer: set pre-built exe path index in each worker."""
-    global _exe_path_index
-    _exe_path_index = exe_index
-
-
 def _process_one(html_path_str):
     """Worker function for multiprocessing — generates one HTML page."""
-    conn = None
-    pdb = None
-    try:
-        html_path = Path(html_path_str)
-        conn = sqlite3.connect(str(DB_PATH))
-        pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
+    html_path = Path(html_path_str)
+    conn = sqlite3.connect(str(DB_PATH))
+    pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
 
-        meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
-        exe_name = meta.get('exe', '')
-        archive_name = html_path.stem + '.zip'
-        archive_base = html_path.stem
+    meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+    exe_name = meta.get('exe', '')
+    archive_name = html_path.stem + '.zip'
+    archive_base = html_path.stem
 
-        exe_path = find_exe_in_db(conn, exe_name, archive_base)
-        strings = get_strings_from_db(conn, exe_path) if exe_path else []
+    exe_path = find_exe_in_db(conn, exe_name, archive_base)
+    strings = get_strings_from_db(conn, exe_path) if exe_path else []
 
-        if not strings:
-            decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
-            if not decomp:
-                decomp_base = DECOMPILED_DIR / archive_base
-                if decomp_base.exists():
-                    for sub in decomp_base.iterdir():
-                        if sub.is_dir() and (sub / 'metadata.json').exists():
-                            decomp = load_decompile_data(archive_base, sub.name)
-                            if decomp:
-                                exe_name = sub.name
-                                break
-            if decomp and decomp.get('strings'):
-                strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
-            elif not exe_path:
-                conn.close()
-                if pdb: pdb.close()
-                return 'skip'
+    if not strings:
+        decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+        if not decomp:
+            decomp_base = DECOMPILED_DIR / archive_base
+            if decomp_base.exists():
+                for sub in decomp_base.iterdir():
+                    if sub.is_dir() and (sub / 'metadata.json').exists():
+                        decomp = load_decompile_data(archive_base, sub.name)
+                        if decomp:
+                            exe_name = sub.name
+                            break
+        if decomp and decomp.get('strings'):
+            strings = decomp['strings']
+        elif not exe_path:
+            conn.close()
+            if pdb: pdb.close()
+            return 'skip'
 
-        page = generate_html(meta, strings, archive_name, html_path, pdb)
-        html_path.write_text(page, encoding='utf-8')
-        conn.close()
-        if pdb: pdb.close()
-        return 'ok'
-    except Exception:
-        logging.exception("Failed to process %s", html_path_str)
-        if conn:
-            try: conn.close()
-            except Exception: pass
-        if pdb:
-            try: pdb.close()
-            except Exception: pass
-        return 'error'
+    page = generate_html(meta, strings, archive_name, html_path, pdb)
+    html_path.write_text(page, encoding='utf-8')
+    conn.close()
+    if pdb: pdb.close()
+    return 'ok'
 
 
 def main() -> int:
@@ -1690,69 +1565,59 @@ def main() -> int:
     total = len(html_files)
     print(f"Processing {total} HTML pages", file=sys.stderr)
 
-    # Pre-build exe path index once for all workers (F13)
-    global _exe_path_index
-    str_conn = sqlite3.connect(str(DB_PATH))
-    _exe_path_index = _build_exe_path_index(str_conn)
-    str_conn.close()
-
     if total > 4:
         import multiprocessing
         workers = max(1, multiprocessing.cpu_count() - 1)
-        generated = skipped = errors = 0
-        with multiprocessing.Pool(workers, initializer=_init_worker, initargs=(_exe_path_index,)) as pool:
+        generated = skipped = 0
+        with multiprocessing.Pool(workers) as pool:
             for i, result in enumerate(pool.imap_unordered(_process_one, [str(p) for p in html_files], chunksize=16)):
                 if result == 'ok':
                     generated += 1
-                elif result == 'error':
-                    errors += 1
                 else:
                     skipped += 1
                 if (i + 1) % 200 == 0:
-                    print(f"  {i+1}/{total} processed, {generated} regenerated, {errors} errors", file=sys.stderr)
+                    print(f"  {i+1}/{total} processed, {generated} regenerated", file=sys.stderr)
     else:
         conn = sqlite3.connect(str(DB_PATH))
         pdb = sqlite3.connect("proggie_db.sqlite") if Path("proggie_db.sqlite").exists() else None
-        generated = skipped = errors = 0
+        generated = skipped = 0
         for html_path in html_files:
-            try:
-                meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
-                exe_name = meta.get('exe', '')
-                archive_name = html_path.stem + '.zip'
-                archive_base = html_path.stem
-                exe_path = find_exe_in_db(conn, exe_name, archive_base)
-                strings = get_strings_from_db(conn, exe_path) if exe_path else []
-                if not strings:
-                    decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
-                    if not decomp:
-                        decomp_base = DECOMPILED_DIR / archive_base
-                        if decomp_base.exists():
-                            for sub in decomp_base.iterdir():
-                                if sub.is_dir() and (sub / 'metadata.json').exists():
-                                    decomp = load_decompile_data(archive_base, sub.name)
-                                    if decomp:
-                                        exe_name = sub.name
-                                        break
-                    if decomp and decomp.get('strings'):
-                        strings = [s if isinstance(s, str) else s.get('value', '') if isinstance(s, dict) else str(s) for s in decomp['strings']]
-                    elif not exe_path:
-                        skipped += 1
-                        continue
-                page = generate_html(meta, strings, archive_name, html_path, pdb)
-                html_path.write_text(page, encoding='utf-8')
-                generated += 1
-            except Exception:
-                logging.exception("Failed to process %s", html_path)
-                errors += 1
+            meta = get_meta_from_db(html_path.stem, pdb) or parse_existing_meta(html_path)
+            exe_name = meta.get('exe', '')
+            archive_name = html_path.stem + '.zip'
+            archive_base = html_path.stem
+            exe_path = find_exe_in_db(conn, exe_name, archive_base)
+            strings = get_strings_from_db(conn, exe_path) if exe_path else []
+            if not strings:
+                decomp = load_decompile_data(archive_base, exe_name) if exe_name and exe_name != '?' else None
+                if not decomp:
+                    decomp_base = DECOMPILED_DIR / archive_base
+                    if decomp_base.exists():
+                        for sub in decomp_base.iterdir():
+                            if sub.is_dir() and (sub / 'metadata.json').exists():
+                                decomp = load_decompile_data(archive_base, sub.name)
+                                if decomp:
+                                    exe_name = sub.name
+                                    break
+                if decomp and decomp.get('strings'):
+                    strings = decomp['strings']
+                elif not exe_path:
+                    skipped += 1
+                    continue
+            page = generate_html(meta, strings, archive_name, html_path, pdb)
+            html_path.write_text(page, encoding='utf-8')
+            generated += 1
         conn.close()
         if pdb: pdb.close()
 
-    print(f"Done: {generated} regenerated, {skipped} skipped, {errors} errors")
+    print(f"Done: {generated} regenerated, {skipped} skipped")
 
     # Generate landing page
     generate_landing_page()
 
     return 0
+
+
 def generate_landing_page():
     """Generate index.html landing page with auto-detected featured proggies."""
     from jinja2 import Environment, FileSystemLoader, select_autoescape

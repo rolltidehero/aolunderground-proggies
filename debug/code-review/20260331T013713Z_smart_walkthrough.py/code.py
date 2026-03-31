@@ -17,10 +17,8 @@ _hunter_log = (Path.home() / 'traces' / Path(__file__).stem
                / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
                / 'hunter.log')
 _hunter_log.parent.mkdir(parents=True, exist_ok=True)
-_hunter_stream = open(_hunter_log, 'a')
 hunter.trace(stdlib=False, action=hunter.CallPrinter(
-    stream=_hunter_stream))
-# _hunter_stream held at module level to prevent GC
+    stream=open(_hunter_log, 'a')))
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -313,12 +311,6 @@ def _extract_greet_names(zip_stem, exe_name):
     return names
 
 
-def _client_rect(win, nc_x, nc_y):
-    """Compute client area rect from window rect + non-client offsets."""
-    return {'x': win['x'] + nc_x, 'y': win['y'] + nc_y,
-            'w': max(win['w'] - 2 * nc_x, 1), 'h': max(win['h'] - nc_y - nc_x, 1)}
-
-
 def _free(n=100):
     for _ in range(n):
         time.sleep(0.01)
@@ -448,19 +440,22 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     viewport = [None]  # mutable container, set after main form found
 
     def crop_to_proggies(path):
-        """Capture cropped to tight bounding box of all visible VB6 forms."""
+        """Capture cropped to the viewport. Recalculates if main form moved."""
+        if viewport[0] is None:
+            return capture_cropped(main_win, str(path))
+        # F13: Refresh viewport from current main form position
         cur_windows = wd.snapshot()
         cur_forms = wd.find_vb_forms(cur_windows)
-        if not cur_forms:
-            return capture_cropped(main_win, str(path))
-        x0 = min(w['x'] for w in cur_forms)
-        y0 = min(w['y'] for w in cur_forms)
-        x1 = max(w['x'] + w['w'] for w in cur_forms)
-        y1 = max(w['y'] + w['h'] for w in cur_forms)
-        pad = 4
-        tight = {'x': max(x0 - pad, 0), 'y': max(y0 - pad, 0),
-                 'w': min(x1 - x0 + 2 * pad, SCREEN_W), 'h': min(y1 - y0 + 2 * pad, SCREEN_H)}
-        return capture_cropped(tight, str(path))
+        if cur_forms:
+            cur_forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            mf = cur_forms[0]
+            if (mf['x'], mf['y']) != (viewport[0]['x'] + 2, viewport[0]['y'] + 2):
+                vp_x = max(mf['x'] - 2, 0)
+                vp_y = max(mf['y'] - 2, 0)
+                vp_w = min(mf['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(mf['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+        return capture_cropped(viewport[0], str(path))
 
     def frames_are_identical(path_a, path_b):
         """Check if two images are visually identical (>97% similar)."""
@@ -739,11 +734,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     _free(50)
     main_win['x'] = FORM_X
     main_win['y'] = FORM_Y
-    # Recapture after move — crop to client area only
+    # Recapture after move
     QMP.park_cursor(); _free(30)
-    cr = _client_rect(main_win, nc_x_off, nc_y_off)
-    capture_cropped(cr, str(out_dir / 'screenshot.png'))
-    capture_cropped(cr, str(out_dir / 'main_form.png'))
+    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+    capture_cropped(main_win, str(out_dir / 'main_form.png'))
     # Recompute viewport after move
     child_x = main_win['x'] + main_win['w'] + 10
     child_y = main_win['y']
@@ -848,8 +842,9 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
 
             if new_win:
                 # Move child to top-left so it doesn't overlap main form
+                CHILD_X, CHILD_Y = 10, 10
                 if new_win['class'] in VB6_CLASSES:
-                    move_child_form(main_win['title'], child_x, child_y)
+                    move_child_form(main_win['title'], CHILD_X, CHILD_Y)
                     _free(50)
                     # Re-detect child position after move
                     after2 = wd.snapshot()
@@ -860,16 +855,15 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     if moved:
                         new_win = moved[0]
 
-                # Capture child window — client area only
+                # Capture just the child window at its own rect
                 fname = unique_fname(caption, matched_target['name'])
                 QMP.park_cursor(); _free(30)
-                child_cr = _client_rect(new_win, nc_x_off, nc_y_off)
-                capture_cropped(child_cr, str(out_dir / fname))
+                capture_cropped(new_win, str(out_dir / fname))
                 label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
                 next_frame(label, 'result')
                 item['image'] = fname
                 item['child_title'] = new_win.get('title', '')
-                item['child_h'] = child_cr['h']
+                item['child_h'] = new_win.get('h', 200)
 
                 # Cleanup
                 if item['type'] == 'msgbox':
@@ -1000,10 +994,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     fname = unique_fname(caption, ctrl_name)
                     QMP.park_cursor()
                     _free(30)
-                    capture_cropped(_client_rect(child_rect, nc_x_off, nc_y_off), str(out_dir / fname))
+                    capture_cropped(child_rect, str(out_dir / fname))
                     next_frame(f'Form: {nf.get("title", caption)}', 'result')
                     item['image'] = fname
-                    item['child_h'] = _client_rect(child_rect, nc_x_off, nc_y_off)['h']
+                    item['child_h'] = child_rect['h']
                     item['child_title'] = nf.get('title', '')
 
                     # F5: Explore child form controls (buttons/tabs on the child)
@@ -1216,12 +1210,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
 
                 if child_forms:
                     cf = child_forms[0]
-                    cf_cr = _client_rect(cf, nc_x_off, nc_y_off)
-                    capture_cropped(cf_cr, str(out_dir / fname))
+                    capture_cropped(cf, str(out_dir / fname))
                     next_frame(f'Form: {cap}', 'result')
                     item['image'] = fname
                     item['child_title'] = cf.get('title', '')
-                    item['child_h'] = cf_cr['h']
+                    item['child_h'] = cf.get('h', 200)
 
                     # Greets: capture animation frames
                     if cap.lower() == 'greets':
@@ -1346,13 +1339,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     extract_dir = SORTED / '_extracted' / zip_stem
     files = sorted(f.name for f in extract_dir.iterdir()) if extract_dir.exists() else []
 
-    client_w = main_win['w'] - 2 * nc_x_off
-    client_h = main_win['h'] - nc_y_off - nc_x_off
     manifest = {
         'form': {
-            'width': client_w, 'height': client_h,
+            'width': main_win['w'], 'height': main_win['h'],
             'image': 'main_form.png',
-            'nc_x': 0, 'nc_y': 0,
+            'nc_x': nc_x_off, 'nc_y': nc_y_off,
             'screen_x': main_win['x'], 'screen_y': main_win['y'],
             'crop_x0': vp_x, 'crop_y0': vp_y,
         },

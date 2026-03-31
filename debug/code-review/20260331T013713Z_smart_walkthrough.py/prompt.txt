@@ -1,3 +1,301 @@
+Review this Python file: smart_walkthrough.py
+
+CONTEXT FILES (dependencies, for reference only — review the main file):
+
+# === DEPENDENCY: WALKTHROUGH_BUGS.md ===
+# Smart Walkthrough — Known Bugs & Required Fixes
+
+Reference: bodini (known working) vs darkwater (broken)
+
+## Known Good State: bodini
+
+**Manifest** (`4.0/bodini/walkthrough.json`):
+- `form.width=323, form.height=129` — matches `main_form.png` exactly (323x129)
+- `form.nc_x=0, form.nc_y=0` — image IS the client area, no title bar
+- `labels`: 5 entries with pixel positions relative to client area origin
+- `categories`: 4 categories (Main, Chat, IM, Mail), each with items
+- Every item has `child_h` (matches image height), `child_title`, `image`
+
+**Screenshots**:
+- `main_form.png`: 323x129 — client area only, no title bar (BorderStyle=0)
+- Child screenshots: tightly cropped to just the child form content (e.g. 205x135, 148x65)
+- No black space, no overlap, no title bars in child crops
+
+**Interactive widget** (`generate_analysis.py` lines 524-652):
+- Form image displayed at exact size
+- Labels overlaid as invisible clickable hotspots
+- Click label → popup menu appears over form image
+- Click menu item → child form screenshot appears to the right
+- `child_h` controls the display height of the child image
+
+---
+
+## Bug 1: main_form.png includes title bar and border
+
+**Symptom**: darkwater `main_form.png` is 212x199 but client area is only 206x150. The extra 6px width and 49px height is the window chrome (title bar + border).
+
+**Root cause**: `smart_walkthrough.py` line ~575 calls `capture_cropped(main_win, ...)` where `main_win` is the GetWindowRect (includes chrome). Should crop to client area.
+
+**Expected**: `main_form.png` should be 206x150 (client area only). Manifest should have `nc_x=0, nc_y=0`.
+
+**Fix**: Crop main_form.png to `(x + nc_x, y + nc_y, x + w - nc_x, y + nc_y + client_h)`. Set manifest `nc_x=0, nc_y=0`.
+
+**Validation**: `main_form.png` dimensions must equal `form.width × form.height` in manifest. Both must equal client area size from .frm `ClientWidth/ClientHeight` (÷15 for twips→px).
+
+---
+
+## Bug 2: Child form screenshots include chrome and black space
+
+**Symptom**: `screen_about_darkwater.png` is 422x315 — includes title bar, border, and possibly black padding. Should be just the form content.
+
+**Root cause**: `smart_walkthrough.py` Phase 1 menu loop captures with `capture_cropped(new_win, ...)` using GetWindowRect. Same problem as Bug 1.
+
+**Expected**: Child screenshots should be client area only, like bodini's (e.g. 205x135 for About).
+
+**Fix**: After getting child window rect, compute client area: `(x + nc_x, y + nc_y, client_w, client_h)`. Use that rect for capture. Set `child_h` to the client height.
+
+**Validation**: Every `screen_*.png` must be > 50x50px, not all-black, not all-single-color. `child_h` in manifest must match image height.
+
+---
+
+## Bug 3: No interactive widget for menu-bar apps
+
+**Symptom**: darkwater has no labels (uses VB6 Menu bar, not clickable Label controls). The interactive `app-sim` widget requires labels. Falls back to tab explorer or broken fake menu bar.
+
+**Root cause**: `generate_analysis.py` line 524: `if form_info and (label_info or categories)` — enters the widget path, but without labels, no clickable hotspots are rendered on the form image.
+
+**Known good**: bodini has 5 Label controls that act as menu category triggers. Their positions are in the manifest `labels` dict. The widget overlays them on the form image.
+
+**Expected for menu-bar apps**: Either:
+1. Use the tab-based explorer (`walkthrough-explorer` at line 655) which already works — shows category tabs with expandable items
+2. OR render the VB6 menu bar items as clickable hotspots at the top of the form image (y ≈ 0, since menu bar is at top of client area)
+
+**Fix (option 1 — simplest)**: When `labels` is empty, skip `app-sim` widget entirely, fall through to `elif categories:` tab explorer. Revert the condition on line 524 back to `if form_info and label_info and ...`.
+
+---
+
+## Bug 4: Frame player shows smashed/black screenshots
+
+**Symptom**: Clicking "Play" in the frame player shows tiny smashed images with black borders.
+
+**Root cause**: Frame captures use viewport crop (`crop_to_proggies`) which captures a fixed-size region. When the main form is small (212x199) but the viewport is large (862x404), the frame is mostly black. The frame player canvas is sized to the viewport, not the form.
+
+**Expected**: Frame player should show clean screenshots at readable size.
+
+**Fix**: Frame captures should crop to just the relevant window (main form or child form), not the viewport. Or size the canvas to the form dimensions.
+
+**Validation**: Every frame PNG must have < 30% black pixels.
+
+---
+
+## Bug 5: generate_analysis.py broken by today's changes
+
+**Symptom**: Today's changes to `generate_analysis.py` added `has_labels`, `app-menubar`, `app-form-wrap` that broke the widget for BOTH label-based and menu-bar apps.
+
+**Root cause**: Multiple edits to the widget rendering code without testing against bodini.
+
+**Fix**: Restore `generate_analysis.py` from the last known-good commit (`29db636f`), then make ONLY the minimal change needed: when `labels` is empty, fall through to tab explorer.
+
+**Validation**: After any change to `generate_analysis.py`, regenerate BOTH `bodini.html` and `darkwater.html`, verify bodini's interactive widget still works identically to the known-good version.
+
+---
+
+## Quality Gates (must pass before any commit)
+
+1. `main_form.png` dimensions == manifest `form.width × form.height`
+2. Every `screen_*.png` is > 50×50 pixels
+3. Every `screen_*.png` has < 30% black pixels
+4. Every `screen_*.png` is not single-color
+5. Every item with `image` in manifest → file exists on disk
+6. Every item with `child_h` → matches actual image height
+7. bodini.html interactive widget unchanged after any generate_analysis.py edit
+8. `python3 -c "import ast; ast.parse(open(f).read())"` passes for all modified .py files
+
+
+# === DEPENDENCY: review-smart-walkthrough-20260330.txt ===
+=REVIEW_SUMMARY=
+total_findings: 7
+critical: 4
+high: 2
+medium: 1
+
+=F1=
+severity: CRITICAL
+title: main_form.png captures full window including title bar and border (Bug 1)
+line: 309-312, 362-363, 395-396
+description: `capture_cropped(main_win, ...)` passes the full GetWindowRect (including title bar, border) as the crop region. The code computes `nc_x_off`/`nc_y_off` correctly but never uses them to construct a client-area-only rect for the main form capture. Per WALKTHROUGH_BUGS.md Bug 1: "Should crop to client area. `main_form.png` should be 206x150 (client area only)." The darkwater manifest confirms `nc_x=3, nc_y=46` meaning 49px of vertical chrome is captured. This is done at three capture sites: initial capture, post-splash recapture, and post-move recapture. The post-move capture (line ~395-396) is the final one that persists to disk.
+===CURRENT_CODE===
+    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+    capture_cropped(main_win, str(out_dir / 'main_form.png'))
+===FIXED_CODE===
+    # Build client-area rect by subtracting non-client chrome
+    client_w = main_win['w'] - 2 * nc_x_off
+    client_h = main_win['h'] - nc_y_off - nc_x_off
+    client_rect = {'x': main_win['x'] + nc_x_off, 'y': main_win['y'] + nc_y_off,
+                   'w': client_w, 'h': client_h}
+    capture_cropped(client_rect, str(out_dir / 'screenshot.png'))
+    capture_cropped(client_rect, str(out_dir / 'main_form.png'))
+
+=F2=
+severity: CRITICAL
+title: Manifest form.width/height are window dimensions (includes chrome), nc_x/nc_y should be 0
+line: 633-638
+description: The manifest stores `main_win['w']` and `main_win['h']` which are the full window dimensions including title bar and border, not the client area dimensions. Per WALKTHROUGH_BUGS.md Bug 1: "Validation: `main_form.png` dimensions must equal `form.width × form.height` in manifest. Both must equal client area size." Additionally, once the image IS the client area (after fixing F1), `nc_x` and `nc_y` must be 0. The darkwater walkthrough.json confirms the bug: `width: 212, height: 199` with `nc_x: 3, nc_y: 46`, but the actual client area is 206×150.
+===CURRENT_CODE===
+    manifest = {
+        'form': {
+            'width': main_win['w'], 'height': main_win['h'],
+            'image': 'main_form.png',
+            'nc_x': nc_x_off, 'nc_y': nc_y_off,
+            'screen_x': main_win['x'], 'screen_y': main_win['y'],
+            'crop_x0': vp_x, 'crop_y0': vp_y,
+        },
+===FIXED_CODE===
+    client_w = main_win['w'] - 2 * nc_x_off
+    client_h = main_win['h'] - nc_y_off - nc_x_off
+    manifest = {
+        'form': {
+            'width': client_w, 'height': client_h,
+            'image': 'main_form.png',
+            'nc_x': 0, 'nc_y': 0,
+            'screen_x': main_win['x'], 'screen_y': main_win['y'],
+            'crop_x0': vp_x, 'crop_y0': vp_y,
+        },
+
+=F3=
+severity: CRITICAL
+title: Child form screenshots include chrome and black space (Bug 2) — Phase 1 WM_COMMAND path
+line: 455-457
+description: In Phase 1 (menu items via WM_COMMAND), child windows are captured using their full GetWindowRect. `new_win` includes title bar and border. `child_h` is set to the full window height, not the client area height. Per WALKTHROUGH_BUGS.md Bug 2: "After getting child window rect, compute client area. Set `child_h` to the client height." The darkwater manifest shows `child_h: 315` for About DarkWater but the actual content is much smaller. This same pattern recurs in the Phase 2 button-click path and the popup menu path (see F4).
+===CURRENT_CODE===
+                capture_cropped(new_win, str(out_dir / fname))
+                label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
+                next_frame(label, 'result')
+                item['image'] = fname
+                item['child_title'] = new_win.get('title', '')
+                item['child_h'] = new_win.get('h', 200)
+===FIXED_CODE===
+                # Compute child client area (use same nc offsets as approximation,
+                # or re-derive from child form's .frm if available)
+                child_client_rect = {
+                    'x': new_win['x'] + nc_x_off,
+                    'y': new_win['y'] + nc_y_off,
+                    'w': new_win['w'] - 2 * nc_x_off,
+                    'h': new_win['h'] - nc_y_off - nc_x_off,
+                }
+                capture_cropped(child_client_rect, str(out_dir / fname))
+                label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
+                next_frame(label, 'result')
+                item['image'] = fname
+                item['child_title'] = new_win.get('title', '')
+                item['child_h'] = child_client_rect['h']
+
+=F4=
+severity: CRITICAL
+title: Child form screenshots include chrome — Phase 2 button-click and popup menu paths (Bug 2 pattern)
+line: 519-524, 609-613
+description: The same full-window-rect capture bug from F3 is repeated in two additional code paths. In Phase 2 button clicks: `capture_cropped(child_rect, ...)` and `item['child_h'] = child_rect['h']`. In popup menu child captures: `capture_cropped(cf, ...)` and `item['child_h'] = cf.get('h', 200)`. Per exhaustive pattern search, ALL `capture_cropped` calls that target child forms suffer from this — the rect includes window chrome. Every `child_h` assignment uses the full window height. Per WALKTHROUGH_BUGS.md Bug 2 validation: "Every `screen_*.png` must be > 50x50px, not all-black. `child_h` in manifest must match image height."
+===CURRENT_CODE===
+                    capture_cropped(child_rect, str(out_dir / fname))
+                    next_frame(f'Form: {nf.get("title", caption)}', 'result')
+                    item['image'] = fname
+                    item['child_h'] = child_rect['h']
+                    item['child_title'] = nf.get('title', '')
+===FIXED_CODE===
+                    child_client_rect = {
+                        'x': child_rect['x'] + nc_x_off,
+                        'y': child_rect['y'] + nc_y_off,
+                        'w': child_rect['w'] - 2 * nc_x_off,
+                        'h': child_rect['h'] - nc_y_off - nc_x_off,
+                    }
+                    capture_cropped(child_client_rect, str(out_dir / fname))
+                    next_frame(f'Form: {nf.get("title", caption)}', 'result')
+                    item['image'] = fname
+                    item['child_h'] = child_client_rect['h']
+                    item['child_title'] = nf.get('title', '')
+
+=F5=
+severity: HIGH
+title: Frame captures use viewport crop producing mostly-black images (Bug 4)
+line: 262-275
+description: The `crop_to_proggies` function captures a large viewport region (e.g. 862×404) even when the actual form content is much smaller (e.g. 212×199). This means frame PNGs are dominated by black space. The `next_frame` function always calls `crop_to_proggies`, so every frame is a viewport-sized image. Per WALKTHROUGH_BUGS.md Bug 4: "Frame captures should crop to just the relevant window (main form or child form), not the viewport." and "Every frame PNG must have < 30% black pixels." The fix should capture frames at the current relevant window rect, not the fixed viewport.
+===CURRENT_CODE===
+    def crop_to_proggies(path):
+        """Capture cropped to the viewport. Recalculates if main form moved."""
+        if viewport[0] is None:
+            return capture_cropped(main_win, str(path))
+        # F13: Refresh viewport from current main form position
+        cur_windows = wd.snapshot()
+        cur_forms = wd.find_vb_forms(cur_windows)
+        if cur_forms:
+            cur_forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            mf = cur_forms[0]
+            if (mf['x'], mf['y']) != (viewport[0]['x'] + 2, viewport[0]['y'] + 2):
+                vp_x = max(mf['x'] - 2, 0)
+                vp_y = max(mf['y'] - 2, 0)
+                vp_w = min(mf['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(mf['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+        return capture_cropped(viewport[0], str(path))
+===FIXED_CODE===
+    def crop_to_proggies(path):
+        """Capture cropped to the tightest bounding box of all visible VB6 forms."""
+        cur_windows = wd.snapshot()
+        cur_forms = wd.find_vb_forms(cur_windows)
+        if not cur_forms:
+            return capture_cropped(main_win, str(path))
+        # Compute tight bounding box around all visible VB6 forms
+        x0 = min(w['x'] for w in cur_forms)
+        y0 = min(w['y'] for w in cur_forms)
+        x1 = max(w['x'] + w['w'] for w in cur_forms)
+        y1 = max(w['y'] + w['h'] for w in cur_forms)
+        pad = 4
+        tight = {'x': max(x0 - pad, 0), 'y': max(y0 - pad, 0),
+                 'w': min(x1 - x0 + 2 * pad, SCREEN_W), 'h': min(y1 - y0 + 2 * pad, SCREEN_H)}
+        return capture_cropped(tight, str(path))
+
+=F6=
+severity: HIGH
+title: nc_x_off/nc_y_off computed before form is moved and may use wrong form
+line: 338-353
+description: The first nc_offset computation occurs before the splash-dismiss loop and before the main form is moved to `FORM_X, FORM_Y`. If the initial form is a splash screen (detected and dismissed later), the nc offsets are computed against the wrong form's .frm file. While the code re-computes nc_offset after settling on the real form (line ~405), the initial `main_form.png` captures at lines 309-312 use the stale/wrong nc_offset values. Additionally, the nc_offset recomputation after move (line ~405) only runs `if main_form_name` — if `main_form_name` is None (fallback path at line ~382), the offsets remain stale defaults (3, 26) which may be wrong for the actual form.
+===CURRENT_CODE===
+    nc_x_off, nc_y_off = 3, 26  # defaults
+    if decomp_base.exists():
+        startup_frm = None
+        for t in safe_targets:
+            if t['is_startup_form']:
+                startup_frm = t['form']; break
+        if startup_frm:
+            frm_candidates = list(decomp_base.glob(f'{startup_frm}.frm'))
+===FIXED_CODE===
+    nc_x_off, nc_y_off = 0, 0  # defaults — safer: assume no chrome until proven otherwise
+    if decomp_base.exists():
+        startup_frm = None
+        for t in safe_targets:
+            if t['is_startup_form']:
+                startup_frm = t['form']; break
+        if startup_frm:
+            frm_candidates = list(decomp_base.glob(f'{startup_frm}.frm'))
+
+=F7=
+severity: MEDIUM
+title: File handle leak from hunter trace stream
+line: 19-20
+description: `open(_hunter_log, 'a')` creates a file handle that is never closed. The file remains open for the entire process lifetime. While Python will close it at interpreter exit, this is a resource leak that can cause issues with log rotation, filesystem unmount, or file descriptor exhaustion in long-running or repeatedly-invoked scenarios. Per PEP 343 (context managers), file handles should be managed explicitly.
+===CURRENT_CODE===
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+===FIXED_CODE===
+_hunter_stream = open(_hunter_log, 'a')
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=_hunter_stream))
+# Note: intentionally kept open for process lifetime; stored in module var to prevent GC
+
+=END=
+
+
+MAIN FILE TO REVIEW:
 #!/usr/bin/env python3
 """Smart walkthrough: state-diff driven screenshot capture for VB proggies.
 
@@ -17,10 +315,8 @@ _hunter_log = (Path.home() / 'traces' / Path(__file__).stem
                / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
                / 'hunter.log')
 _hunter_log.parent.mkdir(parents=True, exist_ok=True)
-_hunter_stream = open(_hunter_log, 'a')
 hunter.trace(stdlib=False, action=hunter.CallPrinter(
-    stream=_hunter_stream))
-# _hunter_stream held at module level to prevent GC
+    stream=open(_hunter_log, 'a')))
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -313,12 +609,6 @@ def _extract_greet_names(zip_stem, exe_name):
     return names
 
 
-def _client_rect(win, nc_x, nc_y):
-    """Compute client area rect from window rect + non-client offsets."""
-    return {'x': win['x'] + nc_x, 'y': win['y'] + nc_y,
-            'w': max(win['w'] - 2 * nc_x, 1), 'h': max(win['h'] - nc_y - nc_x, 1)}
-
-
 def _free(n=100):
     for _ in range(n):
         time.sleep(0.01)
@@ -448,19 +738,22 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     viewport = [None]  # mutable container, set after main form found
 
     def crop_to_proggies(path):
-        """Capture cropped to tight bounding box of all visible VB6 forms."""
+        """Capture cropped to the viewport. Recalculates if main form moved."""
+        if viewport[0] is None:
+            return capture_cropped(main_win, str(path))
+        # F13: Refresh viewport from current main form position
         cur_windows = wd.snapshot()
         cur_forms = wd.find_vb_forms(cur_windows)
-        if not cur_forms:
-            return capture_cropped(main_win, str(path))
-        x0 = min(w['x'] for w in cur_forms)
-        y0 = min(w['y'] for w in cur_forms)
-        x1 = max(w['x'] + w['w'] for w in cur_forms)
-        y1 = max(w['y'] + w['h'] for w in cur_forms)
-        pad = 4
-        tight = {'x': max(x0 - pad, 0), 'y': max(y0 - pad, 0),
-                 'w': min(x1 - x0 + 2 * pad, SCREEN_W), 'h': min(y1 - y0 + 2 * pad, SCREEN_H)}
-        return capture_cropped(tight, str(path))
+        if cur_forms:
+            cur_forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            mf = cur_forms[0]
+            if (mf['x'], mf['y']) != (viewport[0]['x'] + 2, viewport[0]['y'] + 2):
+                vp_x = max(mf['x'] - 2, 0)
+                vp_y = max(mf['y'] - 2, 0)
+                vp_w = min(mf['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(mf['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+        return capture_cropped(viewport[0], str(path))
 
     def frames_are_identical(path_a, path_b):
         """Check if two images are visually identical (>97% similar)."""
@@ -739,11 +1032,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     _free(50)
     main_win['x'] = FORM_X
     main_win['y'] = FORM_Y
-    # Recapture after move — crop to client area only
+    # Recapture after move
     QMP.park_cursor(); _free(30)
-    cr = _client_rect(main_win, nc_x_off, nc_y_off)
-    capture_cropped(cr, str(out_dir / 'screenshot.png'))
-    capture_cropped(cr, str(out_dir / 'main_form.png'))
+    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+    capture_cropped(main_win, str(out_dir / 'main_form.png'))
     # Recompute viewport after move
     child_x = main_win['x'] + main_win['w'] + 10
     child_y = main_win['y']
@@ -848,8 +1140,9 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
 
             if new_win:
                 # Move child to top-left so it doesn't overlap main form
+                CHILD_X, CHILD_Y = 10, 10
                 if new_win['class'] in VB6_CLASSES:
-                    move_child_form(main_win['title'], child_x, child_y)
+                    move_child_form(main_win['title'], CHILD_X, CHILD_Y)
                     _free(50)
                     # Re-detect child position after move
                     after2 = wd.snapshot()
@@ -860,16 +1153,15 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     if moved:
                         new_win = moved[0]
 
-                # Capture child window — client area only
+                # Capture just the child window at its own rect
                 fname = unique_fname(caption, matched_target['name'])
                 QMP.park_cursor(); _free(30)
-                child_cr = _client_rect(new_win, nc_x_off, nc_y_off)
-                capture_cropped(child_cr, str(out_dir / fname))
+                capture_cropped(new_win, str(out_dir / fname))
                 label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
                 next_frame(label, 'result')
                 item['image'] = fname
                 item['child_title'] = new_win.get('title', '')
-                item['child_h'] = child_cr['h']
+                item['child_h'] = new_win.get('h', 200)
 
                 # Cleanup
                 if item['type'] == 'msgbox':
@@ -1000,10 +1292,10 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     fname = unique_fname(caption, ctrl_name)
                     QMP.park_cursor()
                     _free(30)
-                    capture_cropped(_client_rect(child_rect, nc_x_off, nc_y_off), str(out_dir / fname))
+                    capture_cropped(child_rect, str(out_dir / fname))
                     next_frame(f'Form: {nf.get("title", caption)}', 'result')
                     item['image'] = fname
-                    item['child_h'] = _client_rect(child_rect, nc_x_off, nc_y_off)['h']
+                    item['child_h'] = child_rect['h']
                     item['child_title'] = nf.get('title', '')
 
                     # F5: Explore child form controls (buttons/tabs on the child)
@@ -1216,12 +1508,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
 
                 if child_forms:
                     cf = child_forms[0]
-                    cf_cr = _client_rect(cf, nc_x_off, nc_y_off)
-                    capture_cropped(cf_cr, str(out_dir / fname))
+                    capture_cropped(cf, str(out_dir / fname))
                     next_frame(f'Form: {cap}', 'result')
                     item['image'] = fname
                     item['child_title'] = cf.get('title', '')
-                    item['child_h'] = cf_cr['h']
+                    item['child_h'] = cf.get('h', 200)
 
                     # Greets: capture animation frames
                     if cap.lower() == 'greets':
@@ -1346,13 +1637,11 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
     extract_dir = SORTED / '_extracted' / zip_stem
     files = sorted(f.name for f in extract_dir.iterdir()) if extract_dir.exists() else []
 
-    client_w = main_win['w'] - 2 * nc_x_off
-    client_h = main_win['h'] - nc_y_off - nc_x_off
     manifest = {
         'form': {
-            'width': client_w, 'height': client_h,
+            'width': main_win['w'], 'height': main_win['h'],
             'image': 'main_form.png',
-            'nc_x': 0, 'nc_y': 0,
+            'nc_x': nc_x_off, 'nc_y': nc_y_off,
             'screen_x': main_win['x'], 'screen_y': main_win['y'],
             'crop_x0': vp_x, 'crop_y0': vp_y,
         },
