@@ -730,12 +730,20 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
             log.info('run_walkthrough: fallback to form with most targets: %s (%d)',
                      main_form_name, form_target_counts[main_form_name])
 
+    # Get runtime control positions + menus from Win32 API (need form_hwnd for MoveWindow)
+    rt = enum_runtime_controls(main_win['title'])
+    if rt and not rt.get('error'):
+        form_hwnd = rt.get('form_hwnd', 0)
+    else:
+        form_hwnd = 0
+
     # Move the REAL main form to a known position with room for child forms
-    move_cmd = (f'import ctypes; u=ctypes.windll.user32; '
-                f'u.MoveWindow({form_hwnd}, '
-                f'{FORM_X}, {FORM_Y}, {main_win["w"]}, {main_win["h"]}, 1)')
-    _c2gui_shell(rf'"{PYTHON_GUEST}" -c "{move_cmd}"')
-    _free(50)
+    if form_hwnd:
+        move_cmd = (f'import ctypes; u=ctypes.windll.user32; '
+                    f'u.MoveWindow({form_hwnd}, '
+                    f'{FORM_X}, {FORM_Y}, {main_win["w"]}, {main_win["h"]}, 1)')
+        _c2gui_shell(rf'"{PYTHON_GUEST}" -c "{move_cmd}"')
+        _free(50)
     main_win['x'] = FORM_X
     main_win['y'] = FORM_Y
     # Recapture after move — crop to client area only
@@ -773,6 +781,7 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
              main_form_name, main_win['title'], nc_x_off, nc_y_off)
 
     # ── Get runtime control positions + menus from Win32 API ─────────
+    # (re-enum after MoveWindow since positions changed)
     rt = enum_runtime_controls(main_win['title'])
     if rt and not rt.get('error'):
         rt_children = {c['text']: c for c in rt.get('children', []) if c['text']}
