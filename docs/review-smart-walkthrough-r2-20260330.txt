@@ -1,0 +1,172 @@
+=REVIEW_SUMMARY=
+total_findings: 7
+critical: 4
+high: 2
+medium: 1
+
+=F1=
+severity: CRITICAL
+title: main_form.png captures full window including title bar and border (Bug 1 — 3 capture sites)
+line: 309-312, 395-396
+description: Every `capture_cropped(main_win, ...)` for main_form.png passes the full GetWindowRect which includes title bar and border chrome. The code correctly computes `nc_x_off`/`nc_y_off` (e.g. 3 and 46 for darkwater) but never applies them to construct a client-area-only crop rect. Per WALKTHROUGH_BUGS.md Bug 1: "main_form.png should be client area only" and "Crop main_form.png to (x + nc_x, y + nc_y, x + w - nc_x, y + nc_y + client_h)." The post-move capture (the final one that persists to disk) is the critical fix site. The pre-move captures at lines ~309-312 and ~362-363 are overwritten, but should also be fixed for frame consistency.
+===CURRENT_CODE===
+    # Recapture after move
+    QMP.park_cursor(); _free(30)
+    capture_cropped(main_win, str(out_dir / 'screenshot.png'))
+    capture_cropped(main_win, str(out_dir / 'main_form.png'))
+===FIXED_CODE===
+    # Recapture after move — crop to client area only (exclude title bar + border)
+    QMP.park_cursor(); _free(30)
+    client_w = main_win['w'] - 2 * nc_x_off
+    client_h = main_win['h'] - nc_y_off - nc_x_off
+    client_rect = {'x': main_win['x'] + nc_x_off, 'y': main_win['y'] + nc_y_off,
+                   'w': client_w, 'h': client_h}
+    capture_cropped(client_rect, str(out_dir / 'screenshot.png'))
+    capture_cropped(client_rect, str(out_dir / 'main_form.png'))
+
+=F2=
+severity: CRITICAL
+title: Manifest form.width/height store full window dimensions; nc_x/nc_y should be 0 after client-area crop (Bug 1)
+line: 633-641
+description: The manifest stores `main_win['w']` and `main_win['h']` (full GetWindowRect including chrome) as `form.width` and `form.height`. Per WALKTHROUGH_BUGS.md Bug 1 validation: "main_form.png dimensions must equal form.width × form.height in manifest. Both must equal client area size." Once main_form.png IS the client area (after F1 fix), width/height must be the client dimensions and nc_x/nc_y must be 0 (since the image no longer contains any non-client area). darkwater's current broken manifest has width:212, height:199, nc_x:3, nc_y:46 — the actual client area is 206×150.
+===CURRENT_CODE===
+    manifest = {
+        'form': {
+            'width': main_win['w'], 'height': main_win['h'],
+            'image': 'main_form.png',
+            'nc_x': nc_x_off, 'nc_y': nc_y_off,
+            'screen_x': main_win['x'], 'screen_y': main_win['y'],
+            'crop_x0': vp_x, 'crop_y0': vp_y,
+        },
+===FIXED_CODE===
+    client_w = main_win['w'] - 2 * nc_x_off
+    client_h = main_win['h'] - nc_y_off - nc_x_off
+    manifest = {
+        'form': {
+            'width': client_w, 'height': client_h,
+            'image': 'main_form.png',
+            'nc_x': 0, 'nc_y': 0,
+            'screen_x': main_win['x'], 'screen_y': main_win['y'],
+            'crop_x0': vp_x, 'crop_y0': vp_y,
+        },
+
+=F3=
+severity: CRITICAL
+title: Child screenshots include chrome — Phase 1 WM_COMMAND path (Bug 2)
+line: 455-460
+description: In Phase 1, child windows captured via `capture_cropped(new_win, ...)` use the full GetWindowRect of the child form. `child_h` is set to `new_win.get('h', 200)` — the full window height including title bar and border. Per WALKTHROUGH_BUGS.md Bug 2: "After getting child window rect, compute client area. Set child_h to the client height." Per pushback: child nc_offset may differ from main form (different BorderStyle). Ideal fix uses GetClientRect via guest script, but using main form nc_offset is a reasonable approximation for same-style children.
+===CURRENT_CODE===
+                capture_cropped(new_win, str(out_dir / fname))
+                label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
+                next_frame(label, 'result')
+                item['image'] = fname
+                item['child_title'] = new_win.get('title', '')
+                item['child_h'] = new_win.get('h', 200)
+===FIXED_CODE===
+                # Crop child to client area (approximate using main form nc_offset)
+                child_client = {
+                    'x': new_win['x'] + nc_x_off,
+                    'y': new_win['y'] + nc_y_off,
+                    'w': max(new_win['w'] - 2 * nc_x_off, 1),
+                    'h': max(new_win['h'] - nc_y_off - nc_x_off, 1),
+                }
+                capture_cropped(child_client, str(out_dir / fname))
+                label = f'MsgBox: {caption}' if item['type'] == 'msgbox' else f'Form: {caption}'
+                next_frame(label, 'result')
+                item['image'] = fname
+                item['child_title'] = new_win.get('title', '')
+                item['child_h'] = child_client['h']
+
+=F4=
+severity: CRITICAL
+title: Child screenshots include chrome — Phase 2 button-click path and popup menu path (Bug 2, exhaustive pattern)
+line: 519-523, 609-613
+description: Exhaustive grep for `capture_cropped` + `child_h` reveals two additional code paths with the same full-window-rect bug as F3. Phase 2 button-click: `capture_cropped(child_rect, ...)` with `item['child_h'] = child_rect['h']`. Popup menu child: `capture_cropped(cf, ...)` with `item['child_h'] = cf.get('h', 200)`. Per WALKTHROUGH_BUGS.md Bug 2 validation: "Every screen_*.png must be > 50x50px, not all-black. child_h in manifest must match image height." Both sites need the same client-area crop applied.
+===CURRENT_CODE===
+                    capture_cropped(child_rect, str(out_dir / fname))
+                    next_frame(f'Form: {nf.get("title", caption)}', 'result')
+                    item['image'] = fname
+                    item['child_h'] = child_rect['h']
+                    item['child_title'] = nf.get('title', '')
+===FIXED_CODE===
+                    child_client = {
+                        'x': child_rect['x'] + nc_x_off,
+                        'y': child_rect['y'] + nc_y_off,
+                        'w': max(child_rect['w'] - 2 * nc_x_off, 1),
+                        'h': max(child_rect['h'] - nc_y_off - nc_x_off, 1),
+                    }
+                    capture_cropped(child_client, str(out_dir / fname))
+                    next_frame(f'Form: {nf.get("title", caption)}', 'result')
+                    item['image'] = fname
+                    item['child_h'] = child_client['h']
+                    item['child_title'] = nf.get('title', '')
+
+=F5=
+severity: HIGH
+title: Frame captures use fixed viewport producing mostly-black images (Bug 4)
+line: 262-278
+description: `crop_to_proggies` captures a fixed viewport region sized to `main_win + max_child_w + 20` (e.g. 862×404). When the actual visible content is a small form (e.g. 212×199), the captured frame is dominated by black background. Per WALKTHROUGH_BUGS.md Bug 4: "Frame captures should crop to just the relevant window, not the viewport" and "Every frame PNG must have < 30% black pixels." Additionally, Phase 1 moves children to CHILD_X=10, CHILD_Y=10 (top-left), which falls entirely outside the viewport that starts at ~(398, 298) — those frame captures will show only the main form, not the child.
+===CURRENT_CODE===
+    def crop_to_proggies(path):
+        """Capture cropped to the viewport. Recalculates if main form moved."""
+        if viewport[0] is None:
+            return capture_cropped(main_win, str(path))
+        # F13: Refresh viewport from current main form position
+        cur_windows = wd.snapshot()
+        cur_forms = wd.find_vb_forms(cur_windows)
+        if cur_forms:
+            cur_forms.sort(key=lambda w: w['w'] * w['h'], reverse=True)
+            mf = cur_forms[0]
+            if (mf['x'], mf['y']) != (viewport[0]['x'] + 2, viewport[0]['y'] + 2):
+                vp_x = max(mf['x'] - 2, 0)
+                vp_y = max(mf['y'] - 2, 0)
+                vp_w = min(mf['w'] + max_child_w + 20, SCREEN_W - vp_x)
+                vp_h = min(max(mf['h'], max_child_h) + 4, SCREEN_H - vp_y)
+                viewport[0] = {'x': vp_x, 'y': vp_y, 'w': vp_w, 'h': vp_h}
+        return capture_cropped(viewport[0], str(path))
+===FIXED_CODE===
+    def crop_to_proggies(path):
+        """Capture tight bounding box around all visible VB6 forms."""
+        cur_windows = wd.snapshot()
+        cur_forms = wd.find_vb_forms(cur_windows)
+        if not cur_forms:
+            return capture_cropped(main_win, str(path))
+        # Tight bounding box around all visible VB6 forms
+        x0 = min(w['x'] for w in cur_forms)
+        y0 = min(w['y'] for w in cur_forms)
+        x1 = max(w['x'] + w['w'] for w in cur_forms)
+        y1 = max(w['y'] + w['h'] for w in cur_forms)
+        pad = 4
+        tight = {'x': max(x0 - pad, 0), 'y': max(y0 - pad, 0),
+                 'w': min(x1 - x0 + 2 * pad, SCREEN_W - max(x0 - pad, 0)),
+                 'h': min(y1 - y0 + 2 * pad, SCREEN_H - max(y0 - pad, 0))}
+        return capture_cropped(tight, str(path))
+
+=F6=
+severity: HIGH
+title: Phase 1 child forms placed at (10, 10) fall outside the viewport, producing child-less frame captures
+line: 437-439
+description: Phase 1 (WM_COMMAND) moves child forms to `CHILD_X, CHILD_Y = 10, 10` (top-left of screen). But the viewport is anchored to the main form at (400, 300), starting at approximately (398, 298). The child form at (10, 10) is entirely outside the viewport bounds, so `next_frame` → `crop_to_proggies` produces frames that show only the main form. Phase 2 correctly uses `child_x = main_win['x'] + main_win['w'] + 10` (right of main form, inside viewport). Phase 1 should use the same coordinates for consistency, and per pushback: "child forms are moved to (10, 10) before capture so they don't overlap the main form" — the intent is correct but the coordinates defeat the viewport framing.
+===CURRENT_CODE===
+                CHILD_X, CHILD_Y = 10, 10
+                if new_win['class'] in VB6_CLASSES:
+                    move_child_form(main_win['title'], CHILD_X, CHILD_Y)
+===FIXED_CODE===
+                if new_win['class'] in VB6_CLASSES:
+                    move_child_form(main_win['title'], child_x, child_y)
+
+=F7=
+severity: MEDIUM
+title: File handle leak from hunter trace stream — never closed
+line: 19-20
+description: `open(_hunter_log, 'a')` creates a file handle stored only as an argument to `hunter.trace()`. It is never closed explicitly nor assigned to a module-level variable to prevent GC. Per PEP 343, file handles should be managed via context managers or at minimum held in a named variable. While CPython's refcount GC would not collect it (the CallPrinter holds a reference), this is a resource leak that can cause issues with log rotation or filesystem unmount. Additionally, if `hunter.stop()` is ever called, the stream remains open with no reference to close it.
+===CURRENT_CODE===
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+===FIXED_CODE===
+_hunter_stream = open(_hunter_log, 'a')
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=_hunter_stream))
+# _hunter_stream held at module level; close via atexit if needed
+
+=END=
