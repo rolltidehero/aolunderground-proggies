@@ -731,9 +731,8 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                      main_form_name, form_target_counts[main_form_name])
 
     # Move the REAL main form to a known position with room for child forms
-    title_esc = main_win['title'].replace('"', '""')
     move_cmd = (f'import ctypes; u=ctypes.windll.user32; '
-                f'u.MoveWindow(u.FindWindowW(None, "{title_esc}"), '
+                f'u.MoveWindow({form_hwnd}, '
                 f'{FORM_X}, {FORM_Y}, {main_win["w"]}, {main_win["h"]}, 1)')
     _c2gui_shell(rf'"{PYTHON_GUEST}" -c "{move_cmd}"')
     _free(50)
@@ -1341,6 +1340,24 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                 'left': t['left_px'], 'top': t['top_px'],
                 'width': t['width_px'], 'height': t['height_px'],
             }
+
+    # Synthesize labels for menu-bar apps (no clickable Label controls on form)
+    if not labels and rt_menus:
+        seen_tops = []
+        for mi in rt_menus:
+            if mi['top'] not in seen_tops:
+                seen_tops.append(mi['top'])
+        cum_x = 0
+        for top_name in seen_tops:
+            w = len(top_name) * 8 + 16
+            labels[top_name] = {
+                'left': cum_x, 'top': 0,
+                'width': w, 'height': 20,
+            }
+            cum_x += w
+        if labels:
+            log.info('run_walkthrough: synthesized %d menu-bar labels: %s',
+                     len(labels), list(labels.keys()))
 
     # Collect files from extracted zip
     extract_dir = SORTED / '_extracted' / zip_stem
