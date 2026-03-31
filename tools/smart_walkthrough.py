@@ -1309,9 +1309,20 @@ def run_walkthrough(zip_stem, exe_name, out_dir, passwords=None):
                     # Hover frames get short duration, results get longer
                     durations.append(80 if f['type'] == 'hover' else 250 if f['type'] == 'result' else 200)
             if len(imgs) > 1:
-                durations[-1] = 2000  # pause on last frame before loop
-                imgs[0].save(str(gif_path), save_all=True, append_images=imgs[1:],
-                             duration=durations, loop=0, optimize=True)
+                durations[-1] = 2000
+                # Normalize all frames to same canvas size (PIL GIF requires it)
+                max_w = max(im.width for im in imgs)
+                max_h = max(im.height for im in imgs)
+                normalized = []
+                for im in imgs:
+                    if im.size != (max_w, max_h):
+                        canvas = Image.new('RGB', (max_w, max_h), (13, 17, 23))
+                        canvas.paste(im, (0, 0))
+                        normalized.append(canvas)
+                    else:
+                        normalized.append(im)
+                normalized[0].save(str(gif_path), save_all=True, append_images=normalized[1:],
+                                   duration=durations, loop=0, optimize=True)
                 log.info('run_walkthrough: GIF %s (%d frames)', gif_path, len(imgs))
                 # Cutoff detection
                 cutoffs = detect_cutoff(gif_path)
