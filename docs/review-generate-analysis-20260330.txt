@@ -1,0 +1,113 @@
+=REVIEW_SUMMARY=
+total_findings: 4
+critical: 0
+high: 2
+medium: 2
+
+=F1=
+severity: HIGH
+title: Unreachable dead code block inside render_form_layout references out-of-scope variable
+line: render_form_layout, after `return '\n'.join(lines)`
+description: After the `return '\n'.join(lines)` statement in `render_form_layout`, there are ~20 lines of unreachable code that are a duplicate of the `render_about_text` function (which is properly defined later). This dead block references `decomp`, which is not a parameter of `render_form_layout(form_name, frm_path)` — if somehow reached, it would raise `NameError`. This is clearly a merge/paste artifact from Bug 5 in WALKTHROUGH_BUGS.md ("Multiple edits to the widget rendering code without testing"). While Python allows code after `return` syntactically, this is a maintenance hazard and signals an incomplete edit.
+===CURRENT_CODE===
+    lines.append('</svg>')
+    return '\n'.join(lines)
+    """Extract and render About/Help dialog text as blockquotes."""
+    if not decomp:
+        return ''
+    funcs = decomp.get('_funcs_by_module', {})
+    lines = []
+    for mod_name, fn_list in funcs.items():
+        for f in fn_list:
+            if not re.search(r'about|help', f['name'], re.I):
+                continue
+            # Extract string literals from the code
+            texts = re.findall(r'"([^"]{20,})"', f['code'])
+            for t in texts:
+                # Skip if it's just a variable name or short
+                t = t.replace('vbCrLf', '\n').strip()
+                if len(t) > 30 and not t.startswith('loc_'):
+                    lines.append(t)
+    if not lines:
+        return ''
+    e = H.escape
+    out = ['<h2>&#x1f4ac; About This Program</h2>']
+    for t in lines:
+        out.append(f'<blockquote>{e(t)}</blockquote>')
+    return '\n'.join(out)
+===FIXED_CODE===
+    lines.append('</svg>')
+    return '\n'.join(lines)
+
+=F2=
+severity: HIGH
+title: AttributeError when decomp strings are dicts passed to generate_html
+line: _process_one and main(), `strings = decomp['strings']`
+description: When no exe_path exists in the strings DB, both `_process_one` and the `main()` serial branch fall back to `strings = decomp['strings']`. The decompiled metadata `strings` field can contain dicts (e.g. `{"value": "...", "section": "..."}`) — evidenced by `generate_html` itself handling this format for greet detection: `s = ds if isinstance(ds, str) else ds.get('value', '')`. However, the main string processing loop in `generate_html` calls `s = s.strip()` directly on each element, which raises `AttributeError: 'dict' object has no attribute 'strip'` when elements are dicts. This crashes HTML generation for any proggie that has decompiled data but no entry in exe_strings.db.
+===CURRENT_CODE===
+                if decomp and decomp.get('strings'):
+                    strings = decomp['strings']
+===FIXED_CODE===
+                if decomp and decomp.get('strings'):
+                    strings = [s if isinstance(s, str) else s.get('value', '') for s in decomp['strings']]
+
+=F3=
+severity: MEDIUM
+title: Dead first parsing loop in _parse_frm_controls discarded by reassignment
+line: _parse_frm_controls, `for line in lines:` loop through `controls = []` reassignment
+description: The first `for line in lines:` loop in `_parse_frm_controls` manipulates a `stack`, `ox`, `oy`, and implicitly the `controls` list, but all results are thrown away when `controls = []` is reassigned immediately before calling `_parse_nested`. The comment `# Re-parse with proper nesting using a simpler recursive approach` confirms this was an intentional replacement, but the old loop (~25 lines) was never removed. This is dead code that obscures the actual parsing logic and wastes CPU cycles on every .frm file processed.
+===CURRENT_CODE===
+    # Parse nested Begin/End blocks with parent offset tracking
+    lines = text.splitlines()
+    stack = []  # (ctrl_type, ctrl_name, offset_x, offset_y)
+    ox, oy = 0, 0
+    for line in lines:
+        stripped = line.strip()
+        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
+        if m:
+            raw_type = m.group(1).split('.')[-1] if '.' in m.group(1) else m.group(1)
+            stack.append((raw_type, m.group(2), ox, oy))
+            continue
+        if stripped == 'End' and stack:
+            _, _, ox, oy = stack.pop()
+            continue
+        if not stack:
+            continue
+        pm = re.match(r'(\w+)\s*=\s*(.+)', stripped)
+        if not pm:
+            continue
+        key, val = pm.group(1), pm.group(2).strip()
+        cur_type, cur_name = stack[-1][0], stack[-1][1]
+        # When we see Left/Top of a container (Frame/SSFrame/SSPanel), record its offset for children
+        if key == 'Left' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            try:
+                parent_ox, parent_oy = stack[-2][2], stack[-2][3] if len(stack) > 1 else (0, 0)
+            except IndexError:
+                parent_ox = 0
+            # Update stack entry with this container's absolute position
+            pox = stack[-2][2] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, pox + int(val.split("'")[0].strip()), stack[-1][3])
+        elif key == 'Top' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
+            poy = stack[-2][3] if len(stack) > 1 else 0
+            stack[-1] = (cur_type, cur_name, stack[-1][2], poy + int(val.split("'")[0].strip()))
+
+    # Re-parse with proper nesting using a simpler recursive approach
+    controls = []
+===FIXED_CODE===
+    lines = text.splitlines()
+
+    # Parse nested Begin/End blocks with recursive approach
+    controls = []
+===END_FIXED===
+
+=F4=
+severity: MEDIUM
+title: Incorrect nc_y default value (3 instead of 26) for label positioning
+line: render_screenshots, `nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)`
+description: Per pushback.txt, the correct nc_y default for a BorderStyle=1 (Fixed Single) VB6 form is 26 (SM_CYFIXEDFRAME=3 + SM_CYCAPTION=23), not 3. The nc_x default of 3 is correct (SM_CXFIXEDFRAME=3). When a walkthrough.json lacks explicit nc_y (future proggies or corrupted data), label hotspots would be positioned 23px too high on the form image, making them unclickable. Current bodini/darkwater manifests include explicit values so this doesn't affect them, but it violates the documented constraint.
+===CURRENT_CODE===
+            nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
+===FIXED_CODE===
+            nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 26)
+
+=END=
