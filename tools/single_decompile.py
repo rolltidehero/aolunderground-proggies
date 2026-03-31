@@ -775,15 +775,23 @@ def _find_passwords(strings):
 # ── Step 3: Screenshots ─────────────────────────────────────────────
 
 def run_screenshots(zip_stem, exe_name, meta):
-    """Run smart_walkthrough for full walkthrough, or screenshot-only if no targets."""
-    log.info('Running smart walkthrough...')
+    """Route to the correct walkthrough engine based on proggie."""
+    # Known proggies that use capture_walkthrough.py (label-based popup menus)
+    LEGACY_WALKTHROUGHS = {'bodini', 'anexbust', 'mavspy4'}
+
+    if zip_stem in LEGACY_WALKTHROUGHS:
+        script = REPO / 'tools' / 'capture_walkthrough.py'
+        log.info(f'Using capture_walkthrough (legacy) for {zip_stem}')
+    else:
+        script = REPO / 'tools' / 'smart_walkthrough.py'
+        log.info(f'Using smart_walkthrough for {zip_stem}')
+
     r = subprocess.run(
-        [sys.executable, str(REPO / 'tools' / 'smart_walkthrough.py'), zip_stem],
+        [sys.executable, str(script), zip_stem],
         capture_output=True, text=True, timeout=600
     )
     if r.returncode != 0:
-        log.error(f'Smart walkthrough failed:\n{r.stdout[-500:]}\n{r.stderr[-500:]}')
-        # Fallback to screenshot-only
+        log.error(f'Walkthrough failed:\n{r.stdout[-500:]}\n{r.stderr[-500:]}')
         log.info('Falling back to screenshot-only...')
         r = subprocess.run(
             [sys.executable, str(REPO / 'tools' / 'smart_walkthrough.py'), zip_stem, '--screenshot-only'],
