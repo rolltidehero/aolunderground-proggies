@@ -2,7 +2,7 @@
 
 In the Mac AOL underground, hacking tools were called **"hells"** — the Mac equivalent of Windows "proggies." These included macro-based tools (KeyQuencer, OneClick, and RzaHell), 68k binary patchers, and other tools that exploited AOL's FDO protocol, client-trusted billing, and other design flaws in the Mac AOL client.
 
-All hells below were extracted from the **[WhackedMac Archives Version 1.0](https://archive.org/details/the-whacked-mac-archives-version-1.0-l-0-pht-heavy-industries-inc.-1996)** CD-ROM (L0pht Heavy Industries, November 1995), path: `Pub/AOLCrap/`.
+All hells below were extracted from the **[WhackedMac Archives Version 1.0](https://archive.org/details/The_Whacked_Mac_Archives_Version_1.0_L0pht_Heavy_Industries_Inc._1996)** CD-ROM (L0pht Heavy Industries, November 1995), path: `Pub/AOLCrap/`.
 
 ## Hells
 
