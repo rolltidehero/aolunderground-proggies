@@ -154,6 +154,7 @@ FDO version.
 | Inside Macintosh: PowerPC System Software | [preterhuman.net mirror](https://www.preterhuman.net/macstuff/insidemac/PPCSoftware/PPCSoftware-15.html) | **Primary** — Apple documentation |
 | AOL 3.0B PPC binary | `programs/Mac/aol30-client/InstallaOL3.0bppc.sit` | **Primary** — the client |
 | AOL 2.6 FDO Analysis | `programs/Mac/aol26-client/AOL26-FDO-Version-Analysis.md` | **Primary** — comparison baseline |
+| Token → FDO Source Mapping | `programs/Mac/hells/aol4free/AOL4FREE-Token-FDO-Mapping.md` | Reference — every token mapped to exact FDO88 Manual page or token DB source |
 | vise-rs | [codeberg.org/cyco/vise-rs](https://codeberg.org/cyco/vise-rs) | Tool — VISE installer extractor |
 
 *Analysis performed 2026-04-03 on Ubuntu Linux using unar, vise-rs (Rust nightly), and Python 3.12.*

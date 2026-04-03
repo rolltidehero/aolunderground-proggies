@@ -414,7 +414,10 @@ January 1994) documents four features found in the binary:
 | FDO88 Manual v1, January 1994 | `programs/Mac/hells/aol4free/FDO88_Manual_v1_1994-01_(searchable).pdf` | **Primary** — AOL internal document | p.2-3 (PDF 11), p.2-43 (PDF 51), p.2-44 (PDF 52), App.B p.B-4 (PDF 175), App.E pp.E-1–E-10 (PDF 225–234) |
 | AOL 2.6b15 binary | `programs/Mac/aol26-client/Instll_AOl_v2.6b15.sit` | **Primary** — the unpatched client | Extracted resource fork |
 | AOL4Free Binary Analysis | `programs/Mac/hells/aol4free/AOL4FREE-Binary-Analysis.md` | **Primary** — disassembly of the patch code | "Kg Dispatch" section, "Patch Architecture" section |
+| Token → FDO Source Mapping | `programs/Mac/hells/aol4free/AOL4FREE-Token-FDO-Mapping.md` | Reference — every token mapped to exact FDO88 Manual page or token DB source | All token citations |
 | AOL 3.0B PPC binary | `programs/Mac/aol30-client/InstallaOL3.0bppc.sit` | **Primary** — comparison client | STR# 10018 absent (verified) |
+| AOL internal token dump | `aol-files.com/fdo91/tokens/1998.txt` (Jan 7, 1998) | Secondary — server-side dump | Kg entry |
+| AOL-Files FDO Tutorial | [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutorial%20-%20what%20is%20FDO.htm) | Secondary — community documentation by Tau/BMB | "What is FDO?" section |
 | AOL internal token dump | `aol-files.com/fdo91/tokens/1998.txt` (Jan 7, 1998) | Secondary — server-side dump | Kg entry |
 | AOL-Files FDO Tutorial | [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutorial%20-%20what%20is%20FDO.htm) | Secondary — community documentation by Tau/BMB | "What is FDO?" section |
 
