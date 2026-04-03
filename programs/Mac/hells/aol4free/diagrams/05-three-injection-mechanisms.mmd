@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant T as Token Handler<br/>(P3 @ 0x589A)
+    participant E as Event Loop<br/>(Events CODE)
+    participant F as File Transfer<br/>(Tool CODE)
+    participant M as Low Memory<br/>Flags $4-$7
+    participant D as SendDispatch()<br/>A5+$0EFA
+    participant S as AOL Server
+
+    note over T,S: MECHANISM 1 — Direct Kg injection (mail/IM tokens)
+    T->>T: Token is el/ol/eo/iO<br/>(mail list, outbox, old mail, locate user)
+    T->>D: PEA Kg_data(PC)<br/>Kg = "surcharge switch"
+    D->>S: Kg token + PlusGroup $3FC1
+    note right of S: Server switches billing state<br/>→ surcharge PAUSED
+
+    note over T,S: MECHANISM 2 — Deferred K1 injection (via event loop)
+    T->>T: Token is mT or YC<br/>(MIP mail pkt, TCP RMG input)
+    T->>M: SET $6 = '3'
+    T->>M: SET $5 = 'i'
+    note over E: Next event loop cycle...
+    E->>M: READ $6
+    M->>E: '3' (flag set)
+    E->>M: CLEAR $6
+    E->>D: PEA K1_data(PC)<br/>K1 = "request library record"
+    D->>S: K1 token + free area address
+    note right of S: Server loads free area<br/>→ billing PAUSED
+
+    note over T,S: MECHANISM 3 — Direct K1 injection (file transfers)
+    F->>D: PEA K1_data(PC)
+    D->>S: K1 token + free area address
+    note right of S: Billing PAUSED
+
+    note over T,S: SUPPRESSION — incoming free area response
+    S->>T: fD (free area window data)
+    T->>T: Detect $1501FB06 marker
+    T->>T: ProcessIncoming() — ACK to server
+    T->>D: SendDispatch(K1) — re-enter free area
+    note over T: Window data consumed, never displayed
+
+    note over T,S: SUPPRESSION — HideDisplay (Switch 22)
+    S->>T: fdo$Switch HideDisplay 00
+    T->>M: READ $5
+    M->>T: 'i' (flag set)
+    T->>M: CLEAR $5
+    T--xT: SWITCH 22 IGNORED
+    note over T: All windows remain visible
