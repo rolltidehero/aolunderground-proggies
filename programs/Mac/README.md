@@ -14,7 +14,7 @@ All hells below were extracted from the **[WhackedMac Archives Version 1.0](http
 | [MAOHELL b2](hells/maohell/) | ηeη | 1995 | KeyQuencer macros | "AOHELL for Mac" — mail bomb, IM bomb, scroll hell, hell drive scan (crashes PC A: drives via chat), credit card generator, AOL Aid. 9 sequences. |
 | [NAPOhell v1.0](hells/napohell/) | mike | 1995 | KeyQuencer control panel (cdev) | Control panel-based hell with macros. Promised AOPHree 1.0 ("just like AOL4Free only better") in a future release. |
 | [No Dice](hells/nodice/) | Andrew Welch / Ambrosia Software | 1995 | System extension (INIT) + C source | Automatically ignores dice rolls in AOL chat rooms by patching `_TEDispatch`. Full C source code included — patches the Toolbox trap to filter "OnlineHost" messages in "People Connection" windows. |
-| [SlyoHell](hells/slyohell/) | Unknown | 1995 | Self-extracting archive (.sea) | Compressed archive only — no expanded version on the CD. |
+| [SLAYoHell v1.2](hells/slyohell/) | Unknown | 1995 | KeyQuencer macros + plug-ins | Full hell suite: 55 KeyQuencer plug-ins, ASCII art collection (14 pieces), gPaste, No Dice, documentation. Bundled with BBEdit Lite 3.0. |
 
 ## Screenshots of Hells
 
