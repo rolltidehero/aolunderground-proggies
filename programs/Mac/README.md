@@ -21,7 +21,7 @@ All hells below were extracted from the **[WhackedMac Archives Version 1.0](http
 | Client | Date | FDO Version | Description |
 |--------|------|-------------|-------------|
 | [America Online v2.6b15](aol26-client/) | May 1995 | **FDO88** ([proof](aol26-client/AOL26-FDO-Version-Analysis.md)) | The unpatched AOL 2.6 Mac client that AOL4Free targets. Binary analysis confirms FDO88 protocol. |
-| [America Online v3.0.1 (68K)](aol30-client/) | ~1996 | Expected FDO91 | VISE installer — binary not yet extracted. First Mac version expected to use FDO91. |
+| [America Online v3.0](aol30-client/) | ~1996 | Expected FDO91 | VISE installers (68K + PPC) — binary not yet extracted. Major architectural shift from monolithic 68K to PPC shared libraries. |
 
 ## FDO Protocol Documentation
 
