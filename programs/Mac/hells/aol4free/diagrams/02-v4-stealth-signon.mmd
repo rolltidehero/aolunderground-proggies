@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant C as AOL 2.6 Client
+    participant P as AOL4Free Patch
+    participant S as AOL Server
+    participant L as Server Logs
+
+    rect rgb(255, 235, 235)
+        note over C,L: v1–v3 SIGNON (DETECTABLE)
+        C->>P: Dd (Initial login pkt)
+        P->>S: Dd (signon)
+        P->>S: K1 "Request library record" (free area)
+        note right of S: User NOT fully authenticated yet
+        S->>L: CMis ERROR — holding area update<br/>with mismatched session q_context
+        note over L: David Lippke's filter catches this:<br/>"filter the log for CMis"
+    end
+
+    rect rgb(235, 255, 235)
+        note over C,L: v4 SIGNON (STEALTH — Sep 13, 1995)
+        C->>P: Dd (Initial login pkt)
+        note over P: Token table at 0x589A:<br/>CMPI.W #$4464, 1(A4)<br/>BEQ → skip handler<br/><br/>Also skips:<br/>Dg (Guest signon)<br/>LO (Session termination)<br/>xG (Download go-ahead)<br/>vx (Feature mask removal)
+        P->>S: Dd (signon) — alone, no injection
+        S-->>L: Normal signon — no CMis error
+        note over C,P: Free-area injection resumes<br/>only after signon completes
+    end

@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant C as AOL 2.6 Client
+    participant P as AOL4Free Patch<br/>(P3 CODE @ 0x589A)
+    participant S as AOL Server
+    participant B as Billing System
+
+    rect rgb(240, 248, 255)
+        note over C,B: NORMAL CLIENT — user clicks "Chat Rooms"
+        note over C: Button dispatch: Ask_DB (MOP 1)<br/>('K1', plus_pay) subparms<br/>Packed token+s_code: $96 $C5
+        C->>S: K1 token + library record
+        S->>B: plus_pay → billing RUNNING
+        S->>C: fD packet (Chat Rooms window)
+    end
+
+    rect rgb(255, 240, 240)
+        note over C,B: PATCHED CLIENT — same action
+        C->>P: K1 (Chat Rooms) outgoing
+        P->>S: K1 (Chat Rooms) — forwarded unchanged
+        S->>B: plus_pay → billing RUNNING
+        note over P: Token table (0x589A): no special match<br/>→ default handler, '3' flag set at $0006
+        note over P: Events handler fires next cycle:<br/>reads '3', clears it, sends K1 dispatch
+        P->>S: K1 "Request library record"<br/>(free area address)
+        S->>B: Free area → billing PAUSED
+        S->>C: fD (Chat Rooms data)
+        S->>P: fD (Free Area window data)
+        P--xC: SUPPRESSED — $1501FB06 marker
+        S->>P: fdo$Switch HideDisplay 00<br/>(Window Switch 22)
+        P--xC: IGNORED — 'i' flag set at $0005
+        note over C: Chat Rooms visible + billing paused
+    end

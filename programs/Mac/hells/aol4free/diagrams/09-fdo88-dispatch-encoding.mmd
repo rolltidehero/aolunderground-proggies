@@ -1,0 +1,65 @@
+flowchart TB
+    subgraph FDO_STREAM["FDO Stream Encoding (FDO88 Manual, p.2-44)"]
+        direction TB
+        FS1["<b>fdo$dispch</b> (Opcode $05)"]
+        FS2["Followed by 6-byte dispatch"]
+        FS1 --> FS2
+
+        subgraph SIXBYTE["6-Byte Dispatch in FDO Stream"]
+            direction LR
+            SB1["Byte 0<br/><b>MOP_code</b><br/>1=Ask_DB<br/>6=Send_DB<br/>10=Send_Form"]
+            SB2["Bytes 1-2<br/><b>Packed token+s_code</b><br/>char1«1, char2«2|s_code"]
+            SB3["Bytes 3-5<br/><b>MOP_info</b><br/>3 subparameters"]
+            SB1 --- SB2 --- SB3
+        end
+    end
+
+    subgraph PACKING["Token + s_code Packing (verified)"]
+        direction TB
+        P1["Byte 1 = token_char1 << 1<br/>'K' ($4B) → $96"]
+        P2["Byte 2 = token_char2 << 2 | s_code<br/>'1'($31)<<2 = $C4 | plus_free(2) = $C6"]
+        P1 --- P2
+    end
+
+    subgraph EXAMPLES["Confirmed from FDO88 Appendix B"]
+        direction TB
+        EX1["News & Finance: <code>129 ('K1',1) $08 $B8 $07</code><br/>K1 + plus_pay → library 8, record $B807"]
+        EX2["Members' Support: <code>129 ('K1',2) $08 $CC $93</code><br/>K1 + <b>plus_free</b> → library 8, record $CC93<br/><i>FREE AREA — billing pauses here</i>"]
+        EX3["Entertainment: <code>129 ('MR',1) $00 $00 $02</code><br/>MR + plus_pay → library 0, record $0002"]
+        EX1 --- EX2 --- EX3
+    end
+
+    subgraph AOL4FREE["AOL4Free Internal Dispatch Format"]
+        direction TB
+        AF0["Byte 0 ($06) = <b>LENGTH PREFIX</b>, not MOP code.<br/>Proven: Menus patch builds 'MR' dispatch with same $06.<br/>MR uses Ask_DB (MOP 1/2), not Send_DB (MOP 6)."]
+        AF1["<b>K1 dispatch</b> (0x5890):<br/><code>06 4B 31 40 61 42 71 69</code><br/>len=6 | 'K1' = <b>Request library record</b><br/>$40 | $61 $42 $71 | $69"]
+        AF2["<b>Kg dispatch</b> (0x5982):<br/><code>06 4B 67 3F C1 3F C1 60</code><br/>len=6 | 'Kg' = <b>PC indicating surcharge switch</b><br/>$3F | $C1 $3F $C1 | $60"]
+        AF3["<b>MR dispatch</b> (Menus patch, built on stack):<br/><code>06 4D 52 40 40 43 57 00</code><br/>len=6 | 'MR' | $40 | $40 $43 $57 | $00"]
+        AF0 --- AF1 --- AF2 --- AF3
+    end
+
+    subgraph TOKENS["Token Meanings"]
+        direction TB
+        T1["<b>K1</b> = 'Request a library record' (Library)<br/>FDO88 Manual + all 3 sources — <b>definitive</b>"]
+        T2["<b>Kg</b> = 'PC indicating surcharge switch' (tih)<br/>Source: AOL Stratus server dump, Jan 7 1998<br/>Category: Terminal Interface Handler (Q-Link era)<br/>Flags: PL (Platform), SP (Special)<br/>Grouped with C64/Q-Link tokens (1985-1991)<br/><b>Predates AOL itself</b>"]
+        T3["<b>Dd</b> = 'Initial login pkt' (Porch) — all 3 sources<br/><b>Dg</b> = 'Guest Account signon' — all 3 sources<br/><b>LO</b> = 'Session termination' — all 3 sources<br/><b>xG</b> = 'Download go-ahead' — all 3 sources"]
+        T4["<b>el/ol/eo</b> = mail list/outbox/old mail (mbox_list)<br/><b>iO</b> = Locate Member (whisper)<br/><b>iS</b> = Send FlashNote/IM (whisper)<br/><b>mT/mB</b> = MIP mail pkt (mbox_send)<br/><b>aB</b> = Process ext invoice (Register)<br/><b>YC</b> = TCP RMG input (rmg)"]
+        T1 --- T2 --- T3 --- T4
+    end
+
+    subgraph INSIGHT["Key Insight"]
+        direction TB
+        I1["AOL4Free uses TWO different mechanisms:<br/><br/><b>K1</b>: Navigates to a free-area library record<br/>→ server pauses billing because destination is free<br/><br/><b>Kg</b>: Directly switches surcharge state<br/>→ billing paused without navigating anywhere<br/>→ mechanism inherited from Q-Link (1985-1991)<br/><br/>Kg needed for mail/IM because AOL's mail system<br/>checked billing state before allowing operations.<br/>K1 alone wasn't sufficient — it triggers a<br/>window response that must be suppressed."]
+    end
+
+    FDO_STREAM --> PACKING --> EXAMPLES --> AOL4FREE --> TOKENS --> INSIGHT
+
+    style FDO_STREAM fill:#e8e8ff,stroke:#0000cc
+    style PACKING fill:#e8ffe8,stroke:#00cc00
+    style EXAMPLES fill:#e8ffe8,stroke:#00cc00
+    style EX2 fill:#ffcccc,stroke:#cc0000
+    style AOL4FREE fill:#fff8e0,stroke:#cc8800
+    style AF0 fill:#ffffcc,stroke:#cc8800
+    style TOKENS fill:#e8e8ff,stroke:#4444cc
+    style T2 fill:#ffdddd,stroke:#cc0000
+    style INSIGHT fill:#f0fff0,stroke:#00aa00

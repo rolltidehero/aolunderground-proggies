@@ -1,0 +1,38 @@
+flowchart LR
+    subgraph ORIGINAL["AOL 2.6 — P3 CODE Segment (22,972 bytes)"]
+        A["0x1ABA<br/>Incoming data<br/>parser"] -.->|"BRA.W $57FC<br/>(4 bytes)"| PATCH_BLOCK
+        B["0x56A4<br/>Outgoing token<br/>sender"] -.->|"JSR $589A(PC)<br/>(4 bytes)"| TOKEN_TABLE
+        C["0x56CE<br/>FDO Switch handler<br/>(processes Switch 22<br/>HideDisplay)"] -.->|"BRA.W $5866<br/>(4 bytes)"| HIDE_SUPPRESS
+    end
+
+    subgraph INJECTED["New Code Block at 0x57FC (448 bytes)"]
+        PATCH_BLOCK["<b>0x57FC: Incoming Data Handler</b><br/>─────────────────────<br/>• Extends buffer to 127 bytes<br/>• Checks for $1501FB06<br/>  (Free Area fD response marker)<br/>• If found: ProcessIncoming()<br/>  then SendDispatch(K1)<br/>• Checks 'U' flag at $0004<br/><i>Suppresses Member Services window</i>"]
+
+        HIDE_SUPPRESS["<b>0x5866: Switch 22 Suppressor</b><br/>─────────────────────<br/>• Reads AOL flag at A5-$3D65<br/>• If 'i' flag at $0005: IGNORE<br/>  HideDisplay command<br/>  (all windows stay open)<br/>• Else: SendDispatch(K1)<br/><i>FDO88 Table C.6 p.C-22:</i><br/><i>Switch 22 = HideDisplay</i>"]
+
+        K1_DATA["<b>0x5890: K1 Dispatch Data</b><br/>06 4B 31 40 61 42 71 69<br/>len(6) | Token <b>'K1'</b><br/><i>'Request a library record'</i><br/>(FDO88 + notaol: confirmed)<br/>Navigates to free area<br/>→ server pauses billing"]
+
+        TOKEN_TABLE["<b>0x589A: Token Comparison</b><br/>─────────────────────<br/>15 tokens checked via<br/>CMPI.W #token, 1(A4)<br/>All meanings confirmed<br/>from notaol/AOL-Files DB"]
+
+        KG_DATA["<b>0x5982: Kg Dispatch Data</b><br/>06 4B 67 3F C1 3F C1 60<br/>len(6) | Token <b>'Kg'</b><br/><i>'PC indicating surcharge switch'</i><br/>(notaol: confirmed)<br/>$3FC1 = PlusGroup ID<br/>(FDO88 p.2-95: probable)"]
+    end
+
+    subgraph FLAGS["Low Memory Flags ($0004–$0007)<br/>68k Reset Vector Area (confirmed: used by 4 patches)"]
+        F4["$0004: 'U' ($55)<br/>ext invoice flag"]
+        F5["$0005: 'i' ($69)<br/>Injection done"]
+        F6["$0006: '3' ($33)<br/>Deferred inject"]
+        F7["$0007: 'w' ($77)<br/>Menu toggle<br/>(Guide Room Bugger)"]
+    end
+
+    PATCH_BLOCK --> K1_DATA
+    HIDE_SUPPRESS --> K1_DATA
+    TOKEN_TABLE --> KG_DATA
+    TOKEN_TABLE --> F4
+    TOKEN_TABLE --> F5
+    TOKEN_TABLE --> F6
+    HIDE_SUPPRESS --> F5
+
+    style K1_DATA fill:#ffe0e0,stroke:#c00
+    style KG_DATA fill:#ffe0e0,stroke:#c00
+    style FLAGS fill:#fff8e0,stroke:#aa0
+    style INJECTED fill:#e8f4e8,stroke:#060

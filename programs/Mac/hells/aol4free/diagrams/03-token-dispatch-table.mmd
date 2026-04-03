@@ -1,0 +1,57 @@
+flowchart TD
+    START["Outgoing token arrives at<br/>P3 CODE 0x589A<br/>(JSR from patch site 0x56A4)"] --> READ["Read 2-byte token at 1(A4)"]
+
+    READ --> CMP_Dd{"Dd?<br/>$4464<br/><b>Initial login pkt</b>"}
+    CMP_Dd -->|Yes| SKIP
+    CMP_Dd -->|No| CMP_Dg{"Dg?<br/>$4467<br/><b>Guest signon</b>"}
+    CMP_Dg -->|Yes| SKIP
+    CMP_Dg -->|No| CMP_LO{"LO?<br/>$4C4F<br/><b>Session termination</b>"}
+    CMP_LO -->|Yes| SKIP
+    CMP_LO -->|No| CMP_xG{"xG?<br/>$7847<br/><b>Download go-ahead</b><br/>(file transfer ACK)"}
+    CMP_xG -->|Yes| SKIP
+    CMP_xG -->|No| CMP_vx{"vx?<br/>$7678<br/><b>Remove user feature<br/>mask</b><br/>checked at 0(A4)"}
+    CMP_vx -->|Yes| SKIP
+    CMP_vx -->|No| CMP_LOOP{"4(A4) = Kg<br/>dispatch params?<br/><i>anti-loop guard</i>"}
+    CMP_LOOP -->|Yes| SKIP
+    CMP_LOOP -->|No| CMP_mT{"mT?<br/>$6D54<br/><b>MIP mail pkt</b><br/>(Message Interchange<br/>Protocol)"}
+    CMP_mT -->|Yes| DEFER
+    CMP_mT -->|No| CMP_YC{"YC?<br/>$5943<br/><b>TCP RMG input</b>"}
+    CMP_YC -->|Yes| DEFER
+    CMP_YC -->|No| CMP_el{"el? ol?<br/>eo? iO?<br/><b>Mail list / Outbox /<br/>Old mail / Locate user</b>"}
+    CMP_el -->|Yes| SEND_KG
+    CMP_el -->|No| CMP_iS{"iS?<br/>$6953<br/><b>Send FlashNote</b><br/>(Instant Message)"}
+    CMP_iS -->|Yes| COND_KG
+    CMP_iS -->|No| CMP_aB{"aB?<br/>$6142<br/><b>Process ext invoice</b><br/>(billing/registration)"}
+    CMP_aB -->|Yes| FLAGS_AB
+    CMP_aB -->|No| CMP_mB{"mB?<br/>$6D42<br/><b>MIP mail pkt</b>"}
+    CMP_mB -->|Yes| FLAGS_MB
+    CMP_mB -->|No| DEFAULT
+
+    SKIP["<b>SKIP — no injection</b><br/>SET 'i' ($69) at $0005<br/>Return unchanged<br/><br/><i>Dd/Dg: v4 stealth fix<br/>LO: no point billing on logoff<br/>xG: would disrupt file transfer<br/>vx: feature negotiation</i>"]
+    SKIP --> DONE["Return to AOL code"]
+
+    DEFER["<b>DEFERRED injection</b><br/>SET '3' ($33) at $0006<br/>SET 'i' ($69) at $0005<br/><i>Events loop sends K1 on<br/>next cycle when it reads '3'</i>"]
+    DEFER --> DONE
+
+    SEND_KG["<b>IMMEDIATE Kg send</b><br/>SendDispatch(Kg data)<br/><br/><b>Kg = 'PC indicating<br/>surcharge switch'</b><br/><i>Directly switches billing state<br/>for mail/IM operations that<br/>AOL had 'partially protected'</i>"]
+    SEND_KG --> DONE
+
+    COND_KG["<b>CONDITIONAL Kg send</b><br/>If '3' not already set:<br/>  SendDispatch(Kg)<br/>  SET '3' at $0006<br/>SET 'i' at $0005"]
+    COND_KG --> DONE
+
+    FLAGS_AB["<b>Flag manipulation</b><br/>SET 'i' at $0005<br/>If 6(A4) ≠ 'qi':<br/>  SET 'U' ($55) at $0004<br/><i>aB = billing invoice process</i>"]
+    FLAGS_AB --> DONE
+
+    FLAGS_MB["<b>Conditional flag</b><br/>If $0007 = 'w':<br/>  SET 'i' at $0005<br/><i>'w' toggled from Menus patch<br/>(Guide Room Bugger feature)</i>"]
+    FLAGS_MB --> DONE
+
+    DEFAULT["<b>DEFAULT — no match</b><br/>CLR D7; MOVE.B (A4), D7<br/>Return unchanged<br/><i>K1 injection handled by<br/>Events loop & File Transfer</i>"]
+    DEFAULT --> DONE
+
+    style SKIP fill:#d4edda,stroke:#28a745
+    style DEFER fill:#fff3cd,stroke:#ffc107
+    style SEND_KG fill:#f8d7da,stroke:#dc3545
+    style COND_KG fill:#f8d7da,stroke:#dc3545
+    style FLAGS_AB fill:#e2e3e5,stroke:#6c757d
+    style FLAGS_MB fill:#e2e3e5,stroke:#6c757d
+    style DEFAULT fill:#d1ecf1,stroke:#17a2b8
