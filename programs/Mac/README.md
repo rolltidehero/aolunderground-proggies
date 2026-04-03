@@ -10,6 +10,8 @@ In the Mac AOL underground, hacking tools were called **"hells"** — the Mac eq
 
 ## Screenshots of Hells
 
+*Screenshots courtesy of iconidentify.*
+
 ### PB (November 2, 1997)
 
 ![PB](screenshots/pb11.02.97.jpg)
