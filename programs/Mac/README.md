@@ -16,6 +16,26 @@ All hells below were extracted from the **[WhackedMac Archives Version 1.0](http
 | [No Dice](hells/nodice/) | Andrew Welch / Ambrosia Software | 1995 | System extension (INIT) + C source | Automatically ignores dice rolls in AOL chat rooms by patching `_TEDispatch`. Full C source code included — patches the Toolbox trap to filter "OnlineHost" messages in "People Connection" windows. |
 | [SLAYoHell v1.2](hells/slyohell/) | Unknown | 1995 | KeyQuencer macros + plug-ins | Full hell suite: 55 KeyQuencer plug-ins, ASCII art collection (14 pieces), gPaste, No Dice, documentation. Bundled with BBEdit Lite 3.0. |
 
+## AOL Mac Client
+
+| Client | Date | Description |
+|--------|------|-------------|
+| [America Online v2.6b15](aol26-client/) | May 1995 | The unpatched AOL 2.6 Mac client that AOL4Free targets. Includes binary analysis proving it uses the FDO88 protocol. |
+
+## FDO Protocol Documentation
+
+FDO ("Form Definition Opcode/Operator") is the programming language AOL used to render all client UI. The server sent FDO streams to the client, which interpreted them to draw windows, buttons, lists, and text fields. Every button contained a 6-byte dispatch that told the server what action to take when clicked.
+
+There were two versions:
+- **FDO88** (1988) — used by the Apple II, GEOS, PCAO, and Mac clients before AOL 3.0
+- **FDO91** (1991) — used by the Windows client and Mac clients 3.0 and later
+
+| Document | Description |
+|----------|-------------|
+| [FDO88 Manual (PDF)](hells/aol4free/FDO88_Manual_v1_1994-01_(searchable).pdf) | AOL's internal FDO88 reference, January 1994, 239 pages. Defines tokens, dispatches, MOP codes, surcharge billing, switches, and sample FDO streams. |
+| [FDO88 Manual (searchable web version)](https://iconidentify.github.io/fdo88_docs/) | Browser-readable version of the FDO88 Manual with full-text search. |
+| [FDO91 Manual chapters](hells/aol4free/fdo91_docs/) | 11 chapters of the FDO91 Manual (February 1998) — Introduction, Action Protocol, Async, Chat, File Transfer, Forms Manager, Host Forms Server, P3, Universal, Transfer, and Appendix A. Text and PDF. |
+
 ## Screenshots of Hells
 
 *Screenshots courtesy of iconidentify.*
