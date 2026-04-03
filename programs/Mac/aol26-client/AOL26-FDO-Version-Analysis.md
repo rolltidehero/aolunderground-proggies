@@ -235,7 +235,7 @@ Kg dispatch in CODE 27 'MOPs' at offset 0x02f6:
 
 ## Finding 1: AOL 2.6 Uses FDO88, Not FDO91
 
-### Evidence A: Binary Terminology Matches FDO88 Manual (Primary)
+### Evidence A: Error Strings Contain "FDO" Identifier
 
 STR# resource 10018 in the binary contains:
 ```
@@ -243,12 +243,13 @@ STR# resource 10018 in the binary contains:
 "Unknown extended FDO code: "
 ```
 
-The FDO88 Manual (January 1994, AOL internal document) uses the terms "FDO code" and "opcode"
-for its instructions throughout. The FDO91 Manual (February 1998, also AOL internal) uses the
-term "atom" exclusively — 194 occurrences of "atom" in the introduction chapter alone, zero
-occurrences of "FDO code" across all 11 chapters.
+These are error messages in the FDO stream parser. The string "FDO" confirms the client
+implements the FDO protocol. The word "code" matches the FDO88 Manual's terminology for
+its instructions (e.g., "FDO code" at p.2-3, PDF p.11).
 
-The binary's error handler uses FDO88 Manual terminology, not FDO91 Manual terminology.
+**Fact:** The binary contains the string "Unknown FDO code." This is an error handler for
+unrecognized FDO instructions. AOL 3.0 PPC does not contain this string (verified — see
+AOL 3.0 analysis).
 
 ### Evidence B: CODE Segment `MOPs` Implements FDO88 Architecture (Primary)
 
@@ -268,7 +269,7 @@ The FDO88 Manual defines MOP codes in Table E.1 (p.E-2, PDF p.226):
 | 14 | Private_Event | Internal client event |
 
 A dedicated `MOPs` CODE segment confirms the client implements the FDO88 MOP dispatch
-architecture. The FDO91 Manual does not use the term "MOP" — it uses "atom" for all operations.
+architecture.
 
 ### Evidence C: Dispatch Data Format Matches FDO88 Manual (Primary)
 
@@ -302,8 +303,7 @@ Source: [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutoria
 
 This is a community-written tutorial, not an AOL internal document. Tau and BMB operated
 aol-files.com and had access to AOL tools and leaked documents, but their statement is
-secondary — it is consistent with the primary evidence from the binary and the FDO88 Manual
-but does not carry the same weight.
+secondary — it does not carry the same weight as the FDO88 Manual or the binary itself.
 
 ---
 
@@ -459,19 +459,16 @@ of the 2.6 release. This is the version AOL4Free v4 targets.
 
 ## Conclusion
 
-The AOL 2.6b15 Macintosh client binary uses the **FDO88** protocol. The primary evidence comes
-from the binary itself cross-referenced against the FDO88 Manual (AOL internal document,
-January 1994, 239 pages):
+The AOL 2.6b15 Macintosh client binary implements the **FDO88** protocol. Verifiable facts:
 
-1. **Error strings** use FDO88 Manual terminology ("FDO code") — the FDO91 Manual uses "atom" exclusively (194 occurrences in intro, 0 of "FDO code" across all chapters)
-2. **CODE segment `MOPs`** implements the MOP dispatch architecture defined in FDO88 Manual Appendix E (pp.E-1–E-10)
-3. **Dispatch data format** matches FDO88 Manual's `fdo$dispch` encoding (p.2-43)
-4. **Free area strings** confirm the billing mechanism from FDO88 Manual p.2-44
-5. **Kg dispatch template** (`06 4B 67 40 40 40 40 00`) exists in the unpatched client between function boundaries in CODE 27, proving AOL4Free exploited an existing protocol feature
+1. **STR# 10018** contains "Unknown FDO code: " — an FDO stream parser error handler. This string is absent from AOL 3.0 PPC.
+2. **CODE 27** is named `MOPs` — the MOP dispatch mechanism is defined in FDO88 Manual Appendix E (pp.E-1–E-10, PDF pp.225–234)
+3. **Dispatch data at CODE 27 offset 0x02F6** matches the FDO88 Manual's `fdo$dispch` encoding (p.2-43, PDF p.51) — 6-byte length-prefixed format with Kg token
+4. **STR# 10016/10026** contain "free area" strings matching FDO88 Manual p.2-44 (PDF p.52)
+5. **Kg dispatch template** (`06 4B 67 40 40 40 40 00`) exists between RTS and LINK A6 instructions in the unpatched client — AOL4Free exploited an existing protocol feature
 
-Community documentation (AOL-Files tutorial by Tau/BMB) corroborates this by stating FDO88
-was used for Mac clients before 3.0, but this is a secondary source — the conclusion stands
-on the binary and the FDO88 Manual alone.
+The AOL-Files community tutorial (secondary source) states FDO88 was used for Mac clients
+before 3.0. This is a secondary claim that cannot be independently verified from the binary.
 
 ---
 
@@ -480,10 +477,10 @@ on the binary and the FDO88 Manual alone.
 | Source | Location | Authority | Pages Cited |
 |--------|----------|-----------|-------------|
 | FDO88 Manual v1, January 1994 | `programs/Mac/hells/aol4free/FDO88_Manual_v1_1994-01_(searchable).pdf` | **Primary** — AOL internal document | p.2-3 (PDF 11), p.2-43 (PDF 51), p.2-44 (PDF 52), App.B p.B-4 (PDF 175), App.E pp.E-1–E-10 (PDF 225–234) |
-| FDO91 Manual, February 1998 | `programs/Mac/hells/aol4free/fdo91_docs/` | **Primary** — AOL internal document | intro.txt (terminology comparison) |
 | AOL 2.6b15 binary | `programs/Mac/aol26-client/Instll_AOl_v2.6b15.sit` | **Primary** — the unpatched client | Extracted resource fork |
 | AOL4Free Binary Analysis | `programs/Mac/hells/aol4free/AOL4FREE-Binary-Analysis.md` | **Primary** — disassembly of the patch code | "Kg Dispatch" section, "Patch Architecture" section |
-| AOL internal token dump | `aol-files.com/fdo91/tokens/1998.txt` (Jan 7, 1998) | Secondary — server-side dump, not an official document | Kg entry |
+| AOL 3.0B PPC binary | `programs/Mac/aol30-client/InstallaOL3.0bppc.sit` | **Primary** — comparison client | STR# 10018 absent (verified) |
+| AOL internal token dump | `aol-files.com/fdo91/tokens/1998.txt` (Jan 7, 1998) | Secondary — server-side dump | Kg entry |
 | AOL-Files FDO Tutorial | [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutorial%20-%20what%20is%20FDO.htm) | Secondary — community documentation by Tau/BMB | "What is FDO?" section |
 
 *Analysis performed 2026-04-03 on Ubuntu Linux using unar 1.10.1 and Python 3.12.*

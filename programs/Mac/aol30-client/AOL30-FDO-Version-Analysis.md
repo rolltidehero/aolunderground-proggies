@@ -82,7 +82,7 @@ not a finding about FDO version.
 
 ---
 
-## Finding 2: "Unknown FDO code" Error String is Gone
+## Finding 2: "Unknown FDO code" Error String is Absent
 
 ### AOL 2.6 (68K) — STR# 10018:
 ```
@@ -93,28 +93,23 @@ not a finding about FDO version.
 ### AOL 3.0 (PPC) — Not present
 
 The strings "Unknown FDO code" and "Unknown extended FDO code" do not appear in any STR#
-resource in the AOL 3.0 PPC resource fork, nor in the PPC data fork (searched all 1.76MB).
+resource in the AOL 3.0 PPC resource fork (47 STR# resources searched), nor anywhere in the
+PPC data fork (1,759,739 bytes searched).
 
-The string "atom" also does not appear as an error message. The FDO error handler was either
-removed, rewritten, or moved into a shared library (the Online Tools are now separate PPC
-shared libraries, not embedded CODE segments).
-
-**This is consistent with but does not prove a FDO88→FDO91 transition.** The error strings
-could have been removed for other reasons (e.g., moved to a shared library, or the error
-handler was rewritten to use numeric codes instead of text).
+**Fact:** AOL 2.6 has this error handler. AOL 3.0 does not. The FDO stream parser was either
+removed, rewritten, or moved into a shared library.
 
 ---
 
-## Finding 3: "Exit Free Area" Persists
+## Finding 3: "Exit Free Area" Present
 
 STR# resource 303 contains:
 ```
 "Exit Free Area"
 ```
 
-The free/paid area billing mechanism documented in FDO88 Manual p.2-44 (PDF p.52) is still
-present in AOL 3.0. This is expected — the billing architecture is server-side and would
-persist across client protocol versions.
+The free/paid area billing mechanism documented in FDO88 Manual p.2-44 (PDF p.52) is present
+in AOL 3.0.
 
 ---
 
@@ -139,8 +134,8 @@ Example at offset 0x00065C1E:
 ```
 
 Both tokens are loaded as immediate values into register r4, which in the PPC calling
-convention is the second parameter to a function call. This confirms the K1 and Kg token
-dispatch mechanism survived the 68K→PPC port.
+convention is the second parameter to a function call. K1 and Kg token dispatch is present
+in AOL 3.0 PPC.
 
 ### Comparison with AOL 2.6
 
@@ -151,8 +146,7 @@ dispatch mechanism survived the 68K→PPC port.
 
 The dispatch template format changed — AOL 2.6 stored Kg as a static 8-byte data block
 between functions (`06 4B 67 40 40 40 40 00`), while AOL 3.0 loads the token value directly
-into a register as a function parameter. This is consistent with the architectural shift from
-68K (data-driven dispatch tables) to PPC (register-based function calls).
+into a register as a function parameter.
 
 ---
 
@@ -192,7 +186,7 @@ data with embedded K1 token references — a format not present in AOL 2.6.
 
 - K1 (`$4B31`) appears in at least 12 of the 35 AOst resources, always followed by
   3-byte values that resemble library record addresses (e.g., `02 a8 ff`, `03 11 fc`,
-  `08 3e a3`) — consistent with the FDO88 dispatch parameter format
+  `08 3e a3`)
 - Streams consistently begin with `00 01` or `00 00` and end with `20 02` or `20 12`
 - The byte `$24` (`$`) and `$62` (`b`) appear after K1 references — `$24 62` could encode
   a dispatch operation
@@ -214,9 +208,7 @@ The `AOp3` resource (64 bytes) contains:
 "?Copyright © 1987-1995 America Online, Inc. All rights reserved."
 ```
 
-Note the copyright ends at 1995, while the main `vers` resource says 1987-1996. This suggests
-the P3 protocol handler code was carried forward from the AOL 2.x era without updating its
-copyright string.
+Note the copyright ends at 1995, while the main `vers` resource says 1987-1996.
 
 ---
 
@@ -236,9 +228,7 @@ AOL 3.0 PPC contains resource types not present in AOL 2.6:
 | `AOp3` | 1 | AOL P3 protocol data (custom type) |
 
 The presence of 86 `PPob` resources confirms AOL 3.0 was built with Metrowerks CodeWarrior
-and the PowerPlant application framework — a complete rewrite from AOL 2.6's Think C / MPW
-codebase. This is the kind of ground-up rewrite where a protocol transition (FDO88→FDO91)
-would naturally occur.
+and the PowerPlant application framework.
 
 ---
 
@@ -255,28 +245,22 @@ Build 34 of AOL 3.0B, copyright 1987-1996.
 
 ## Conclusion
 
-The AOL 3.0B PPC binary shows clear architectural differences from AOL 2.6 (68K):
+Verifiable differences between AOL 2.6 (68K) and AOL 3.0B (PPC):
 
-1. **PPC-only** (`cfrg` present, no CODE resources) — code in data fork, not resource fork
-2. **"Unknown FDO code" error strings are gone** — the FDO88-specific terminology is absent
-3. **K1 and Kg tokens persist** — loaded as PPC register immediates, confirming the token
-   protocol survived the port
-4. **PowerPlant framework** (86 PPob resources) — complete UI rewrite from Think C to CodeWarrior
-5. **AOst resources contain structured protocol streams** with embedded K1 token references
-   in a format different from AOL 2.6's static dispatch templates — the protocol data
-   storage architecture changed
-6. **Free area billing persists** — "Exit Free Area" still in STR# 303
+| Fact | AOL 2.6 | AOL 3.0 |
+|------|---------|---------|
+| Architecture | 68K CODE resources in resource fork | PPC code in data fork (`cfrg`) |
+| "Unknown FDO code" string | Present (STR# 10018) | Absent |
+| "Exit Free Area" string | Present (STR# 10026) | Present (STR# 303) |
+| K1 token | In CODE 4, CODE 14 | 6 occurrences in PPC data fork |
+| Kg token | Dispatch template in CODE 27 | 2 occurrences in PPC data fork |
+| Protocol data storage | Static data blocks between 68K functions | Dedicated `AOst` resources (35) |
+| UI framework | None (raw Toolbox) | PowerPlant (86 `PPob` resources) |
+| AOp3 copyright | N/A | "1987-1995" (vs vers "1987-1996") |
 
-The evidence is **consistent with** a FDO88→FDO91 transition at AOL 3.0:
-- The FDO88-specific error strings are gone
-- The architecture was completely rewritten (PPC, PowerPlant, shared libraries)
-- Protocol data is stored in dedicated `AOst` resources instead of inline CODE segment data
-- The P3 protocol handler copyright (1987-1995) suggests code carried forward from 2.x
-
-What the binary **does not** contain is any string or identifier that explicitly says "FDO91."
-The definitive proof would require the FDO91 binary atom encoding specification (not present
-in the manual chapters we have) to decode the AOst resource streams and confirm they match
-the FDO91 atom format.
+The binary does not contain any string or identifier that explicitly names its FDO version.
+The FDO88 Manual's concepts (MOPs, dispatch format, "FDO code" error string) are present in
+AOL 2.6 and absent from AOL 3.0. The token protocol (K1, Kg) is present in both.
 
 ---
 
