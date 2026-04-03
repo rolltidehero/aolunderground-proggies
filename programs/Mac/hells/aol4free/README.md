@@ -18,6 +18,8 @@ v4 (September 13, 1995) was the "stealth" release that evaded AOL's `CMis` detec
 | [AOL4FREE-Binary-Analysis.md](AOL4FREE-Binary-Analysis.md) | Full 68k disassembly of the v4 patch code — token dispatch table, injection mechanisms, flag system |
 | [HOW-TO-DECOMPILE.md](HOW-TO-DECOMPILE.md) | How to extract and disassemble classic Mac resource fork binaries on Linux using unar + Capstone |
 | [FDO88 Manual (PDF)](FDO88_Manual_v1_1994-01_(searchable).pdf) | AOL's internal Form Definition Opcode reference (January 1994, 239 pages) — the protocol spec AOL4Free exploited |
+| [AOL 2.6b15 FDO Version Analysis](aol26-client/AOL26-FDO-Version-Analysis.md) | Binary proof that AOL 2.6 uses FDO88 — CODE segment names, dispatch format, Kg token in unpatched client, error strings |
+| [Token → FDO Source Mapping](AOL4FREE-Token-FDO-Mapping.md) | Every token in the AOL4Free patch mapped to its authoritative source with exact page numbers |
 
 ## Reference Materials
 
