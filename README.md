@@ -72,6 +72,12 @@ Found in 342 executables
 | Strings extracted | 11.6 million |
 | Decompiled so far | 3 (pipeline proven, batch run next) |
 
+## Mac Hacking Tools
+
+The archive also includes Mac-era AOL hacking tools, starting with the most notorious:
+
+- **[AOL4Free v4](programs/Mac/hells/aol4free/)** — Happy Hardcore's 68k binary patcher for AOL 2.6 (1995). Exploited a client-trusted billing system to access all paid services for free. Includes the original .sit archive, full 68k disassembly, architecture diagrams, FDO protocol documentation, and Happy Hardcore's own writings.
+
 ## Finding Proggies
 
 - [proggie-index.html](https://ssstonebraker.github.io/aolunderground-proggies/proggie-index.html) - Interactive web search with filters and sorting
@@ -137,6 +143,9 @@ programs/AOL/proggies-sorted-deduped/
   proggies-by-version/          # 2,138 zips sorted by AOL version
   <name>.html                   # Per-proggie analysis pages
   <name>/                       # Assets (screenshots, source)
+
+programs/Mac/hells/
+  aol4free/                     # AOL4Free v4 — binary, analysis, FDO docs
 
 tools/
   build_proggie_db.py           # Build the SQLite database
