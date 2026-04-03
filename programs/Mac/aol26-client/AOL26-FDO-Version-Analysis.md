@@ -233,9 +233,9 @@ Kg dispatch in CODE 27 'MOPs' at offset 0x02f6:
 
 ---
 
-## Finding 1: AOL 2.6 Uses FDO88, Not FDO91
+## FDO Version Evidence
 
-### Evidence A: Error Strings Contain "FDO" Identifier
+### 1. Error Strings Contain "FDO code"
 
 STR# resource 10018 in the binary contains:
 ```
@@ -243,15 +243,11 @@ STR# resource 10018 in the binary contains:
 "Unknown extended FDO code: "
 ```
 
-These are error messages in the FDO stream parser. The string "FDO" confirms the client
-implements the FDO protocol. The word "code" matches the FDO88 Manual's terminology for
-its instructions (e.g., "FDO code" at p.2-3, PDF p.11).
+These are error messages in the FDO stream parser. The word "code" matches the FDO88 Manual's
+terminology for its instructions (p.2-3, PDF p.11). AOL 3.0 PPC does not contain this string
+(verified — see AOL 3.0 analysis).
 
-**Fact:** The binary contains the string "Unknown FDO code." This is an error handler for
-unrecognized FDO instructions. AOL 3.0 PPC does not contain this string (verified — see
-AOL 3.0 analysis).
-
-### Evidence B: CODE Segment `MOPs` Implements FDO88 Architecture (Primary)
+### 2. CODE Segment Named `MOPs`
 
 CODE resource 27 is named **`MOPs`** (10,986 bytes). MOP ("Message Operation Protocol") is the
 dispatch mechanism defined in the FDO88 Manual:
@@ -268,113 +264,7 @@ The FDO88 Manual defines MOP codes in Table E.1 (p.E-2, PDF p.226):
 | 11 | Send_Selected | Send selected item data |
 | 14 | Private_Event | Internal client event |
 
-A dedicated `MOPs` CODE segment confirms the client implements the FDO88 MOP dispatch
-architecture.
-
-### Evidence C: Dispatch Data Format Matches FDO88 Manual (Primary)
-
-The Kg dispatch template at CODE 27 offset 0x02F6 (see Finding 2) uses the same 6-byte
-length-prefixed format defined in the FDO88 Manual's `fdo$dispch` syntax (p.2-43, PDF p.51).
-The verified dispatch example from Appendix B p.B-4 (PDF p.175) — `fdo$dispch 129 ('K1',2)
-$08 $CC $93` — encodes to the same structure found in the binary.
-
-### Evidence D: Free Area Strings Match FDO88 Manual (Primary)
-
-STR# resources 10016 and 10026 contain:
-```
-"You cannot exit the free area while a download is in progress..."
-"You cannot enter a free area while a download is in progress..."
-"Exit Free Area"
-```
-
-These match the billing mechanism described in the FDO88 Manual p.2-44 (PDF p.52):
-`plus_free` — "Action allowed from free area only" and "the client software will offer to
-either cancel the dispatch or to change the surcharge status."
-
-### Evidence E: Community Documentation (Corroborative, Not Authoritative)
-
-The AOL-Files FDO tutorial (Tau/BMB, circa 2000, `aol-files.com`) states:
-
-> "FDO88 is used in the GEOS version of the AOL client, PCAO, and the Macintosh clients
-> before version AOL version 3.0. FDO91 is the 1991 version and is the language used in the
-> Windows client, the Magic Cap client, and the Macintosh client (versions 3.0 and later)."
-
-Source: [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutorial%20-%20what%20is%20FDO.htm)
-
-This is a community-written tutorial, not an AOL internal document. Tau and BMB operated
-aol-files.com and had access to AOL tools and leaked documents, but their statement is
-secondary — it does not carry the same weight as the FDO88 Manual or the binary itself.
-
----
-
-## Finding 2: The `Kg` Token Exists in the Unpatched AOL 2.6 Client
-
-### Binary Evidence
-
-CODE resource 27 (`MOPs`) contains the byte sequence `06 4B 67` at offset `0x02F6`:
-
-```
-Offset 0x02F4: 4E 75                    ← RTS (end of previous function)
-Offset 0x02F6: 06 4B 67 40 40 40 40 00  ← data block between functions
-Offset 0x02FE: 4E 56 FD FA              ← LINK A6 (start of next function)
-```
-
-The data block sits between an `RTS` instruction (0x4E75, return from subroutine) and a
-`LINK A6` instruction (0x4E56, function prologue). This proves it is **static data embedded
-between two functions**, not executable code. Classic Mac 68k applications commonly store
-constant data between function boundaries in CODE segments.
-
-Interpreting the data block:
-```
-06 4B 67 40 40 40 40 00
-│  └──┘  └──────────┘  │
-│  "Kg"  parameters     │ trailing null
-len=6
-```
-
-- Byte 0: `$06` — length prefix (6 bytes of dispatch payload follow)
-- Bytes 1-2: `$4B 67` — ASCII "Kg" (the token identifier)
-- Bytes 3-6: `$40 40 40 40` — parameters (placeholder/default values)
-- Byte 7: `$00` — null terminator or padding
-
-### Why $06 is a length prefix, not MOP code 6
-
-The AOL4Free Binary Analysis (section "The Two Free-Area Dispatch Tokens") proves this:
-the Menus patch constructs an "MR" dispatch with the same `$06` prefix, but MR uses Ask_DB
-(MOP 1/2), not Send_DB (MOP 6). If `$06` were a MOP code, the MR dispatch would be
-inconsistent. Therefore `$06` is a length prefix meaning "6 bytes of payload follow."
-
-### Comparison with AOL4Free's Kg Dispatch
-
-The AOL4Free patch (Binary Analysis, address `0x5982`) contains:
-
-```
-AOL4Free:  06 4B 67 3F C1 3F C1 60
-AOL 2.6:   06 4B 67 40 40 40 40 00
-```
-
-Both share the same format. The AOL4Free version has specific PlusGroup values (`$3FC1`)
-while the unpatched client has placeholder values (`$4040`). This confirms:
-
-1. The Kg dispatch structure existed in the original AOL 2.6 client code
-2. AOL4Free modified the parameters, not the structure
-3. The `$3FC1` PlusGroup value was injected by the patch
-
-### Cross-Reference: Token Database
-
-`Kg` does **not** appear in the FDO88 Manual (January 1994, 239 pages). It **is** documented
-in the AOL internal token table dump (`1998.txt`, January 7, 1998) as:
-- Category: `tih` (Terminal Interface Handler)
-- Flags: PL (Pre-Login), SP (Special)
-- Meaning: "PC indicating surcharge switch"
-
-The file modification timestamp on the extracted binary is May 27, 1995. `Kg` was part of the
-AOL protocol by that date but was not in the January 1994 FDO88 Manual — it was either added
-between those dates or existed as an undocumented internal token.
-
----
-
-## Finding 3: FDO88 Dispatch Format Confirmed in Binary
+### 3. Dispatch Data Format Matches `fdo$dispch`
 
 The FDO88 Manual (p.2-43, PDF p.51) defines the dispatch syntax:
 
@@ -392,83 +282,128 @@ This encodes to 6 bytes:
 fdo$dispch 129 ('K1',2) $08 $CC $93
 ```
 Members' Online Support — MOP 129 = Ask_DB, token K1, s_code 2 = plus_free, library $08,
-record $CC93. This is the free-area dispatch that AOL4Free exploits.
+record $CC93.
 
-The binary's dispatch data blocks use the same 6-byte format with a `$06` length prefix,
-matching the FDO88 Manual specification.
+The binary contains dispatch data blocks in CODE 27 (`MOPs`) using this same 6-byte format
+with a `$06` length prefix.
 
----
+### 4. Free Area Strings Match FDO88 Manual
 
-## Finding 4: Free Area UI Strings Confirm Billing Architecture
-
-STR# resource 10016:
+STR# resources 10016 and 10026 contain:
 ```
-"You cannot exit the free area while a download is in progress. To suspend
-the download, click Finish Later in the File Transfer window. The remainder
-of the download will not be free."
-
-"You cannot enter a free area while a download is in progress."
-```
-
-STR# resource 10026:
-```
+"You cannot exit the free area while a download is in progress..."
+"You cannot enter a free area while a download is in progress..."
 "Exit Free Area"
 ```
 
 These match the billing mechanism described in FDO88 Manual p.2-44 (PDF p.52):
-- `plus_free` — "Action allowed from free area only"
-- "the client software will offer to either cancel the dispatch or to change the surcharge status"
+`plus_free` — "Action allowed from free area only" and "the client software will offer to
+either cancel the dispatch or to change the surcharge status."
+
+### 5. Community Documentation (Secondary)
+
+The AOL-Files FDO tutorial (Tau/BMB, circa 2000, `aol-files.com`) states:
+
+> "FDO88 is used in the GEOS version of the AOL client, PCAO, and the Macintosh clients
+> before version AOL version 3.0. FDO91 is the 1991 version and is the language used in the
+> Windows client, the Magic Cap client, and the Macintosh client (versions 3.0 and later)."
+
+Source: [koin.org mirror](http://koin.org/files/aol.aim/aol/fdo/tutorial/tutorial%20-%20what%20is%20FDO.htm)
+
+This is a community-written tutorial, not an AOL internal document.
 
 ---
 
-## Finding 5: Complete CODE Segment Map
+## Supplementary: AOL4Free-Related Findings
 
-54 CODE resources. Segment names with confirmed FDO88 relevance are marked:
+These findings are relevant to the AOL4Free exploit analysis but do not prove the FDO version.
 
-| CODE ID | Name | Size | FDO88 Relevance |
-|---------|------|------|-----------------|
+### Kg Token in the Unpatched Client
+
+CODE resource 27 (`MOPs`) contains the byte sequence `06 4B 67` at offset `0x02F6`:
+
+```
+Offset 0x02F4: 4E 75                    ← RTS (end of previous function)
+Offset 0x02F6: 06 4B 67 40 40 40 40 00  ← data block between functions
+Offset 0x02FE: 4E 56 FD FA              ← LINK A6 (start of next function)
+```
+
+The data block sits between an `RTS` instruction (0x4E75) and a `LINK A6` instruction (0x4E56),
+proving it is **static data embedded between two functions**, not executable code.
+
+```
+06 4B 67 40 40 40 40 00
+│  └──┘  └──────────┘  │
+│  "Kg"  parameters     │ trailing null
+len=6
+```
+
+The AOL4Free patch (Binary Analysis, address `0x5982`) contains the same structure with
+different parameters:
+
+```
+AOL4Free:  06 4B 67 3F C1 3F C1 60
+AOL 2.6:   06 4B 67 40 40 40 40 00
+```
+
+AOL4Free modified the parameters (`$3FC1` PlusGroup values), not the structure. The Kg
+dispatch existed in the original client.
+
+`Kg` does **not** appear in the FDO88 Manual (January 1994). It is documented in the AOL
+internal token table dump (`1998.txt`, January 7, 1998) as "PC indicating surcharge switch"
+(category: `tih`, flags: PL, SP).
+
+### Why $06 is a length prefix
+
+The AOL4Free Binary Analysis proves this: the Menus patch constructs an "MR" dispatch with
+the same `$06` prefix, but MR uses Ask_DB (MOP 1/2), not Send_DB (MOP 6). If `$06` were a
+MOP code, the MR dispatch would be inconsistent.
+
+### Complete CODE Segment Map
+
+54 CODE resources:
+
+| CODE ID | Name | Size | Notes |
+|---------|------|------|-------|
 | 0 | *(jump table)* | 12,552 | Standard Mac 68k jump table |
 | 1 | Main | 23,918 | Application entry point |
-| 4 | **Events** | 27,106 | Event loop — AOL4Free patches this for deferred K1 injection |
-| 5 | **P3** | 22,524 | Protocol handler — AOL4Free's primary patch target |
-| 6 | **DataParsing** | 27,088 | Parses incoming FDO data streams |
-| 9 | **TokenHandler** | 4,218 | Token processing — FDO88 p.2-3: "Each data packet is marked with a token" |
-| 10 | **FormsInfo** | 18,004 | FDO form metadata — "Forms" = FDO88 Chapter 2 |
-| 12 | **FormModifiers** | 28,050 | FDO form modification (switches, attributes) |
-| 20 | **FormsDeletion** | 3,120 | FDO form cleanup |
-| 21 | **FormsCreation** | 28,006 | FDO form instantiation |
-| 24 | UDO | 9,306 | Purpose unknown (acronym expansion unverified) |
-| 27 | **MOPs** | 10,986 | MOP dispatch — FDO88 Appendix E; contains Kg template |
+| 4 | Events | 27,106 | Event loop — AOL4Free patches this |
+| 5 | P3 | 22,524 | Protocol handler — AOL4Free's primary target |
+| 6 | DataParsing | 27,088 | FDO data stream parser |
+| 9 | TokenHandler | 4,218 | Token processing |
+| 10 | FormsInfo | 18,004 | FDO form metadata |
+| 12 | FormModifiers | 28,050 | FDO form modification |
+| 20 | FormsDeletion | 3,120 | FDO form cleanup |
+| 21 | FormsCreation | 28,006 | FDO form instantiation |
+| 24 | UDO | 9,306 | Purpose unknown |
+| 27 | MOPs | 10,986 | MOP dispatch; contains Kg template |
 
-Segments 30–53 are charting/graphing engine components (2D_ENGINE, BAR_ENGINE, PIE_ENGINE,
-etc.).
+Segments 30–53 are charting/graphing engine components.
 
 ---
 
-## Finding 6: Version Resource Confirmation
+## Version Identification
 
 ```
 vers 1: short='2.6b15' long='2.6b15 Copyright © 1987-1995 America Online, Inc.'
 vers 2: short='2.6b15' long='America Online v2.6b15'
 ```
 
-File modification timestamp from extraction: May 27, 1995. The "b15" suffix indicates build 15
-of the 2.6 release. This is the version AOL4Free v4 targets.
+File modification timestamp: May 27, 1995. This is the version AOL4Free v4 targets.
 
 ---
 
 ## Conclusion
 
-The AOL 2.6b15 Macintosh client binary implements the **FDO88** protocol. Verifiable facts:
+The AOL 2.6b15 binary implements the **FDO88** protocol. The FDO88 Manual (AOL internal,
+January 1994) documents four features found in the binary:
 
-1. **STR# 10018** contains "Unknown FDO code: " — an FDO stream parser error handler. This string is absent from AOL 3.0 PPC.
-2. **CODE 27** is named `MOPs` — the MOP dispatch mechanism is defined in FDO88 Manual Appendix E (pp.E-1–E-10, PDF pp.225–234)
-3. **Dispatch data at CODE 27 offset 0x02F6** matches the FDO88 Manual's `fdo$dispch` encoding (p.2-43, PDF p.51) — 6-byte length-prefixed format with Kg token
-4. **STR# 10016/10026** contain "free area" strings matching FDO88 Manual p.2-44 (PDF p.52)
-5. **Kg dispatch template** (`06 4B 67 40 40 40 40 00`) exists between RTS and LINK A6 instructions in the unpatched client — AOL4Free exploited an existing protocol feature
-
-The AOL-Files community tutorial (secondary source) states FDO88 was used for Mac clients
-before 3.0. This is a secondary claim that cannot be independently verified from the binary.
+| Binary Fact | FDO88 Manual Reference |
+|-------------|----------------------|
+| STR# 10018: "Unknown FDO code: " | p.2-3 (PDF p.11): "FDO code" terminology |
+| CODE 27 named `MOPs` | Appendix E pp.E-1–E-10 (PDF pp.225–234): MOP dispatch |
+| 6-byte dispatch data in CODE 27 | p.2-43 (PDF p.51): `fdo$dispch` encoding |
+| STR# 10016/10026: "free area" strings | p.2-44 (PDF p.52): `plus_free` billing |
 
 ---
 
