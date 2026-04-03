@@ -1,57 +1,65 @@
-flowchart TD
-    START["Outgoing token arrives at<br/>P3 CODE 0x589A<br/>(JSR from patch site 0x56A4)"] --> READ["Read 2-byte token at 1(A4)"]
+flowchart TB
+    subgraph FDO_STREAM["FDO Stream Encoding (FDO88 Manual, p.2-44)"]
+        direction TB
+        FS1["<b>fdo$dispch</b> (Opcode $05)"]
+        FS2["Followed by 6-byte dispatch"]
+        FS1 --> FS2
 
-    READ --> CMP_Dd{"Dd?<br/>$4464<br/><b>Initial login pkt</b>"}
-    CMP_Dd -->|Yes| SKIP
-    CMP_Dd -->|No| CMP_Dg{"Dg?<br/>$4467<br/><b>Guest signon</b>"}
-    CMP_Dg -->|Yes| SKIP
-    CMP_Dg -->|No| CMP_LO{"LO?<br/>$4C4F<br/><b>Session termination</b>"}
-    CMP_LO -->|Yes| SKIP
-    CMP_LO -->|No| CMP_xG{"xG?<br/>$7847<br/><b>Download go-ahead</b><br/>(file transfer ACK)"}
-    CMP_xG -->|Yes| SKIP
-    CMP_xG -->|No| CMP_vx{"vx?<br/>$7678<br/><b>Remove user feature<br/>mask</b><br/>checked at 0(A4)"}
-    CMP_vx -->|Yes| SKIP
-    CMP_vx -->|No| CMP_LOOP{"4(A4) = Kg<br/>dispatch params?<br/><i>anti-loop guard</i>"}
-    CMP_LOOP -->|Yes| SKIP
-    CMP_LOOP -->|No| CMP_mT{"mT?<br/>$6D54<br/><b>MIP mail pkt</b><br/>(Message Interchange<br/>Protocol)"}
-    CMP_mT -->|Yes| DEFER
-    CMP_mT -->|No| CMP_YC{"YC?<br/>$5943<br/><b>TCP RMG input</b>"}
-    CMP_YC -->|Yes| DEFER
-    CMP_YC -->|No| CMP_el{"el? ol?<br/>eo? iO?<br/><b>Mail list / Outbox /<br/>Old mail / Locate user</b>"}
-    CMP_el -->|Yes| SEND_KG
-    CMP_el -->|No| CMP_iS{"iS?<br/>$6953<br/><b>Send FlashNote</b><br/>(Instant Message)"}
-    CMP_iS -->|Yes| COND_KG
-    CMP_iS -->|No| CMP_aB{"aB?<br/>$6142<br/><b>Process ext invoice</b><br/>(billing/registration)"}
-    CMP_aB -->|Yes| FLAGS_AB
-    CMP_aB -->|No| CMP_mB{"mB?<br/>$6D42<br/><b>MIP mail pkt</b>"}
-    CMP_mB -->|Yes| FLAGS_MB
-    CMP_mB -->|No| DEFAULT
+        subgraph SIXBYTE["6-Byte Dispatch in FDO Stream"]
+            direction LR
+            SB1["Byte 0<br/><b>MOP_code</b><br/>1=Ask_DB<br/>6=Send_DB<br/>10=Send_Form"]
+            SB2["Bytes 1-2<br/><b>Packed token+s_code</b><br/>char1«1, char2«2|s_code"]
+            SB3["Bytes 3-5<br/><b>MOP_info</b><br/>3 subparameters"]
+            SB1 --- SB2 --- SB3
+        end
+    end
 
-    SKIP["<b>SKIP — no injection</b><br/>SET 'i' ($69) at $0005<br/>Return unchanged<br/><br/><i>Dd/Dg: v4 stealth fix<br/>LO: no point billing on logoff<br/>xG: would disrupt file transfer<br/>vx: feature negotiation</i>"]
-    SKIP --> DONE["Return to AOL code"]
+    subgraph PACKING["Token + s_code Packing (verified)"]
+        direction TB
+        P1["Byte 1 = token_char1 << 1<br/>'K' ($4B) → $96"]
+        P2["Byte 2 = token_char2 << 2 | s_code<br/>'1'($31)<<2 = $C4 | plus_free(2) = $C6"]
+        P1 --- P2
+    end
 
-    DEFER["<b>DEFERRED injection</b><br/>SET '3' ($33) at $0006<br/>SET 'i' ($69) at $0005<br/><i>Events loop sends K1 on<br/>next cycle when it reads '3'</i>"]
-    DEFER --> DONE
+    subgraph EXAMPLES["Confirmed from FDO88 Appendix B"]
+        direction TB
+        EX1["News & Finance: <code>129 ('K1',1) $08 $B8 $07</code><br/>K1 + plus_pay → library 8, record $B807"]
+        EX2["Members' Support: <code>129 ('K1',2) $08 $CC $93</code><br/>K1 + <b>plus_free</b> → library 8, record $CC93<br/><i>FREE AREA — billing pauses here</i>"]
+        EX3["Entertainment: <code>129 ('MR',1) $00 $00 $02</code><br/>MR + plus_pay → library 0, record $0002"]
+        EX1 --- EX2 --- EX3
+    end
 
-    SEND_KG["<b>IMMEDIATE Kg send</b><br/>SendDispatch(Kg data)<br/><br/><b>Kg = 'PC indicating<br/>surcharge switch'</b><br/><i>Directly switches billing state<br/>for mail/IM operations that<br/>AOL had 'partially protected'</i>"]
-    SEND_KG --> DONE
+    subgraph AOL4FREE["AOL4Free Internal Dispatch Format"]
+        direction TB
+        AF0["Byte 0 ($06) = <b>LENGTH PREFIX</b>, not MOP code.<br/>Proven: Menus patch builds 'MR' dispatch with same $06.<br/>MR uses Ask_DB (MOP 1/2), not Send_DB (MOP 6)."]
+        AF1["<b>K1 dispatch</b> (0x5890):<br/><code>06 4B 31 40 61 42 71 69</code><br/>len=6 | 'K1' = <b>Request library record</b><br/>$40 | $61 $42 $71 | $69"]
+        AF2["<b>Kg dispatch</b> (0x5982):<br/><code>06 4B 67 3F C1 3F C1 60</code><br/>len=6 | 'Kg' = <b>PC indicating surcharge switch</b><br/>$3F | $C1 $3F $C1 | $60"]
+        AF3["<b>MR dispatch</b> (Menus patch, built on stack):<br/><code>06 4D 52 40 40 43 57 00</code><br/>len=6 | 'MR' | $40 | $40 $43 $57 | $00"]
+        AF0 --- AF1 --- AF2 --- AF3
+    end
 
-    COND_KG["<b>CONDITIONAL Kg send</b><br/>If '3' not already set:<br/>  SendDispatch(Kg)<br/>  SET '3' at $0006<br/>SET 'i' at $0005"]
-    COND_KG --> DONE
+    subgraph TOKENS["Token Meanings"]
+        direction TB
+        T1["<b>K1</b> = 'Request a library record' (Library)<br/>FDO88 Manual + all 3 sources — <b>definitive</b>"]
+        T2["<b>Kg</b> = 'PC indicating surcharge switch' (tih)<br/>Source: AOL internal token table dump (edit_token/list_token output), Jan 7 1998<br/>Category: Terminal Interface Handler (Q-Link era)<br/>Flags: PL (Platform), SP (Special)<br/>Grouped with C64/Q-Link tokens (1985-1991)<br/><b>Predates AOL itself</b>"]
+        T3["<b>Dd</b> = 'Initial login pkt' (Porch) — all 3 sources<br/><b>Dg</b> = 'Guest Account signon' — all 3 sources<br/><b>LO</b> = 'Session termination' — all 3 sources<br/><b>xG</b> = 'Download go-ahead' — all 3 sources"]
+        T4["<b>el/ol/eo</b> = mail list/outbox/old mail (mbox_list)<br/><b>iO</b> = Locate Member (whisper)<br/><b>iS</b> = Send FlashNote/IM (whisper)<br/><b>mT/mB</b> = MIP mail pkt (mbox_send)<br/><b>aB</b> = Process ext invoice (Register)<br/><b>YC</b> = TCP RMG input (rmg)"]
+        T1 --- T2 --- T3 --- T4
+    end
 
-    FLAGS_AB["<b>Flag manipulation</b><br/>SET 'i' at $0005<br/>If 6(A4) ≠ 'qi':<br/>  SET 'U' ($55) at $0004<br/><i>aB = billing invoice process</i>"]
-    FLAGS_AB --> DONE
+    subgraph INSIGHT["Key Insight"]
+        direction TB
+        I1["AOL4Free uses TWO different mechanisms:<br/><br/><b>K1</b>: Navigates to a free-area library record<br/>→ server pauses billing because destination is free<br/><br/><b>Kg</b>: Directly switches surcharge state<br/>→ billing paused without navigating anywhere<br/>→ mechanism inherited from Q-Link (1985-1991)<br/><br/>Kg needed for mail/IM because AOL's mail system<br/>checked billing state before allowing operations.<br/>K1 alone wasn't sufficient — it triggers a<br/>window response that must be suppressed."]
+    end
 
-    FLAGS_MB["<b>Conditional flag</b><br/>If $0007 = 'w':<br/>  SET 'i' at $0005<br/><i>'w' toggled from Menus patch<br/>(Guide Room Bugger feature)</i>"]
-    FLAGS_MB --> DONE
+    FDO_STREAM --> PACKING --> EXAMPLES --> AOL4FREE --> TOKENS --> INSIGHT
 
-    DEFAULT["<b>DEFAULT — no match</b><br/>CLR D7; MOVE.B (A4), D7<br/>Return unchanged<br/><i>K1 injection handled by<br/>Events loop & File Transfer</i>"]
-    DEFAULT --> DONE
-
-    style SKIP fill:#d4edda,stroke:#28a745
-    style DEFER fill:#fff3cd,stroke:#ffc107
-    style SEND_KG fill:#f8d7da,stroke:#dc3545
-    style COND_KG fill:#f8d7da,stroke:#dc3545
-    style FLAGS_AB fill:#e2e3e5,stroke:#6c757d
-    style FLAGS_MB fill:#e2e3e5,stroke:#6c757d
-    style DEFAULT fill:#d1ecf1,stroke:#17a2b8
+    style FDO_STREAM fill:#e8e8ff,stroke:#0000cc
+    style PACKING fill:#e8ffe8,stroke:#00cc00
+    style EXAMPLES fill:#e8ffe8,stroke:#00cc00
+    style EX2 fill:#ffcccc,stroke:#cc0000
+    style AOL4FREE fill:#fff8e0,stroke:#cc8800
+    style AF0 fill:#ffffcc,stroke:#cc8800
+    style TOKENS fill:#e8e8ff,stroke:#4444cc
+    style T2 fill:#ffdddd,stroke:#cc0000
+    style INSIGHT fill:#f0fff0,stroke:#00aa00
