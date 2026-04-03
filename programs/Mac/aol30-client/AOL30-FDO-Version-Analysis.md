@@ -156,7 +156,71 @@ into a register as a function parameter. This is consistent with the architectur
 
 ---
 
-## Finding 5: New Resource Types Indicate PowerPlant Framework
+## Finding 5: AOst Resources Contain Structured Protocol Data
+
+The resource fork contains 35 `AOst` (AOL Stream) resources. These contain structured binary
+data with embedded K1 token references — a format not present in AOL 2.6.
+
+### Examples (hex dumps):
+
+**AOst 137** (19 bytes):
+```
+00 01 20 11 24 20 9f 86 02 4B 31 24 62 08 3e a3 68 20 02
+                              ^^^^
+                              "K1" token embedded in stream
+```
+
+**AOst 141** (34 bytes):
+```
+00 01 20 11 e2 2e 01 21 a5 4B 31 02 a8 ff 2f 34
+                         ^^^^
+                         "K1"
+01 24 20 9f 86 02 4B 31 24 62 02 a8 ff 68 40 27 20 02
+                  ^^^^
+                  "K1" again
+```
+
+**AOst 153** (29 bytes):
+```
+00 01 20 11 e2 2e 01 21 a5 4B 31 03 11 fc 24 20
+                         ^^^^
+9f 86 02 4B 31 24 62 03 11 fc 68 20 02
+         ^^^^
+```
+
+### Observations
+
+- K1 (`$4B31`) appears in at least 12 of the 35 AOst resources, always followed by
+  3-byte values that resemble library record addresses (e.g., `02 a8 ff`, `03 11 fc`,
+  `08 3e a3`) — consistent with the FDO88 dispatch parameter format
+- Streams consistently begin with `00 01` or `00 00` and end with `20 02` or `20 12`
+- The byte `$24` (`$`) and `$62` (`b`) appear after K1 references — `$24 62` could encode
+  a dispatch operation
+- This is a **different storage format** from AOL 2.6, which embedded dispatch templates
+  as static data blocks between 68K functions in CODE segments
+
+### What this does NOT prove
+
+The exact wire encoding of FDO91 atoms is not documented in the manual chapters we have
+(the manual describes the human-readable `atom$` syntax, not the binary encoding). Without
+the binary encoding specification, I cannot definitively identify these as FDO91 atom streams
+vs. some other structured format. The K1 token references confirm the protocol layer is
+consistent, but the container format requires further analysis.
+
+### AOp3 Resource: P3 Protocol Copyright
+
+The `AOp3` resource (64 bytes) contains:
+```
+"?Copyright © 1987-1995 America Online, Inc. All rights reserved."
+```
+
+Note the copyright ends at 1995, while the main `vers` resource says 1987-1996. This suggests
+the P3 protocol handler code was carried forward from the AOL 2.x era without updating its
+copyright string.
+
+---
+
+## Finding 6: New Resource Types Indicate PowerPlant Framework
 
 AOL 3.0 PPC contains resource types not present in AOL 2.6:
 
@@ -198,15 +262,21 @@ The AOL 3.0B PPC binary shows clear architectural differences from AOL 2.6 (68K)
 3. **K1 and Kg tokens persist** — loaded as PPC register immediates, confirming the token
    protocol survived the port
 4. **PowerPlant framework** (86 PPob resources) — complete UI rewrite from Think C to CodeWarrior
-5. **Free area billing persists** — "Exit Free Area" still in STR# 303
+5. **AOst resources contain structured protocol streams** with embedded K1 token references
+   in a format different from AOL 2.6's static dispatch templates — the protocol data
+   storage architecture changed
+6. **Free area billing persists** — "Exit Free Area" still in STR# 303
 
-The evidence is **consistent with** a FDO88→FDO91 transition at AOL 3.0 but does not
-definitively prove it from the binary alone. The FDO88-specific error strings are gone and
-the architecture was completely rewritten, but no FDO91-specific strings (like "atom") were
-found either. The definitive proof would require:
-- Finding FDO91 atom stream data in the PPC data fork or shared libraries
-- Analyzing the Online Tool shared libraries (Chat PPC, Browser PPC, etc.)
-- Comparing the dispatch mechanism in the PPC code against FDO91 atom format
+The evidence is **consistent with** a FDO88→FDO91 transition at AOL 3.0:
+- The FDO88-specific error strings are gone
+- The architecture was completely rewritten (PPC, PowerPlant, shared libraries)
+- Protocol data is stored in dedicated `AOst` resources instead of inline CODE segment data
+- The P3 protocol handler copyright (1987-1995) suggests code carried forward from 2.x
+
+What the binary **does not** contain is any string or identifier that explicitly says "FDO91."
+The definitive proof would require the FDO91 binary atom encoding specification (not present
+in the manual chapters we have) to decode the AOst resource streams and confirm they match
+the FDO91 atom format.
 
 ---
 
