@@ -24,9 +24,9 @@ All hells below were extracted from the **[WhackedMac Archives Version 1.0](http
 
 ![PB](screenshots/pb11.02.97.jpg)
 
-### Sven (April 3, 1996)
+### Puck (April 3, 1996)
 
-![Sven](screenshots/sven4.3.96.jpg)
+![Puck](screenshots/puck4.3.96.jpg)
 
 ### Tang (April 13, 1996)
 
