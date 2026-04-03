@@ -1,6 +1,6 @@
 # Mac Hells
 
-In the Mac AOL underground, hacking tools were called **"hells"** — the Mac equivalent of Windows "proggies." These were typically 68k binary patchers and other tools that exploited AOL's FDO protocol, client-trusted billing, and other design flaws in the Mac AOL client.
+In the Mac AOL underground, hacking tools were called **"hells"** — the Mac equivalent of Windows "proggies." These included macro-based tools (KeyQuencer, OneClick, and RzaHell), 68k binary patchers, and other tools that exploited AOL's FDO protocol, client-trusted billing, and other design flaws in the Mac AOL client.
 
 ## Hells
 
