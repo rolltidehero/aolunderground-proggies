@@ -14,6 +14,17 @@ Requires: VM running, proggie launched and visible, VBD minimized.
 import sys, os, json, re, time, socket, subprocess, logging, base64, struct
 from pathlib import Path
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 log = logging.getLogger(__name__)
 
@@ -31,6 +42,7 @@ CURSOR_PARK = (SCREEN_W - 1, SCREEN_H - 1)  # bottom-right, out of any crop
 
 class QMP:
     _sock = None
+    _buf = b''
 
     @staticmethod
     def _ensure_connected():
@@ -38,26 +50,44 @@ class QMP:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.connect(QMP_SOCK)
             s.settimeout(5)
-            s.sendall(json.dumps({"execute": "qmp_capabilities"}).encode() + b'\n')
-            time.sleep(0.1)
-            s.recv(4096)
             QMP._sock = s
+            QMP._buf = b''
+            QMP._read_response()
+            QMP._sock.sendall(json.dumps({"execute": "qmp_capabilities"}).encode() + b'\n')
+            QMP._read_response()
+
+    @staticmethod
+    def _read_response():
+        while True:
+            while b'\n' in QMP._buf:
+                line, QMP._buf = QMP._buf.split(b'\n', 1)
+                line = line.strip()
+                if not line:
+                    continue
+                msg = json.loads(line)
+                if 'event' in msg:
+                    continue
+                return msg
+            chunk = QMP._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("QMP socket closed")
+            QMP._buf += chunk
 
     @staticmethod
     def _cmd(execute, arguments=None):
         QMP._ensure_connected()
         msg = {"execute": execute}
-        if arguments: msg["arguments"] = arguments
+        if arguments:
+            msg["arguments"] = arguments
         try:
             QMP._sock.sendall(json.dumps(msg).encode() + b'\n')
-            time.sleep(0.05)
-            QMP._sock.recv(4096)
+            return QMP._read_response()
         except (BrokenPipeError, ConnectionResetError, OSError):
             QMP._sock = None
+            QMP._buf = b''
             QMP._ensure_connected()
             QMP._sock.sendall(json.dumps(msg).encode() + b'\n')
-            time.sleep(0.05)
-            QMP._sock.recv(4096)
+            return QMP._read_response()
 
     _last_x, _last_y = SCREEN_W // 2, SCREEN_H // 2
 
@@ -136,6 +166,23 @@ class QMP:
 
 
 # ── QGA ──────────────────────────────────────────────────────────────
+
+
+
+def check_absolute_device():
+    """Verify VM has an absolute pointing device."""
+    try:
+        resp = QMP._cmd("query-mice")
+        if resp and 'return' in resp:
+            mice = resp['return']
+            has_absolute = any(m.get('absolute', False) for m in mice)
+            if not has_absolute:
+                log.warning('WARNING: No absolute pointing device. '
+                           'Add "-device usb-tablet" to QEMU command line.')
+            return has_absolute
+    except Exception as e:
+        log.warning(f'Could not check for absolute pointing device: {e}')
+    return True
 
 
 C2GUI_SOCK = '/tmp/vm-c2gui.sock'
@@ -250,34 +297,141 @@ _move_child_deployed = False
 _dismiss_msgbox_deployed = False
 _close_form_deployed = False
 
+TYPE_SECRET_SCRIPT = r'''import win32gui, win32con, sys
+keep = sys.argv[1]
+secret = sys.argv[2]
+form_classes = {"ThunderRT6FormDC", "ThunderRT6Form", "ThunderRT5FormDC", "ThunderRT5Form"}
+
+target = None
+def find_form(h, _):
+    global target
+    if not win32gui.IsWindowVisible(h):
+        return True
+    cls = win32gui.GetClassName(h)
+    t = win32gui.GetWindowText(h)
+    if cls in form_classes and t != keep:
+        target = h
+        return False
+    return True
+win32gui.EnumWindows(find_form, None)
+if not target:
+    print("No child form found")
+    sys.exit(1)
+
+textbox = None
+button = None
+def find_controls(h, _):
+    global textbox, button
+    cls = win32gui.GetClassName(h)
+    if "TextBox" in cls:
+        textbox = h
+    if "CommandButton" in cls:
+        button = h
+    return True
+win32gui.EnumChildWindows(target, find_controls, None)
+
+if textbox:
+    win32gui.SendMessage(textbox, win32con.WM_SETTEXT, 0, secret)
+    print(f"Set text on {textbox}")
+else:
+    print("No TextBox found")
+if button:
+    win32gui.SendMessage(button, win32con.BM_CLICK, 0, 0)
+    print(f"Clicked button {button}")
+else:
+    print("No CommandButton found")
+'''
+TYPE_SECRET_GUEST = r'C:\work\type_secret.py'
+_type_secret_deployed = False
+
+def deploy_type_secret_script():
+    """Write the type_secret script to the guest (one-time)."""
+    global _type_secret_deployed
+    if _type_secret_deployed:
+        return
+    _qga_write_file(TYPE_SECRET_GUEST, TYPE_SECRET_SCRIPT.encode())
+    _type_secret_deployed = True
+
 
 def _free_process(n=100):
-    """Yield CPU n times without arbitrary delay — the AOL proggie way."""
+    """Yield CPU n times with small delay between iterations (~10ms each)."""
     for _ in range(n):
-        time.sleep(0)
-
-
+        time.sleep(0.01)
 def _qga_send_recv(sock, msg):
-    """Send a QGA command and recv the response. No sleeps — recv blocks."""
+    """Send a QGA command and recv a complete newline-delimited JSON response."""
     sock.sendall(json.dumps(msg).encode() + b'\n')
-    # recv blocks until data arrives (up to socket timeout)
-    return json.loads(sock.recv(65536))
+    if not hasattr(sock, '_buf'):
+        sock._buf = b''
+    while True:
+        while b'\n' in sock._buf:
+            line, sock._buf = sock._buf.split(b'\n', 1)
+            line = line.strip()
+            if not line:
+                continue
+            return json.loads(line)
+        chunk = sock.recv(65536)
+        if not chunk:
+            raise ConnectionError("QGA socket closed")
+        sock._buf += chunk
+
+
+class _BufSock:
+    """Socket wrapper that carries a read buffer."""
+    __slots__ = ('sock', '_buf')
+    def __init__(self, sock):
+        self.sock = sock
+        self._buf = b''
+    def sendall(self, data): return self.sock.sendall(data)
+    def recv(self, n): return self.sock.recv(n)
+    def close(self): return self.sock.close()
+    def settimeout(self, t): return self.sock.settimeout(t)
 
 
 def _qga_connect():
-    """Connect to QGA and sync. Returns socket."""
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(QGA_SOCK)
-    s.settimeout(10)
-    _qga_send_recv(s, {'execute': 'guest-sync', 'arguments': {'id': int(time.time() * 1000) % 100000}})
-    return s
+    """Connect to QGA and sync. Validates sync token per QGA spec."""
+    raw = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    raw.connect(QGA_SOCK)
+    raw.settimeout(10)
+    s = _BufSock(raw)
+    sync_id = int(time.time() * 1000) % 100000
+    s.sendall(json.dumps({'execute': 'guest-sync', 'arguments': {'id': sync_id}}).encode() + b'\n')
+    while True:
+        while b'\n' in s._buf:
+            line, s._buf = s._buf.split(b'\n', 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                resp = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if resp.get('return') == sync_id:
+                return s
+        chunk = s.recv(65536)
+        if not chunk:
+            raise ConnectionError("QGA socket closed during sync")
+        s._buf += chunk
 
 
-def _qga_poll_exec(sock, pid, safety_max=200):
-    """Poll guest-exec-status until exited=True. FreeProcess yield between polls."""
+def _qga_poll_exec(sock, pid, safety_max=200, overall_timeout=120):
+    """Poll guest-exec-status until exited=True. With overall timeout."""
+    deadline = time.time() + overall_timeout
     for attempt in range(safety_max):
+        if time.time() > deadline:
+            log.error(f'guest-exec pid={pid} overall timeout ({overall_timeout}s)')
+            return {'status': 'timeout', 'returncode': -1, 'stdout': '', 'stderr': '', 'exited': False}
         _free_process(100)
-        r = _qga_send_recv(sock, {'execute': 'guest-exec-status', 'arguments': {'pid': pid}})
+        try:
+            r = _qga_send_recv(sock, {'execute': 'guest-exec-status', 'arguments': {'pid': pid}})
+        except (socket.timeout, TimeoutError):
+            log.warning(f'guest-exec-status recv timeout for pid={pid}, attempt {attempt}')
+            continue
+        except Exception as e:
+            log.warning(f'guest-exec-status error for pid={pid}: {e}')
+            continue
+        if 'error' in r:
+            log.warning(f'guest-exec-status error for pid={pid}: {r["error"]}')
+            continue
         ret = r['return']
         if ret.get('exited', False):
             stdout = base64.b64decode(ret.get('out-data', '')).decode(errors='replace') if ret.get('out-data') else ''
@@ -313,123 +467,128 @@ def _qga_exec(cmd, args, safety_max=200):
     return {'status': 'error', 'returncode': -1, 'stdout': '', 'stderr': 'QGA exec failed', 'exited': True}
 
 
-def _gui_launch(cmdline):
-    """Launch a process in session 1 via QGA → s1launch_sys.py. Polls for completion."""
-    s = _qga_connect()
-    r = _qga_send_recv(s, {'execute': 'guest-exec', 'arguments': {
-        'path': PYTHON_GUEST, 'arg': [S1LAUNCH, cmdline], 'capture-output': True
-    }})
-    pid = r['return']['pid']
-    result = _qga_poll_exec(s, pid)
-    s.close()
-    stdout = result.get('stdout', '')
-    log.debug(f's1launch: {stdout.strip()}')
-    return {'status': 'ok'}
-
-
 def _qga_read_file(guest_path):
-    """Read a file from the guest via QGA. Retries on error."""
+    """Read a file from the guest via QGA."""
     for attempt in range(3):
         try:
             s = _qga_connect()
             r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': guest_path, 'mode': 'r'}})
             if 'error' in r:
-                s.close()
-                log.warning(f'QGA file-open error (attempt {attempt}): {r["error"]}')
-                _free_process(100)
-                continue
+                s.close(); _free_process(100); continue
             handle = r['return']
             data = b''
             while True:
                 r = _qga_send_recv(s, {'execute': 'guest-file-read', 'arguments': {'handle': handle, 'count': 65536}})
                 chunk = base64.b64decode(r['return']['buf-b64']) if r['return'].get('buf-b64') else b''
                 data += chunk
-                if r['return'].get('eof', False) or not chunk:
-                    break
+                if r['return'].get('eof', False) or not chunk: break
             _qga_send_recv(s, {'execute': 'guest-file-close', 'arguments': {'handle': handle}})
             s.close()
             return data.decode(errors='replace')
         except Exception as e:
-            log.warning(f'QGA read error (attempt {attempt}): {e}')
+            log.warning('_qga_read_file: attempt %d exc=%s', attempt, e)
             try: s.close()
             except: pass
             _free_process(100)
-    log.error(f'QGA read failed after 3 attempts: {guest_path}')
     return ''
 
 
 def _qga_write_file(guest_path, data):
-    """Write data to a file on the guest via QGA. Retries on error."""
+    """Write data to a file on the guest via QGA."""
     for attempt in range(3):
         try:
             s = _qga_connect()
             r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': guest_path, 'mode': 'w'}})
             if 'error' in r:
-                s.close()
-                log.warning(f'QGA file-open error (attempt {attempt}): {r["error"]}')
-                _free_process(100)
-                continue
+                s.close(); _free_process(100); continue
             handle = r['return']
             _qga_send_recv(s, {'execute': 'guest-file-write', 'arguments': {'handle': handle, 'buf-b64': base64.b64encode(data).decode()}})
             _qga_send_recv(s, {'execute': 'guest-file-close', 'arguments': {'handle': handle}})
             s.close()
             return
         except Exception as e:
-            log.warning(f'QGA write error (attempt {attempt}): {e}')
+            log.warning('_qga_write_file: attempt %d exc=%s', attempt, e)
             try: s.close()
             except: pass
             _free_process(100)
-    log.error(f'QGA write failed after 3 attempts: {guest_path}')
 
 
-_SHELL_OUT = r'C:\work\_shell_out.txt'
-_SHELL_BAT = r'C:\work\_shell_cmd.bat'
+def _gui_launch(cmdline):
+    """Launch a process in session 1 via QGA → s1launch_sys.py. Polls for completion."""
+    s = _qga_connect()
+    r = _qga_send_recv(s, {'execute': 'guest-exec', 'arguments': {
+        'path': PYTHON_GUEST, 'arg': [S1LAUNCH, cmdline], 'capture-output': True
+    }})
+    if 'error' in r:
+        s.close()
+        log.error(f's1launch exec error: {r["error"]}')
+        return {'status': 'error', 'returncode': -1, 'stdout': '', 'stderr': str(r['error'])}
+    pid = r['return']['pid']
+    result = _qga_poll_exec(s, pid)
+    s.close()
+    stdout = result.get('stdout', '')
+    stderr = result.get('stderr', '')
+    if result.get('returncode', -1) != 0:
+        log.warning(f's1launch non-zero exit ({result.get("returncode")}): {stderr[:200]}')
+    else:
+        log.debug(f's1launch: {stdout.strip()}')
+    return result
 _shell_seq = 0
 
 def c2gui(action, **kwargs):
-    """Run commands in session 1 via QGA + s1launch_sys.py.
-
-    Shell commands: write .bat → s1launch → poll for s1launch exit →
-    poll for output file existence → read output. No hardcoded waits.
-    """
+    """Run commands in session 1 via QGA + s1launch_sys.py."""
     if action == 'run':
         target = kwargs['target']
-        _gui_launch(f'"{target}"')
-        return {'status': 'running', 'pid': 0}
+        result = _gui_launch(f'"{target}"')
+        return {'status': 'running' if result.get('returncode', -1) == 0 else 'error',
+                'pid': 0, 'returncode': result.get('returncode', -1)}
     elif action == 'shell':
         global _shell_seq
         _shell_seq += 1
         out_file = rf'C:\work\_shell_out_{_shell_seq}.txt'
+        rc_file = rf'C:\work\_shell_rc_{_shell_seq}.txt'
         bat_file = rf'C:\work\_shell_cmd_{_shell_seq}.bat'
         command = kwargs['command']
-        bat_content = f'@echo off\r\n{command} > {out_file} 2>&1\r\n'
+        bat_content = f'@echo off\r\n{command} > {out_file} 2>&1\r\n(echo %ERRORLEVEL%)>{rc_file}\r\n'
         _qga_write_file(bat_file, bat_content.encode())
         _gui_launch(f'cmd.exe /c {bat_file}')
-        # Poll for output file to exist and have content
+        # Poll for rc_file (written AFTER output, so existence means command done)
         for attempt in range(200):
             _free_process(100)
             try:
                 s = _qga_connect()
-                r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': out_file, 'mode': 'r'}})
+                r = _qga_send_recv(s, {'execute': 'guest-file-open', 'arguments': {'path': rc_file, 'mode': 'r'}})
                 if 'error' in r:
                     s.close()
-                    continue  # file not ready yet — keep polling
+                    continue
                 handle = r['return']
-                r2 = _qga_send_recv(s, {'execute': 'guest-file-read', 'arguments': {'handle': handle, 'count': 65536}})
+                r2 = _qga_send_recv(s, {'execute': 'guest-file-read', 'arguments': {'handle': handle, 'count': 256}})
                 _qga_send_recv(s, {'execute': 'guest-file-close', 'arguments': {'handle': handle}})
                 s.close()
                 chunk = base64.b64decode(r2['return']['buf-b64']) if r2['return'].get('buf-b64') else b''
                 if chunk:
-                    return {'status': 'ok', 'returncode': 0, 'stdout': chunk.decode(errors='replace'), 'stderr': ''}
+                    rc_text = chunk.decode(errors='replace').strip()
+                    try:
+                        returncode = int(rc_text)
+                    except (ValueError, TypeError):
+                        returncode = -1
+                    out = _qga_read_file(out_file)
+                    if returncode != 0:
+                        log.warning(f'Shell cmd exited {returncode}: {command[:80]}')
+                    return {'status': 'ok', 'returncode': returncode, 'stdout': out, 'stderr': ''}
             except Exception:
                 try: s.close()
                 except: pass
-        # Final attempt — command may have produced empty output
         try:
             out = _qga_read_file(out_file)
         except Exception:
             out = ''
-        return {'status': 'ok', 'returncode': 0, 'stdout': out, 'stderr': ''}
+        try:
+            rc_text = _qga_read_file(rc_file).strip()
+            returncode = int(rc_text)
+        except Exception:
+            returncode = -1
+        return {'status': 'ok', 'returncode': returncode, 'stdout': out, 'stderr': ''}
     else:
         raise ValueError(f'Unknown c2gui action: {action}')
 
@@ -473,7 +632,7 @@ def deploy_close_form_script():
 def dismiss_msgboxes():
     """Dismiss all visible #32770 MsgBox dialogs. Returns list of dismissed titles."""
     deploy_dismiss_msgbox_script()
-    r = c2gui("shell", command=rf'python {DISMISS_MSGBOX_GUEST}')
+    r = c2gui("shell", command=rf'"{PYTHON_GUEST}" {DISMISS_MSGBOX_GUEST}')
     stdout = r.get('stdout', '').strip()
     if stdout:
         titles = [t.strip() for t in stdout.split('\n') if t.strip()]
@@ -488,7 +647,7 @@ def move_child_form(keep_title, tx, ty):
     deploy_move_child_script()
     for attempt in range(5):
         r = c2gui("shell", command=(
-            rf'python {MOVE_CHILD_GUEST} '
+            rf'"{PYTHON_GUEST}" {MOVE_CHILD_GUEST} '
             rf'"{keep_title}" {tx} {ty}'
         ))
         stdout = r.get('stdout', '').strip()
@@ -501,7 +660,9 @@ def move_child_form(keep_title, tx, ty):
 def get_window_rects():
     """Enumerate visible windows via C2 GUI agent (session 1)."""
     deploy_enum_script()
-    r = c2gui("shell", command=rf'python {ENUM_SCRIPT_GUEST}')
+    c2gui("shell", command=rf'if exist "{ENUM_RESULT_GUEST}" del /f /q "{ENUM_RESULT_GUEST}"')
+    _free_process(50)
+    r = c2gui("shell", command=rf'"{PYTHON_GUEST}" {ENUM_SCRIPT_GUEST}')
     if r.get('returncode') != 0:
         log.warning(f'Enum script failed: {r.get("stderr", "")[:200]}')
         return []
@@ -765,33 +926,56 @@ def extract_greet_names(zip_stem, exe_name):
 # ── Form position from .frm ─────────────────────────────────────────
 
 def read_frm_controls(frm_path):
-    """Parse .frm file to get control positions in twips."""
+    """Parse .frm file to get control positions in twips, handling nested containers.
+
+    Normalizes type names (strips 'VB.' prefix).
+    Accumulates container offsets so all coordinates are form-relative.
+    """
     controls = {}
+    stack = []  # list of (control_dict, cumulative_left, cumulative_top)
     current = None
+    cum_left = 0  # cumulative container Left offset in twips
+    cum_top = 0   # cumulative container Top offset in twips
     text = frm_path.read_text(errors='replace')
     for line in text.split('\n'):
         line = line.strip().rstrip('\r')
         m = re.match(r'Begin (\S+) (\S+)', line)
         if m:
-            current = {'type': m.group(1), 'name': m.group(2)}
+            if current is not None:
+                # Nested Begin: current control becomes a container.
+                # Push it and accumulate its offset for children.
+                stack.append((current, cum_left, cum_top))
+                # Form's Left/Top are screen position, not container offset
+                bare_type = current.get('type', '')
+                if bare_type not in ('Form', 'MDIForm'):
+                    cum_left += current.get('Left', 0)
+                    cum_top += current.get('Top', 0)
+            raw_type = m.group(1)
+            current = {'type': raw_type.split('.')[-1], 'name': m.group(2)}
             continue
-        if line == 'End' and current:
-            controls[current['name']] = current
-            current = None
+        if line == 'End':
+            if current is not None:
+                # Adjust coordinates by cumulative container offset
+                if cum_left or cum_top:
+                    current['Left'] = current.get('Left', 0) + cum_left
+                    current['Top'] = current.get('Top', 0) + cum_top
+                controls[current['name']] = current
+                if stack:
+                    current, cum_left, cum_top = stack.pop()
+                else:
+                    current = None
+                    cum_left = 0
+                    cum_top = 0
             continue
         if current:
-            m = re.match(r'(\w+)\s*=\s*(.+)', line)
-            if m:
-                key, val = m.group(1), m.group(2).strip()
+            m2 = re.match(r'(\w+)\s*=\s*(.+)', line)
+            if m2:
+                key, val = m2.group(1), m2.group(2).strip()
                 try:
                     current[key] = int(val)
                 except ValueError:
                     current[key] = val.strip("'").strip()
     return controls
-
-
-# ── Walkthrough engine ───────────────────────────────────────────────
-
 MENU_ITEM_H = 22  # pixels per regular menu item
 MENU_SEP_H = 10   # pixels per separator
 
@@ -1045,7 +1229,11 @@ def run_walkthrough(zip_stem, exe_name, meta):
             nf = found[1]
             log.info(f'  {lbl["name"]} → form "{nf["title"]}" at {nf["x"]},{nf["y"]}')
             fc.capture(f'dialog_{lbl["name"]}', delay_cs=300, win_rect=nf)
-            QMP.key('escape')
+            deploy_close_form_script()
+            keep = main_win.get('title', '')
+            c2gui("shell", command=rf'"{PYTHON_GUEST}" {CLOSE_FORM_GUEST} "{keep}"')
+            _free_process(100)
+            dismiss_msgboxes()
         else:
             log.info(f'  {lbl["name"]} → no popup or form')
 
@@ -1096,20 +1284,26 @@ def run_walkthrough(zip_stem, exe_name, meta):
             return popups[0] if popups else None
 
         def open_popup_for(lbl, prect):
-            """Click label to open popup. Trust it works — position known from Phase 1."""
+            """Click label to open popup. Re-detect actual popup position."""
             QMP.click(fx + fw // 2, fy + fh // 2)
             _free_process(50)
             QMP.click(lbl['x'], lbl['y'])
             _free_process(100)
+            # Re-detect popup position instead of trusting stale Phase 1 rect
+            for _ in range(6):
+                wins = get_window_rects()
+                popups = [w for w in wins if w['class'] == '#32768' and w['w'] > 20]
+                if popups:
+                    return popups[0]
+            log.warning(f'Could not re-detect popup for {lbl["name"]}, using Phase 1 position')
             return prect
-
         def close_and_dismiss():
             """Dismiss MsgBoxes, then WM_CLOSE child forms."""
             dismiss_msgboxes()
             _free_process(100)
             deploy_close_form_script()
             keep = main_win.get('title', '')
-            c2gui("shell", command=rf'python {CLOSE_FORM_GUEST} "{keep}"')
+            c2gui("shell", command=rf'"{PYTHON_GUEST}" {CLOSE_FORM_GUEST} "{keep}"')
             _free_process(100)
             # Second pass — sometimes closing one form reveals another MsgBox
             dismiss_msgboxes()
@@ -1158,13 +1352,13 @@ def run_walkthrough(zip_stem, exe_name, meta):
                         dismiss_msgboxes()
                         _free_process(100)
                         _ct = ''
-                        if act in ('show_form', 'msgbox'):
+                        if actions.get(sub.name, '') in ('show_form', 'msgbox'):
                             _ct = move_child_form(main_win['title'], child_tgt_x, child_tgt_y)
                         QMP.move(*CURSOR_PARK)
                         fc.capture(f'form_{sub.caption}', delay_cs=250)
                         fc.spot_check(sub.caption)
                         log.info(f'  {sub.caption} → captured (child_title={_ct!r})')
-                        cat['items'].append({'caption': sub.caption, 'type': act, 'child_title': _ct})
+                        cat['items'].append({'caption': sub.caption, 'type': actions.get(sub.name, ''), 'child_title': _ct})
                         close_and_dismiss()
                     continue
 
@@ -1216,10 +1410,10 @@ def run_walkthrough(zip_stem, exe_name, meta):
                 if secret:
                     log.info(f'  {item.caption} → typing secret ({len(secret)} chars)')
                     _free_process(100)
-                    # WM_SETTEXT to TextBox + BM_CLICK on CommandButton via Win32 API
+                    deploy_type_secret_script()
                     keep = main_win.get('title', '')
                     r = c2gui("shell", command=(
-                        rf'python C:\work\type_secret.py '
+                        rf'"{PYTHON_GUEST}" {TYPE_SECRET_GUEST} '
                         rf'"{keep}" "{secret}"'
                     ))
                     log.info(f'  type_secret: {r.get("stdout", "").strip()}')
@@ -1298,7 +1492,11 @@ def save_outputs(fc, form_rect, popup_rect, zip_stem, exe_name=None, menu_map=No
     # Static screenshots
     form_crop = f'{fw + 5}x{fh + 5}+{fx}+{fy}'
     fc.save_crop(out_dir / 'screenshot.png', 'main', form_crop)
-    fc.save_crop(out_dir / 'screen_menu.png', 'menu', menu_crop)
+    menu_frame_label = next((l for _, l, _, _ in fc.frames if l.startswith('menu_')), None)
+    if menu_frame_label:
+        fc.save_crop(out_dir / 'screen_menu.png', menu_frame_label, menu_crop)
+    else:
+        fc.save_crop(out_dir / 'screen_menu.png', 'main', menu_crop)
 
     # Save each form/dialog frame as individual PNG
     greets_pngs = []
@@ -1312,6 +1510,15 @@ def save_outputs(fc, form_rect, popup_rect, zip_stem, exe_name=None, menu_map=No
             fc.save_crop(out_dir / fname, label, crop)
             if caption.lower() == 'greets':
                 greets_crop = crop
+        elif label.startswith('secret_'):
+            caption = label.replace('secret_', '')
+            name = caption.replace(' ', '_').lower()
+            fname = f'screen_secret_{name}.png'
+            crop = FrameCapture._rect_to_crop(wr) if wr else menu_crop
+            fc.save_crop(out_dir / fname, label, crop)
+        elif label.startswith('submenu_'):
+            name = label.replace('submenu_', '').replace(' ', '_').lower()
+            fc.save_crop(out_dir / f'screen_submenu_{name}.png', label, menu_crop)
         elif label.startswith('greets_'):
             greets_pngs.append(png)
 
@@ -1339,9 +1546,6 @@ def save_outputs(fc, form_rect, popup_rect, zip_stem, exe_name=None, menu_map=No
             imgs_p[0].save(out_dir / 'screen_greets.gif', save_all=True,
                          append_images=imgs_p[1:], duration=delays, loop=0)
             log.info(f'Greets GIF: {len(imgs)} frames → screen_greets.gif')
-        elif label.startswith('submenu_'):
-            name = label.replace('submenu_', '').replace(' ', '_').lower()
-            fc.save_crop(out_dir / f'screen_submenu_{name}.png', label, menu_crop)
 
     # Write walkthrough manifest for interactive HTML
     if menu_map:
@@ -1428,26 +1632,32 @@ def screenshot_only(zip_stem, exe_name, meta):
         return None
 
     db = sqlite3.connect(str(DB_PATH))
-    row = db.execute('''SELECT p.aol_version FROM proggies p
+    row = db.execute("""SELECT p.aol_version FROM proggies p
                         JOIN exes e ON e.proggie_id=p.id
-                        WHERE p.zip_stem=? AND e.exe_name=?''', (zip_stem, exe_name)).fetchone()
+                        WHERE p.zip_stem=? AND e.exe_name=?""", (zip_stem, exe_name)).fetchone()
     db.close()
     ver = row[0] if row else '4.0'
 
-    # Find window
-    windows = get_window_rects()
     vb6_classes = {'ThunderRT6FormDC', 'ThunderRT6Form', 'ThunderRT5FormDC', 'ThunderRT5Form'}
-    proggie_wins = [w for w in windows
-                    if w['class'] in vb6_classes and 'VB Decompiler' not in w.get('title', '')
-                    and w['x'] >= 0]
+    proggie_wins = []
+    for attempt in range(100):
+        _free_process(100)
+        windows = get_window_rects()
+        proggie_wins = [w for w in windows
+                        if w['class'] in vb6_classes and 'VB Decompiler' not in w.get('title', '')
+                        and w['x'] >= 0]
+        if proggie_wins:
+            break
+        if attempt % 10 == 0:
+            log.info(f'  Waiting for proggie window... ({attempt}/100)')
+
     if not proggie_wins:
         log.error('Could not find proggie window')
         c2gui("shell", command=f'taskkill /f /im "{exe_name}" 2>nul')
         return None
 
     win = proggie_wins[0]
-    qmp = QMP()
-    qmp.screenshot('/tmp/walkthrough_shot.ppm')
+    QMP.screenshot('/tmp/walkthrough_shot.ppm')
     _free_process(100)
 
     from PIL import Image
@@ -1459,7 +1669,6 @@ def screenshot_only(zip_stem, exe_name, meta):
     crop.save(out_dir / 'screenshot.png')
     log.info(f'Saved {out_dir}/screenshot.png ({win["w"]}x{win["h"]})')
 
-    # Kill
     c2gui("shell", command=f'taskkill /f /im "{exe_name}" 2>nul')
     return True
 
@@ -1499,6 +1708,8 @@ def main():
         sys.exit(1)
 
     meta = json.loads(meta_path.read_text())
+
+    check_absolute_device()
 
     if screenshot_mode:
         result = screenshot_only(zip_stem, exe_name, meta)

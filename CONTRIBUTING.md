@@ -24,7 +24,7 @@ If you can run these proggies (Wine, VM, or actual old Windows), we need:
 ### Decompilation Pipeline
 The biggest open task. We have a working end-to-end pipeline that decompiles VB5/VB6 exes inside a QEMU/KVM Windows 10 VM, but it needs to run at scale across 1,826 executables. The pipeline uses:
 - `virtio-serial` for host-to-guest communication (Python on both sides)
-- GUI automation via a C2 DLL injected into VB Decompiler Pro
+- GUI automation via a C2 DLL injected into VB Decompiler
 - File-based command protocol (write command file, read result file)
 
 What needs building:

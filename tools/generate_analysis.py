@@ -496,7 +496,8 @@ def render_screenshots(zip_stem, html_path):
             categories = wt.get('categories', [])
             form_info, label_info = wt.get('form'), wt.get('labels', {})
 
-        if form_info and label_info and (img_dir / form_info.get('image', '')).exists():
+        has_labels = bool(form_info and label_info and len(label_info) > 0)
+        if (has_labels or (form_info and categories)) and (img_dir / form_info.get('image', '')).exists():
             fw, fh = form_info['width'], form_info['height']
             nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
             form_img = f'{zip_stem}/{form_info["image"]}'
@@ -1105,43 +1106,11 @@ def _parse_frm_controls(frm_path):
     NONVISUAL = {'Timer', 'VBMsg', 'CommonDialog', 'MCI', 'InvisibleIcon',
                  'OLE', 'Data', 'Winsock', 'Inet', 'MAPI'}
 
-    # Parse nested Begin/End blocks with parent offset tracking
     lines = text.splitlines()
-    stack = []  # (ctrl_type, ctrl_name, offset_x, offset_y)
-    ox, oy = 0, 0
-    for line in lines:
-        stripped = line.strip()
-        m = re.match(r'Begin\s+(\S+)\s+(\w+)', stripped)
-        if m:
-            raw_type = m.group(1).split('.')[-1] if '.' in m.group(1) else m.group(1)
-            stack.append((raw_type, m.group(2), ox, oy))
-            continue
-        if stripped == 'End' and stack:
-            _, _, ox, oy = stack.pop()
-            continue
-        if not stack:
-            continue
-        pm = re.match(r'(\w+)\s*=\s*(.+)', stripped)
-        if not pm:
-            continue
-        key, val = pm.group(1), pm.group(2).strip()
-        cur_type, cur_name = stack[-1][0], stack[-1][1]
-        # When we see Left/Top of a container (Frame/SSFrame/SSPanel), record its offset for children
-        if key == 'Left' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
-            try:
-                parent_ox, parent_oy = stack[-2][2], stack[-2][3] if len(stack) > 1 else (0, 0)
-            except IndexError:
-                parent_ox = 0
-            # Update stack entry with this container's absolute position
-            pox = stack[-2][2] if len(stack) > 1 else 0
-            stack[-1] = (cur_type, cur_name, pox + int(val.split("'")[0].strip()), stack[-1][3])
-        elif key == 'Top' and cur_type in ('Frame', 'SSFrame', 'SSPanel', 'PictureBox'):
-            poy = stack[-2][3] if len(stack) > 1 else 0
-            stack[-1] = (cur_type, cur_name, stack[-1][2], poy + int(val.split("'")[0].strip()))
 
-    # Re-parse with proper nesting using a simpler recursive approach
+    # Parse with recursive nesting approach
     controls = []
-    _parse_nested(text.splitlines(), controls, 0, 0, NONVISUAL)
+    _parse_nested(lines, controls, 0, 0, NONVISUAL)
     return controls, form_w, form_h
 
 

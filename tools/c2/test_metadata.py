@@ -5,6 +5,17 @@ import sys, os, tempfile, json
 sys.path.insert(0, os.path.dirname(__file__))
 from extract_metadata import extract_metadata, AUTHOR_RE, VERSION_RE, ABOUT_FORM_RE
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 PASS = 0
 FAIL = 0
 

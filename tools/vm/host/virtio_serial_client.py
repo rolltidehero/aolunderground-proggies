@@ -1,6 +1,17 @@
 """Host-side virtio-serial client. JSON-newline protocol over Unix socket."""
 import socket, json, time, logging
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 log = logging.getLogger(__name__)
 
 
@@ -53,19 +64,22 @@ class VirtioSerialClient:
     def wait_for_agent(self, timeout=180):
         deadline = time.time() + timeout
         while time.time() < deadline:
+            connected = False
             try:
                 self.connect()
                 r = self.ping()
                 if r.get("status") == "pong":
                     log.info("Agent online")
+                    connected = True
                     return True
             except Exception:
                 pass
             finally:
-                if self.sock:
-                    self.sock.close()
-                    self.sock = None
-                    self._buf = b""
+                if not connected:
+                    if self.sock:
+                        self.sock.close()
+                        self.sock = None
+                        self._buf = b""
             time.sleep(2)
         raise TimeoutError(f"Agent not online after {timeout}s")
 

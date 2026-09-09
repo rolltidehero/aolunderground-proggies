@@ -10,6 +10,17 @@ Prerequisites: AOHell main menu form visible (run schtask 'aohell' first).
 import sys, time, subprocess, logging
 from pathlib import Path
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from capture_walkthrough import (
     QMP, _qga_write_file, _gui_launch, _free_process, _qga_read_file,

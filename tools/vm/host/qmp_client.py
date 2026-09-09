@@ -1,6 +1,17 @@
 """QMP (QEMU Machine Protocol) client. JSON over Unix socket."""
 import socket, json, time, logging
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 log = logging.getLogger(__name__)
 
 
@@ -44,8 +55,8 @@ class QMPClient:
             {"type": "abs", "data": {"axis": "y", "value": qy}},
         ])
 
-    def send_mouse_click(self, x, y, button="left"):
-        self.send_mouse_move(x, y)
+    def send_mouse_click(self, x, y, button="left", screen_w=1280, screen_h=800):
+        self.send_mouse_move(x, y, screen_w, screen_h)
         time.sleep(0.05)
         self.execute("input-send-event", events=[
             {"type": "btn", "data": {"down": True, "button": button}},
@@ -54,7 +65,6 @@ class QMPClient:
         self.execute("input-send-event", events=[
             {"type": "btn", "data": {"down": False, "button": button}},
         ])
-
     def send_text(self, text):
         """Type text character by character via key events."""
         SHIFT_CHARS = '~!@#$%^&*()_+{}|:"<>?'

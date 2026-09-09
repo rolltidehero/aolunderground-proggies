@@ -29,7 +29,7 @@
   - [ ] Install virtio-win-gt-x86.msi (from D:\ or E:\ CDROM)
   - [ ] Install Python 3.x (copy installer to share/input/ first, access from guest)
   - [ ] `pip install pywin32`
-  - [ ] Copy VB Decompiler Pro to C:\Tools\VBDecompiler\ (via share folder)
+  - [ ] Copy VB Decompiler to C:\Tools\VBDecompiler\ (via share folder)
   - [ ] Copy agent.py + setup_agent.bat to C:\Tools\ (via share folder)
   - [ ] Run setup_agent.bat as admin
   - [ ] Verify agent starts (check C:\Tools\agent.log)

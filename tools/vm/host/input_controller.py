@@ -1,23 +1,36 @@
 """High-level UI automation via QMP input events."""
 import time, logging
 
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
+
 log = logging.getLogger(__name__)
 
 
 class InputController:
-    def __init__(self, qmp_client):
+    def __init__(self, qmp_client, screen_w=1024, screen_h=768):
         self.qmp = qmp_client
+        self.screen_w = screen_w
+        self.screen_h = screen_h
 
     def click(self, x, y):
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
 
     def double_click(self, x, y):
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
         time.sleep(0.1)
-        self.qmp.send_mouse_click(x, y)
+        self.qmp.send_mouse_click(x, y, screen_w=self.screen_w, screen_h=self.screen_h)
 
     def right_click(self, x, y):
-        self.qmp.send_mouse_click(x, y, "right")
+        self.qmp.send_mouse_click(x, y, "right", screen_w=self.screen_w, screen_h=self.screen_h)
 
     def type_text(self, text):
         self.qmp.send_text(text)

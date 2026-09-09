@@ -1,4 +1,4 @@
-"""Clean decompiler noise from VB Decompiler Pro native-code output.
+"""Clean decompiler noise from VB Decompiler native-code output.
 
 Two levels:
   clean_for_display(code)  — aggressive, for HTML rendering
@@ -6,6 +6,17 @@ Two levels:
 """
 
 import re
+
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
 
 # --- helpers ----------------------------------------------------------------
 
@@ -127,13 +138,13 @@ def clean_file(raw_text: str, proc_names: dict | None = None) -> str:
         line = raw_lines[i]
         stripped = line.strip()
         # Detect start of Sub/Function body
-        if re.match(r"(?:Public |Private )?(?:Sub|Function) ", stripped) and ' Lib "' not in stripped:
+        if re.match(r"(?:Public |Private )?(?:Sub|Function|Property (?:Get|Let|Set)) ", stripped) and ' Lib "' not in stripped:
             # Collect entire block until End Sub/Function
             block = [line]
             i += 1
             while i < len(raw_lines):
                 block.append(raw_lines[i])
-                if raw_lines[i].strip().startswith(('End Sub', 'End Function')):
+                if raw_lines[i].strip().startswith(('End Sub', 'End Function', 'End Property')):
                     break
                 i += 1
             # Clean the block

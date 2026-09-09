@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
-"""Decompile a VB5/VB6 executable using VB Decompiler Pro via injected C2 DLL.
+"""Decompile a VB5/VB6 executable using VB Decompiler via injected C2 DLL.
 
 Usage: vbdecompile.py <input_exe> <output_bas>
 
 Requires: C2 DLL already injected into running VB Decompiler.
 """
 import sys, os, time, shutil, subprocess
+
+# Hunter deep tracing — always on, timestamped per-run, file only
+import hunter
+from pathlib import Path as _Path
+from datetime import datetime, timezone
+_hunter_log = (_Path.home() / 'traces' / _Path(__file__).stem
+               / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+               / 'hunter.log')
+_hunter_log.parent.mkdir(parents=True, exist_ok=True)
+hunter.trace(stdlib=False, action=hunter.CallPrinter(
+    stream=open(_hunter_log, 'a')))
 
 C_DRIVE = '/home/wineuser/.wine/drive_c'
 CMD_FILE = os.path.join(C_DRIVE, 'c2_cmd.txt')
@@ -17,7 +28,7 @@ def c2(cmd, timeout=10):
     except: pass
     with open(CMD_FILE, 'w') as f:
         f.write(cmd + '\n')
-    os.chown(CMD_FILE, 994, 1005)
+    shutil.chown(CMD_FILE, user='wineuser', group='nonet')
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -140,8 +151,13 @@ def main():
 
     # Save all in one module (WM_COMMAND ID=9)
     print('Saving...')
-    try: os.remove(save_tmp)
-    except: pass
+    if os.path.isfile(save_tmp):
+        os.remove(save_tmp)
+    if os.path.isfile(save_tmp):
+        print(f'ERROR: Cannot remove stale output file {save_tmp}')
+        sys.exit(1)
+
+    save_start = time.time()
 
     c2(f'WMCOMMAND {hmain} 9')
     sdlg = wait_window('#32770', 'Save All To One BAS File')
@@ -158,10 +174,10 @@ def main():
     time.sleep(0.5)
     c2(f'SENDMSG {sdlg} 273 1 0')
 
-    # Wait for output file
+    # Wait for output file with freshness check
     deadline = time.time() + 15
     while time.time() < deadline:
-        if os.path.isfile(save_tmp):
+        if os.path.isfile(save_tmp) and os.path.getmtime(save_tmp) >= save_start:
             break
         time.sleep(0.5)
 
@@ -169,7 +185,7 @@ def main():
     dismiss_dialogs()
 
     # Copy output
-    if os.path.isfile(save_tmp):
+    if os.path.isfile(save_tmp) and os.path.getmtime(save_tmp) >= save_start:
         os.makedirs(os.path.dirname(output_bas) or '.', exist_ok=True)
         subprocess.run(['sudo', 'cp', save_tmp, output_bas], check=True)
         size = os.path.getsize(output_bas)
