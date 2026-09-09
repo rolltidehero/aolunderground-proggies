@@ -14,6 +14,8 @@ import sys
 import html as H
 from pathlib import Path
 
+from static_loader import load_css, load_js
+
 SORTED_DIR = Path("programs/AOL/proggies-sorted-deduped")
 DB_PATH = Path("exe_strings.db")
 DECOMPILED_DIR = Path("decompiled")
@@ -289,82 +291,7 @@ def load_decompile_data(zip_stem, exe_name):
     return data
 
 
-CSS = """<style>
-*{box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:20px;line-height:1.5}
-.container{max-width:960px;margin:0 auto}
-.hero{padding:24px;margin-bottom:24px;border-radius:8px;background:linear-gradient(135deg,#161b22,#1a2332);border:1px solid #30363d}
-.hero h1{margin:0;font-size:1.8em;color:#58a6ff;display:inline}
-.hero .author{font-size:1.1em;color:#8b949e;margin-bottom:12px;display:inline;margin-left:12px}
-.hero .author b{color:#f0883e}
-.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.badge{padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:600}
-.badge-ver{background:#1f3a1f;color:#3fb950;border:1px solid #238636}
-.badge-cat{background:#1f2a3f;color:#58a6ff;border:1px solid #1f6feb}
-.badge-vb{background:#2a1f3f;color:#bc8cff;border:1px solid #8957e5}
-.badge-compile{background:#3f2a1f;color:#f0883e;border:1px solid #d18616}
-.badge-api{background:#2a2a0a;color:#e3b341;border:1px solid #9e6a03;font-size:0.7em;padding:1px 6px;border-radius:8px}
-section{margin-bottom:20px}
-h2{color:#8b949e;font-size:1em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #21262d}
-.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 16px;margin-bottom:8px}
-.card h3{margin:0 0 8px;color:#58a6ff;font-size:0.95em}
-.ctrl-table{width:100%;border-collapse:collapse;font-size:0.85em}
-.ctrl-table th{text-align:left;color:#8b949e;padding:4px 8px;border-bottom:1px solid #30363d;font-weight:normal}
-.ctrl-table td{padding:4px 8px;border-bottom:1px solid #21262d}
-.ctrl-table td:first-child{color:#bc8cff}
-.menu-tree{margin:8px 0;padding-left:0;list-style:none;font-size:0.85em}
-.menu-tree li{padding:2px 0;color:#c9d1d9}
-.menu-tree li::before{content:'├─ ';color:#30363d}
-.menu-tree li:last-child::before{content:'└─ ';color:#30363d}
-.menu-tree .submenu{padding-left:20px;list-style:none}
-.menu-tree .submenu li::before{content:'├─ ';color:#30363d}
-.menu-tree .submenu li:last-child::before{content:'└─ ';color:#30363d}
-.fn-group{margin-bottom:12px}
-.fn-group summary{cursor:pointer;color:#58a6ff;font-size:0.9em;padding:4px 0}
-.fn-group summary:hover{color:#79c0ff}
-.fn-item{margin:2px 0}
-.fn-item summary{cursor:pointer;color:#c9d1d9;font-size:0.85em;font-family:monospace;padding:2px 4px;border-radius:3px}
-.fn-item summary:hover{background:#1c2333}
-.fn-item summary .sz{color:#484f58;font-size:0.8em;margin-left:8px}
-.fn-item pre{margin:4px 0 8px 16px;padding:12px;background:#0d1117;border:1px solid #21262d;border-radius:4px;overflow-x:auto;font-size:0.8em;line-height:1.4;color:#c9d1d9}
-.api-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.9em}
-.api-name{color:#e3b341;font-family:monospace}
-.s{padding:4px 8px;margin:2px 0;display:block;font-size:0.85em;border-radius:3px}
-.author-str{background:#2a0a2a;border-left:3px solid #f0883e;color:#f8f}
-.credits-str{background:#0a2a2a;border-left:3px solid #3fb950;color:#afa}
-.phishing-str{background:#2a1a1a;border-left:3px solid #f85149;color:#faa}
-.dep-str{background:#2a1a0a;border-left:3px solid #d18616;color:#fca}
-.interesting-str{background:#161b22;border-left:3px solid #58a6ff;color:#c9d1d9}
-.plain-str{color:#484f58;font-size:0.8em}
-blockquote{margin:8px 0;padding:8px 16px;border-left:3px solid #30363d;color:#8b949e;font-style:italic;background:#161b22;border-radius:0 4px 4px 0}
-.greet-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-.greet-tag{background:#1f2a1f;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:0.8em;border:1px solid #238636}
-.stats{color:#484f58;font-size:0.8em;margin:4px 0}
-.breakdown-bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid #30363d}
-.breakdown-bar div{display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:bold;color:#fff;min-width:30px}
-.bar-app{background:#238636}
-.bar-used{background:#8957e5}
-.bar-dead{background:#21262d;color:#484f58 !important}
-.breakdown-legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:0.8em;color:#8b949e}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
-.dot-app{background:#238636}
-.dot-used{background:#8957e5}
-.dot-dead{background:#21262d;border:1px solid #484f58}
-details{margin:4px 0}
-summary{cursor:pointer}
-summary:hover{color:#58a6ff}
-.screenshot{margin:12px 0}
-.screenshot img{max-width:100%;border:1px solid #30363d;border-radius:6px}
-.screenshot .caption{color:#484f58;font-size:0.8em;margin-top:4px}
-.ocr-text{color:#8b949e;font-size:0.8em;margin:4px 0;padding:4px 8px;background:#0d1117;border:1px solid #21262d;border-radius:4px;white-space:pre-wrap;font-family:monospace}
-@media print{body{background:#fff;color:#000}.hero{background:#f6f8fa;border-color:#d0d7de}.card{border-color:#d0d7de}}
-@media(max-width:600px){body{padding:10px}.hero h1{font-size:1.3em}}
-.topnav{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px;border-bottom:1px solid #21262d;font-size:0.85em}
-.topnav a{color:#58a6ff;text-decoration:none}
-.topnav a:hover{text-decoration:underline}
-.topnav .dl-btn{background:#238636;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600}
-.topnav .dl-btn:hover{background:#2ea043;text-decoration:none}
-</style>"""
+CSS = f"<style>{load_css('analysis.css')}</style>"
 
 GITHUB_RAW = "https://github.com/ssstonebraker/aolunderground-proggies/raw/main/"
 
@@ -478,8 +405,126 @@ def _ocr_screenshot(img_path):
         return ''
 
 
+def _render_app_simulator(lines, zip_stem, img_dir, categories, form_info, label_info, wt):
+    """Render the interactive app simulator widget with clickable menu labels."""
+    import json as _json
+    fw, fh = form_info['width'], form_info['height']
+    nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
+    form_img = f'{zip_stem}/{form_info["image"]}'
+    main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
+    sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
+
+    cat_data = []
+    for ci, cat in enumerate(categories):
+        items_js = []
+        for item in cat['items']:
+            img_name = item.get('image', '')
+            exists = (img_dir / img_name).exists() if img_name else False
+            d = {'caption': item['caption'],
+                 'image': f'{zip_stem}/{img_name}' if exists else '',
+                 'type': item.get('type', '')}
+            if item.get('child_h') and item['child_h'] < 460:
+                d['ch'] = item['child_h']
+            if item.get('child_title'):
+                d['ct'] = item['child_title']
+            items_js.append(d)
+        lbl = sorted_labels[ci][1] if ci < len(sorted_labels) else None
+        cat_data.append({'name': cat['category'], 'items': items_js, 'label': lbl})
+
+    # Stage: flexbox — main form left, child forms right
+    lines.append(f'<div class="app-sim">')
+    lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
+    lines.append(f'<div class="app-stage" id="app-stage">')
+    lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
+    lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
+    for ci, cd in enumerate(cat_data):
+        if cd['label']:
+            l = cd['label']
+            lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
+    lines.append('<div class="app-popup" id="app-popup"></div>')
+    lines.append('</div>')
+    lines.append(f'<div class="app-child" id="app-child" data-cw="{main_in_shot_x - 8}"></div>')
+    lines.append('</div>')
+    gif_path = img_dir / 'animated.gif'
+    if gif_path.exists():
+        lines.append(f'<details class="app-gif-toggle"><summary>&#x25b6; Watch animated walkthrough</summary>'
+                     f'<img src="{zip_stem}/animated.gif" loading="lazy"></details>')
+    lines.append('</div>')
+
+    greets = wt.get('greets', [])
+    lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)};')
+    lines.append(load_js('app-simulator.js'))
+    lines.append('</script>')
+    lines.append(f'<style>{load_css("app-simulator.css")}</style>')
+
+
+def _render_tab_explorer(lines, zip_stem, img_dir, categories):
+    """Render a tab-based category explorer (fallback when no form layout data)."""
+    lines.append('<div class="walkthrough-explorer">')
+    lines.append('<div class="wt-tabs">')
+    for ci, cat in enumerate(categories):
+        active = ' active' if ci == 0 else ''
+        lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat["category"])}</button>')
+    lines.append('</div>')
+    for ci, cat in enumerate(categories):
+        vis = '' if ci == 0 else ' style="display:none"'
+        lines.append(f'<div class="wt-panel" id="wt-panel-{ci}"{vis}>')
+        for item in cat['items']:
+            img_name = item.get('image', '')
+            cap = H.escape(item['caption'])
+            lines.append(f'<div class="wt-item" onclick="wtShow(this)"><span class="wt-label">{cap}</span>')
+            if (img_dir / img_name).exists():
+                lines.append(f'<img class="wt-img" src="{zip_stem}/{img_name}" alt="{cap}" loading="lazy" style="display:none">')
+            lines.append('</div>')
+        lines.append('</div>')
+    lines.append('</div>')
+    lines.append(f'<script>{load_js("tab-explorer.js")}</script>')
+    lines.append(f'<style>{load_css("tab-explorer.css")}</style>')
+
+
+_INSTALL_LABELS = {
+    'welcome': 'Welcome', 'directory': 'Select Directory', 'overwrite': 'Overwrite Prompt',
+    'searching': 'Searching for VBRUN300.DLL', 'need_vbrun': 'VBRUN300.DLL Required',
+    'features_irc': 'New Features & IRC Setup', 'disclaimer': 'Disclaimer',
+    'complete': 'Installation Complete', 'startmenu': 'Start Menu Shortcuts',
+}
+
+
+def _render_static_gallery(lines, zip_stem, img_dir):
+    """Render static screenshot/gif/installer gallery (no walkthrough data)."""
+    found = False
+    for name, caption in [('screenshot.png', 'Main window'), ('animated.gif', 'Navigation walkthrough')]:
+        if (img_dir / name).exists():
+            lines.append(f'<img src="{zip_stem}/{name}" alt="{caption}"><div class="caption">{caption}</div>')
+            found = True
+    screens = sorted(img_dir.glob('screen_*.png'))
+    if screens:
+        lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Individual screenshots</summary>')
+        for img in screens:
+            label = img.stem.replace('screen_', '').replace('_', ' ').title()
+            lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
+        lines.append('</details>')
+        found = True
+    installs = sorted(img_dir.glob('install_*.png'))
+    if installs:
+        lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Installer screenshots</summary>')
+        for img in installs:
+            key = img.stem.replace('install_', '')
+            label = _INSTALL_LABELS.get(key, key.replace('_', ' ').title())
+            lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
+        lines.append('</details>')
+        found = True
+    return found
+
+
 def render_screenshots(zip_stem, html_path):
-    """Render interactive app simulator or fallback screenshot gallery."""
+    """Render interactive app simulator or fallback screenshot gallery.
+
+    Dispatches to one of three renderers:
+    1. App simulator — interactive clickable form with menu labels
+    2. Tab explorer — category tabs with expandable screenshots
+    3. Static gallery — simple image list (screenshot.png, screen_*.png, install_*.png)
+    """
     img_dir = html_path.parent / zip_stem
     if not img_dir.exists():
         return ''
@@ -498,197 +543,15 @@ def render_screenshots(zip_stem, html_path):
 
         has_labels = bool(form_info and label_info and len(label_info) > 0)
         if (has_labels or (form_info and categories)) and (img_dir / form_info.get('image', '')).exists():
-            fw, fh = form_info['width'], form_info['height']
-            nc_x, nc_y = form_info.get('nc_x', 3), form_info.get('nc_y', 3)
-            form_img = f'{zip_stem}/{form_info["image"]}'
-            main_in_shot_x = form_info.get('screen_x', 0) - form_info.get('crop_x0', 0)
-            sorted_labels = sorted(label_info.items(), key=lambda kv: kv[1]['left'])
-
-            cat_data = []
-            for ci, cat in enumerate(categories):
-                items_js = []
-                for item in cat['items']:
-                    img_name = item.get('image', '')
-                    exists = (img_dir / img_name).exists() if img_name else False
-                    d = {'caption': item['caption'],
-                         'image': f'{zip_stem}/{img_name}' if exists else '',
-                         'type': item.get('type', '')}
-                    if item.get('child_h') and item['child_h'] < 460:
-                        d['ch'] = item['child_h']
-                    if item.get('child_title'):
-                        d['ct'] = item['child_title']
-                    items_js.append(d)
-                lbl = sorted_labels[ci][1] if ci < len(sorted_labels) else None
-                cat_data.append({'name': cat['category'], 'items': items_js, 'label': lbl})
-
-            # Stage: flexbox — main form left, child forms right
-            lines.append(f'<div class="app-sim">')
-            lines.append(f'<div class="app-sim-hint">&#x1f5b1; Click the menu labels to explore this proggie</div>')
-            lines.append(f'<div class="app-stage" id="app-stage">')
-            lines.append(f'<div class="app-form" id="app-form" style="width:{fw}px;height:{fh}px;position:relative;flex-shrink:0">')
-            lines.append(f'<img src="{form_img}" width="{fw}" height="{fh}" draggable="false">')
-            for ci, cd in enumerate(cat_data):
-                if cd['label']:
-                    l = cd['label']
-                    lines.append(f'<div class="app-label" data-cat="{ci}" style="left:{nc_x+l["left"]}px;top:{nc_y+l["top"]}px;width:{l["width"]}px;height:{l["height"]}px"></div>')
-            lines.append('<div class="app-popup" id="app-popup"></div>')
-            lines.append('</div>')
-            lines.append(f'<div class="app-child" id="app-child" data-cw="{main_in_shot_x - 8}"></div>')
-            lines.append('</div>')
-            gif_path = img_dir / 'animated.gif'
-            if gif_path.exists():
-                lines.append(f'<details class="app-gif-toggle"><summary>&#x25b6; Watch animated walkthrough</summary>'
-                             f'<img src="{zip_stem}/animated.gif" loading="lazy"></details>')
-            lines.append('</div>')
-
-            greets = wt.get('greets', [])
-            lines.append(f'<script>var appCats={_json.dumps(cat_data)},mainX={main_in_shot_x},greetNames={_json.dumps(greets)};')
-            lines.append(r'''
-var openCat=-1,popup=document.getElementById("app-popup"),
-    childEl=document.getElementById("app-child");
-var cw=+childEl.dataset.cw;
-document.querySelectorAll(".app-label").forEach(function(el){
-  el.addEventListener("click",function(e){
-    e.stopPropagation();
-    var ci=+this.dataset.cat;
-    if(openCat===ci){closePopup();return}
-    openCat=ci;
-    var cat=appCats[ci],lbl=cat.label,h="";
-    cat.items.forEach(function(it,i){
-      if(it.type==="secret")return;
-      h+='<div class="app-mi" data-ci="'+ci+'" data-ii="'+i+'">'+
-        it.caption.replace(/</g,"&lt;")+'</div>';
-    });
-    popup.innerHTML=h;
-    popup.style.left=(lbl.left+3)+"px";
-    popup.style.top=(lbl.top+lbl.height+6)+"px";
-    popup.style.display="block";
-    popup.querySelectorAll(".app-mi").forEach(function(mi){
-      mi.addEventListener("click",function(ev){
-        ev.stopPropagation();
-        showChild(appCats[+this.dataset.ci].items[+this.dataset.ii]);
-        closePopup();
-      });
-    });
-  });
-});
-document.addEventListener("click",function(){closePopup()});
-function closePopup(){popup.style.display="none";openCat=-1}
-function showChild(it){
-  var cap=it.caption.replace(/</g,"&lt;");
-  var bar='<div class="app-ct">'+cap+' <button onclick="hideChild()" title="Close">✕</button></div>';
-  if(!it.image){
-    childEl.innerHTML=bar+'<div class="app-noshot">&#x1f4f7; Screenshot not captured &mdash; dialog overlapped main form</div>';
-    return;
-  }
-  var h=it.ch?'height:'+it.ch+'px;':'';
-  var bar='<div class="app-ct">'+cap+' <button onclick="hideChild()" title="Close">✕</button></div>';
-  if(it.caption==="Greets"&&greetNames.length){
-    var names=greetNames.map(function(n){return'<span>'+n+'</span>'}).join('');
-    childEl.innerHTML=bar+
-      '<div class="app-cc app-greets" style="max-width:'+cw+'px;'+h+'"><img src="'+it.image+'" style="max-width:none">'+
-      '<div class="greets-scroll"><div class="greets-track">'+names+names+'</div></div></div>';
-  } else {
-    childEl.innerHTML=bar+
-      '<div class="app-cc" style="max-width:'+cw+'px;'+h+'"><img src="'+it.image+'" style="max-width:none"></div>';
-  }
-}
-function hideChild(){childEl.innerHTML=""}
-</script>''')
-            lines.append('''<style>
-.app-sim{margin:16px 0}
-.app-sim-hint{color:#8b949e;font-size:0.8em;margin-bottom:8px}
-.app-stage{display:flex;align-items:flex-start;gap:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px}
-.app-form{user-select:none;position:relative}
-.app-form>img{display:block}
-.app-label{position:absolute;cursor:pointer;border-radius:2px}
-.app-label:hover{background:rgba(255,255,255,0.18)}
-.app-popup{display:none;position:absolute;background:#fff;border:1px solid #999;box-shadow:2px 2px 6px rgba(0,0,0,.3);z-index:20;min-width:140px;padding:2px 0}
-.app-mi{padding:3px 24px 3px 20px;font:13px/1.4 "Segoe UI",Tahoma,sans-serif;color:#000;cursor:default;white-space:nowrap}
-.app-mi:hover{background:#0078d4;color:#fff}
-.app-child{min-width:0;flex:1;overflow:hidden}
-.app-ct{color:#8b949e;font-size:.78em;margin-bottom:3px;display:flex;align-items:center;gap:6px}
-.app-ct button{background:none;border:none;color:#8b949e;cursor:pointer;font-size:.95em;padding:0}
-.app-ct button:hover{color:#f85149}
-.app-cc{overflow:hidden;border-radius:4px;border:1px solid #30363d;max-height:350px}
-.app-noshot{color:#8b949e;font-size:.85em;padding:24px 16px;border:1px dashed #30363d;border-radius:4px}
-.app-cc img{display:block}
-.app-gif-toggle{margin-top:8px;color:#8b949e;font-size:.85em}
-.app-gif-toggle summary{padding:4px 0;cursor:pointer}
-.app-gif-toggle img{max-width:100%;margin-top:6px;border-radius:4px;border:1px solid #30363d}
-.app-greets{position:relative}
-.greets-scroll{position:absolute;bottom:8px;left:0;right:0;overflow:hidden;height:1.4em}
-.greets-track{display:flex;gap:2em;white-space:nowrap;animation:greets-marquee 20s linear infinite;
-  font:bold 13px/1.4 "Tahoma",sans-serif;color:#fff;text-shadow:0 0 6px #000,0 0 3px #900}
-.greets-track span{flex-shrink:0}
-@keyframes greets-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-</style>''')
+            _render_app_simulator(lines, zip_stem, img_dir, categories, form_info, label_info, wt)
             found = True
         elif categories:
-            # Fallback: tab-based explorer
-            lines.append('<div class="walkthrough-explorer">')
-            lines.append('<div class="wt-tabs">')
-            for ci, cat in enumerate(categories):
-                active = ' active' if ci == 0 else ''
-                lines.append(f'<button class="wt-tab{active}" onclick="wtTab(this,{ci})">{H.escape(cat["category"])}</button>')
-            lines.append('</div>')
-            for ci, cat in enumerate(categories):
-                vis = '' if ci == 0 else ' style="display:none"'
-                lines.append(f'<div class="wt-panel" id="wt-panel-{ci}"{vis}>')
-                for item in cat['items']:
-                    img_name = item.get('image', '')
-                    cap = H.escape(item['caption'])
-                    lines.append(f'<div class="wt-item" onclick="wtShow(this)"><span class="wt-label">{cap}</span>')
-                    if (img_dir / img_name).exists():
-                        lines.append(f'<img class="wt-img" src="{zip_stem}/{img_name}" alt="{cap}" loading="lazy" style="display:none">')
-                    lines.append('</div>')
-                lines.append('</div>')
-            lines.append('</div>')
-            lines.append('''<script>
-function wtTab(b,ci){b.parentElement.querySelectorAll('.wt-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.wt-panel').forEach((p,i)=>p.style.display=i===ci?'':'none')}
-function wtShow(el){var i=el.querySelector('.wt-img');if(i)i.style.display=i.style.display==='none'?'':'none'}
-</script><style>
-.walkthrough-explorer{margin:12px 0;border:1px solid #30363d;border-radius:6px;overflow:hidden}
-.wt-tabs{display:flex;background:#161b22;border-bottom:1px solid #30363d}
-.wt-tab{background:none;border:none;color:#8b949e;padding:8px 14px;cursor:pointer;font-size:.85em}
-.wt-tab.active{color:#58a6ff;border-bottom:2px solid #58a6ff}
-.wt-panel{padding:8px}
-.wt-item{cursor:pointer;padding:4px 8px;border-radius:4px;margin:2px 0}
-.wt-item:hover{background:#21262d}
-.wt-label{color:#c9d1d9;font-size:.85em}
-.wt-img{margin:8px 0;max-width:100%;border-radius:4px;border:1px solid #30363d}
-</style>''')
+            _render_tab_explorer(lines, zip_stem, img_dir, categories)
             found = True
 
-    # Static screenshots only if no interactive widget
     if not found:
-        for name, caption in [('screenshot.png', 'Main window'), ('animated.gif', 'Navigation walkthrough')]:
-            if (img_dir / name).exists():
-                lines.append(f'<img src="{zip_stem}/{name}" alt="{caption}"><div class="caption">{caption}</div>')
-                found = True
-        screens = sorted(img_dir.glob('screen_*.png'))
-        if screens:
-            lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Individual screenshots</summary>')
-            for img in screens:
-                label = img.stem.replace('screen_', '').replace('_', ' ').title()
-                lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
-            lines.append('</details>')
-            found = True
-        installs = sorted(img_dir.glob('install_*.png'))
-        if installs:
-            _inst_labels = {
-                'welcome': 'Welcome', 'directory': 'Select Directory', 'overwrite': 'Overwrite Prompt',
-                'searching': 'Searching for VBRUN300.DLL', 'need_vbrun': 'VBRUN300.DLL Required',
-                'features_irc': 'New Features & IRC Setup', 'disclaimer': 'Disclaimer',
-                'complete': 'Installation Complete', 'startmenu': 'Start Menu Shortcuts',
-            }
-            lines.append('<details><summary style="color:#8b949e;font-size:.85em;margin-top:8px">Installer screenshots</summary>')
-            for img in installs:
-                key = img.stem.replace('install_', '')
-                label = _inst_labels.get(key, key.replace('_', ' ').title())
-                lines.append(f'<div style="margin:8px 0"><img src="{zip_stem}/{img.name}" alt="{label}"><div class="caption">{label}</div></div>')
-            lines.append('</details>')
-            found = True
+        found = _render_static_gallery(lines, zip_stem, img_dir)
+
     lines.append('</section>')
     return '\n'.join(lines) if found else ''
 
@@ -1222,29 +1085,6 @@ def render_form_layout(form_name, frm_path):
             lines.append(f'<text x="{tx}" y="{ty}" fill="{stroke}" font-size="8" font-family="monospace" style="pointer-events:none">{e(cap)}</text>')
     lines.append('</svg>')
     return '\n'.join(lines)
-    """Extract and render About/Help dialog text as blockquotes."""
-    if not decomp:
-        return ''
-    funcs = decomp.get('_funcs_by_module', {})
-    lines = []
-    for mod_name, fn_list in funcs.items():
-        for f in fn_list:
-            if not re.search(r'about|help', f['name'], re.I):
-                continue
-            # Extract string literals from the code
-            texts = re.findall(r'"([^"]{20,})"', f['code'])
-            for t in texts:
-                # Skip if it's just a variable name or short
-                t = t.replace('vbCrLf', '\n').strip()
-                if len(t) > 30 and not t.startswith('loc_'):
-                    lines.append(t)
-    if not lines:
-        return ''
-    e = H.escape
-    out = ['<h2>&#x1f4ac; About This Program</h2>']
-    for t in lines:
-        out.append(f'<blockquote>{e(t)}</blockquote>')
-    return '\n'.join(out)
 
 
 def render_about_text(decomp):
@@ -1268,25 +1108,13 @@ def render_about_text(decomp):
     return '\n'.join(out)
 
 
-def generate_html(meta, strings, archive_name, html_path, conn=None):
-    """Generate the full HTML page."""
-    e = H.escape
-    zip_stem = archive_name.replace('.zip', '')
-    exe_name = meta.get('exe', '?')
+def _classify_strings(strings, decomp):
+    """Classify and deduplicate extracted strings into categories.
 
-    # Load decompile data if available
-    decomp = load_decompile_data(zip_stem, exe_name) if exe_name != '?' else None
-    # Fallback: if no exe in DB, check decompiled dir for any metadata.json
-    if not decomp:
-        decomp_base = DECOMPILED_DIR / zip_stem
-        if decomp_base.exists():
-            for sub in decomp_base.iterdir():
-                if sub.is_dir() and (sub / 'metadata.json').exists():
-                    decomp = load_decompile_data(zip_stem, sub.name)
-                    if decomp:
-                        exe_name = sub.name
-                        break
-
+    Returns:
+        Tuple of (categorized, interesting, other, junk, greet_names, greet_text, str_freq)
+        where categorized is a dict with keys: phishing, author, credits, api, form, dep.
+    """
     # Build string frequency map (count before dedup)
     str_freq = {}
     for s in strings:
@@ -1352,8 +1180,6 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
     # Filter author evidence: remove help text, keep only real author signals
     real_author = []
     for s in categorized.get('author', []):
-        # Short strings with "by" pattern are likely real credits
-        # Long strings are almost always help text that happens to contain "by"
         is_credit = re.search(r'(?:coded|programmed|made|created|written|designed|developed)\s+by\s*:?\s*\S', s, re.I)
         is_byline = re.match(r'^.{0,60}\bby\s*:\s*\S', s, re.I)
         is_presents = re.search(r'presents\s*$', s, re.I)
@@ -1382,6 +1208,30 @@ def generate_html(meta, strings, archive_name, html_path, conn=None):
             if norm not in seen_norm:
                 categorized['author'].append(ev)
                 seen_norm.add(norm)
+
+    return categorized, interesting, other, junk, greet_names, greet_text, str_freq, seen
+
+
+def generate_html(meta, strings, archive_name, html_path, conn=None):
+    """Generate the full HTML page."""
+    e = H.escape
+    zip_stem = archive_name.replace('.zip', '')
+    exe_name = meta.get('exe', '?')
+
+    # Load decompile data if available
+    decomp = load_decompile_data(zip_stem, exe_name) if exe_name != '?' else None
+    # Fallback: if no exe in DB, check decompiled dir for any metadata.json
+    if not decomp:
+        decomp_base = DECOMPILED_DIR / zip_stem
+        if decomp_base.exists():
+            for sub in decomp_base.iterdir():
+                if sub.is_dir() and (sub / 'metadata.json').exists():
+                    decomp = load_decompile_data(zip_stem, sub.name)
+                    if decomp:
+                        exe_name = sub.name
+                        break
+
+    categorized, interesting, other, junk, greet_names, greet_text, str_freq, seen = _classify_strings(strings, decomp)
 
     # Build page
     lines = [f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>{e(archive_name)} — Analysis</title>{CSS}</head><body><div class="container">']
@@ -1524,7 +1374,8 @@ def _process_one(html_path_str):
                             break
         if decomp and decomp.get('strings'):
             strings = decomp['strings']
-        elif not exe_path:
+        elif not exe_path and not meta.get('author'):
+            # No strings DB entry, no decompile data, and no proggie_db metadata → skip
             conn.close()
             if pdb: pdb.close()
             return 'skip'
@@ -1587,7 +1438,7 @@ def main() -> int:
                                     break
                 if decomp and decomp.get('strings'):
                     strings = decomp['strings']
-                elif not exe_path:
+                elif not exe_path and not meta.get('author'):
                     skipped += 1
                     continue
             page = generate_html(meta, strings, archive_name, html_path, pdb)

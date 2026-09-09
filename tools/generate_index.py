@@ -4,6 +4,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from static_loader import load_css, load_js
+
 # Hunter deep tracing — always on, timestamped per-run, file only
 import hunter
 from pathlib import Path as _Path
@@ -72,38 +74,7 @@ def generate_html(proggies):
 <head>
 <meta charset="utf-8">
 <title>AOL Underground Proggies - Search</title>
-<style>
-body {{ background: #0a0a0a; color: #0f0; font-family: 'Courier New', monospace; margin: 0; padding: 0; }}
-.topbar {{ background: #111; border-bottom: 1px solid #0f0; padding: 10px 20px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }}
-.topbar a {{ color: #0ff; text-decoration: none; }}
-.topbar a:hover {{ text-decoration: underline; }}
-.topbar h1 {{ color: #0ff; font-size: 18px; margin: 0; }}
-.content {{ padding: 20px; }}
-.controls {{ margin: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }}
-input, select {{ background: #111; color: #0f0; border: 1px solid #0f0; padding: 8px 12px; font-family: inherit; font-size: 14px; }}
-input::placeholder {{ color: #060; }}
-.chip {{ display: inline-block; padding: 4px 10px; border: 1px solid #333; border-radius: 12px; cursor: pointer; font-size: 12px; user-select: none; background: #111; color: #888; }}
-.chip:hover {{ border-color: #0f0; color: #0f0; }}
-.chip.active {{ background: #0f0; color: #000; border-color: #0f0; font-weight: bold; }}
-.chip.active-src {{ background: #f0f; color: #000; border-color: #f0f; }}
-.chip.active-img {{ background: #ff0; color: #000; border-color: #ff0; }}
-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-th {{ background: #111; color: #0ff; padding: 10px; text-align: left; border: 1px solid #0f0; cursor: pointer; user-select: none; white-space: nowrap; }}
-th:hover {{ background: #1a1a1a; }}
-th .arrow {{ font-size: 10px; margin-left: 4px; }}
-td {{ padding: 8px 10px; border: 1px solid #030; }}
-tr:hover {{ background: #111; }}
-a {{ color: #0ff; text-decoration: none; }}
-a:hover {{ text-decoration: underline; }}
-.aim {{ color: #f0f; }}
-.password {{ color: #ff0; }}
-.stats {{ color: #060; margin: 8px 0; font-size: 13px; }}
-.dl {{ color: #0f0; }}
-.badge {{ display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-left: 4px; }}
-.badge-src {{ background: #303; color: #f0f; }}
-.badge-img {{ background: #330; color: #ff0; }}
-.badge-vb {{ background: #030; color: #0f0; }}
-</style>
+<style>{load_css("index.css")}</style>
 </head>
 <body>
 <div class="topbar">
@@ -132,77 +103,7 @@ a:hover {{ text-decoration: underline; }}
 <script>
 const GITHUB_RAW = {json.dumps(GITHUB_RAW)};
 const proggies = {data_json};
-const versions = new Set();
-proggies.forEach(p => versions.add(p.primary));
-const vf = document.getElementById('version-filter');
-Array.from(versions).sort().forEach(v => {{ const o = document.createElement('option'); o.value = v; o.textContent = v; vf.appendChild(o); }});
-
-let sortCol = null, sortAsc = true;
-let chipSrc = false, chipImg = false;
-
-function toggleChip(which) {{
-  if (which === 'src') {{ chipSrc = !chipSrc; document.getElementById('chip-src').classList.toggle('active-src'); }}
-  if (which === 'img') {{ chipImg = !chipImg; document.getElementById('chip-img').classList.toggle('active-img'); }}
-  doFilter();
-}}
-
-function render(list) {{
-  const tb = document.getElementById('results');
-  tb.innerHTML = '';
-  list.forEach(p => {{
-    const r = tb.insertRow();
-    const nc = r.insertCell(0);
-    if (p.html) {{ const na = document.createElement('a'); na.href = p.html; na.textContent = p.name; nc.appendChild(na); }}
-    else {{ nc.textContent = p.name; }}
-    if (p.has_source) {{ const b = document.createElement('span'); b.className='badge badge-src'; b.textContent='src'; nc.appendChild(b); }}
-    if (p.has_screenshot) {{ const b = document.createElement('span'); b.className='badge badge-img'; b.textContent='img'; nc.appendChild(b); }}
-    r.insertCell(1).textContent = p.author;
-    const pc = r.insertCell(2); pc.textContent = p.platform; if(p.platform==='AIM') pc.className='aim';
-    r.insertCell(3).textContent = p.primary;
-    const vc = r.insertCell(4); vc.textContent = p.vb_version; if(p.vb_version && p.vb_version !== 'unknown') {{ vc.innerHTML = '<span class="badge badge-vb">' + p.vb_version + '</span>'; }}
-    const fc = r.insertCell(5); const a = document.createElement('a'); a.href = GITHUB_RAW + p.file; a.textContent = p.file.split('/').pop(); a.className='dl'; fc.appendChild(a);
-    const pw = r.insertCell(6); pw.textContent = p.password; if(p.password) pw.className='password';
-  }});
-  document.getElementById('showing').textContent = list.length;
-}}
-
-function doFilter() {{
-  const s = document.getElementById('search').value.toLowerCase();
-  const pf = document.getElementById('platform-filter').value;
-  const vfv = document.getElementById('version-filter').value;
-  let list = proggies.filter(p =>
-    (!s || p.name.toLowerCase().includes(s) || p.author.toLowerCase().includes(s) || p.file.toLowerCase().includes(s)) &&
-    (!pf || p.platform === pf) &&
-    (!vfv || p.primary === vfv) &&
-    (!chipSrc || p.has_source) &&
-    (!chipImg || p.has_screenshot)
-  );
-  if (sortCol) {{
-    list = list.slice().sort((a, b) => {{
-      let va = (a[sortCol] || '').toString().toLowerCase();
-      let vb = (b[sortCol] || '').toString().toLowerCase();
-      if (va < vb) return sortAsc ? -1 : 1;
-      if (va > vb) return sortAsc ? 1 : -1;
-      return 0;
-    }});
-  }}
-  render(list);
-}}
-
-document.querySelectorAll('th[data-col]').forEach(th => {{
-  th.addEventListener('click', () => {{
-    const col = th.dataset.col;
-    if (sortCol === col) {{ sortAsc = !sortAsc; }} else {{ sortCol = col; sortAsc = true; }}
-    document.querySelectorAll('th .arrow').forEach(a => a.textContent = '');
-    th.querySelector('.arrow').textContent = sortAsc ? ' \\u25B2' : ' \\u25BC';
-    doFilter();
-  }});
-}});
-
-document.getElementById('search').addEventListener('input', doFilter);
-document.getElementById('platform-filter').addEventListener('change', doFilter);
-document.getElementById('version-filter').addEventListener('change', doFilter);
-doFilter();
+{load_js("index.js")}
 </script>
 </body>
 </html>"""

@@ -48,11 +48,18 @@ def decompile_exe(zip_stem, exe_name, exe_path):
     local_out = DECOMPILED / zip_stem / exe_name
 
     log.info(f'Pushing {exe_name} to VM...')
-    # Ensure C:\work exists on guest
-    c2g = VirtioSerialClient('/tmp/vm-c2gui.sock')
-    c2g.connect()
-    c2g.send_command("shell", command=r"mkdir C:\work 2>nul & echo ok")
-    c2g.close()
+    # Ensure C:\work exists on guest — try c2gui first, fall back to c2
+    try:
+        c2g = VirtioSerialClient('/tmp/vm-c2gui.sock')
+        c2g.connect()
+        c2g.send_command("shell", command=r"mkdir C:\work 2>nul & echo ok")
+        c2g.close()
+    except Exception as exc:
+        log.warning(f'c2gui mkdir failed ({exc}), falling back to c2 shell')
+        c2_fb = VirtioSerialClient('/tmp/vm-c2.sock')
+        c2_fb.connect()
+        c2_fb.shell(r'mkdir C:\work 2>nul')
+        c2_fb.close()
     push_file(str(exe_path), guest_exe)
 
     # Also push bundled deps from the same zip (skip VB runtimes already on VM)
@@ -399,59 +406,54 @@ def _ocr_control_crop(screenshot_path, form_w, form_h, left, top, width, height)
         return ''
 
 
-def _analyze_call_graph(base, frm_files, meta, zip_stem):
-    """Trace which base module functions are actually called from UI event handlers."""
-    _proc_re = re.compile(r'(?:\d+_)?(Proc_(\d+)_(\d+))(?:_[A-Fa-f0-9]+)?')
-    _func_re = re.compile(r'(?:Public |Private )?(?:Sub|Function) (\S+)')
-
-    # Determine which module indices are base modules vs forms
+def _find_module_indices(meta, proc_re):
+    """Phase 1: Identify which module indices are base modules vs forms."""
     bas_indices = set()
     frm_indices = set()
     for mod in meta.get('modules', []):
-        # Module index is encoded in Proc_N_M — N is the module index
-        if mod.get('type') == 'bas':
-            for fn in mod.get('functions', []):
-                m = _proc_re.match(fn)
-                if m:
-                    bas_indices.add(m.group(2))
-                    break
-        elif mod.get('type') == 'frm':
-            for fn in mod.get('functions', []):
-                m = _proc_re.match(fn)
-                if m:
-                    frm_indices.add(m.group(2))
-                    break
+        mod_type = mod.get('type')
+        target = bas_indices if mod_type == 'bas' else frm_indices if mod_type == 'frm' else None
+        if target is None:
+            continue
+        for fn in mod.get('functions', []):
+            m = proc_re.match(fn)
+            if m:
+                target.add(m.group(2))
+                break
+    return bas_indices, frm_indices
 
-    if not bas_indices:
-        return None  # No base module to analyze
 
-    # Load canonical function name reference for known base modules
-    _ref_path = Path(__file__).parent / 'basmod_reference.json'
-    _basmod_ref = json.loads(_ref_path.read_text()) if _ref_path.exists() else {}
-    # Build proc index → canonical name mapping
+def _build_canonical_map(meta, proc_re):
+    """Phase 2: Load basmod_reference.json and build Proc_N_M → canonical name mapping."""
+    ref_path = Path(__file__).parent / 'basmod_reference.json'
+    basmod_ref = json.loads(ref_path.read_text()) if ref_path.exists() else {}
     proc_to_canonical = {}
     base_mod = meta.get('base_module')
     if base_mod:
         mod_key = base_mod['name'].replace('.bas', '').lower()
-        ref_funcs = _basmod_ref.get(mod_key, [])
+        ref_funcs = basmod_ref.get(mod_key, [])
         if ref_funcs:
-            # Find which module index corresponds to this base module
             for mod in meta.get('modules', []):
                 if mod.get('type') == 'bas' and mod['name'].lower() == mod_key:
                     for fn in mod.get('functions', []):
-                        m = _proc_re.match(fn)
+                        m = proc_re.match(fn)
                         if m:
                             mod_idx = m.group(2)
-                            # Map Proc_N_M → canonical name by function index M
                             for i, canon_name in enumerate(ref_funcs):
                                 proc_to_canonical[f'Proc_{mod_idx}_{i}'] = canon_name
                             break
                     break
+    return proc_to_canonical
 
-    # Parse all functions from all source files
-    all_funcs = {}  # full_name -> {calls: set of short_names, size: int, code: str, module_idx: str}
+
+def _parse_all_functions(base, frm_files, proc_re):
+    """Phase 3: Parse all Sub/Function blocks from source files.
+
+    Returns:
+        Tuple of (all_funcs dict, short_to_full mapping).
+    """
+    all_funcs = {}
     source_files = list(base.glob('*.bas')) + list(frm_files)
-    # Plugin layout: modules/*_funcs/*.vb
     modules_dir = base / 'modules'
     if modules_dir.exists():
         for func_dir in sorted(modules_dir.iterdir()):
@@ -464,31 +466,31 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
             data, re.DOTALL
         ):
             block, name = m.group(1), m.group(2)
-            # Skip Declare statements (API imports, not real functions)
             if ' Lib "' in block.split('\n')[0]:
                 continue
-            short_m = _proc_re.match(name)
+            short_m = proc_re.match(name)
             short = short_m.group(1) if short_m else name
             mod_idx = short_m.group(2) if short_m else None
-            calls = set(_proc_re.findall(block))
+            calls = set(proc_re.findall(block))
             call_shorts = {c[0] for c in calls} - {short}
             all_funcs[name] = {
                 'calls': call_shorts, 'size': len(block.encode('utf-8', errors='replace')),
                 'code': block, 'module_idx': mod_idx, 'short': short,
                 'source_file': sf.name,
             }
+    short_to_full = {info['short']: name for name, info in all_funcs.items()}
+    return all_funcs, short_to_full
 
-    # Map short names to full names
-    short_to_full = {}
-    for name, info in all_funcs.items():
-        short_to_full[info['short']] = name
 
-    # Identify UI entry points: form event handlers (not Proc_N_M, not Declare stubs)
+def _trace_reachable(all_funcs, short_to_full, bas_indices):
+    """Phase 4: BFS from UI entry points to find reachable base module functions.
+
+    Returns:
+        Tuple of (ui_entries list, reachable_bas set).
+    """
     ui_entries = [n for n in all_funcs
                   if not n.startswith('Proc_')
                   and 'Declare ' not in all_funcs[n]['code'].split('\n')[0]]
-
-    # Trace reachable functions from UI entry points
     reachable_bas = set()
     visited = set()
 
@@ -509,34 +511,12 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
 
     for entry in ui_entries:
         trace(entry)
+    return ui_entries, reachable_bas
 
-    # Compute sizes
-    app_size = sum(v['size'] for k, v in all_funcs.items()
-                   if v['module_idx'] not in bas_indices or k in ui_entries)
-    reachable_size = sum(all_funcs[f]['size'] for f in reachable_bas)
-    dead_size = sum(v['size'] for k, v in all_funcs.items()
-                    if v['module_idx'] in bas_indices and k not in reachable_bas)
-    total = app_size + reachable_size + dead_size
 
-    # Helper: resolve canonical name for a proc
-    def _canon(fname):
-        short = all_funcs[fname]['short'] if fname in all_funcs else fname
-        return proc_to_canonical.get(short, '')
-
-    # Build result — include source code for reachable base functions
-    reachable_funcs = []
-    for fname in sorted(reachable_bas):
-        info = all_funcs[fname]
-        reachable_funcs.append({
-            'name': fname,
-            'canonical_name': _canon(fname),
-            'size': info['size'],
-            'code': info['code'],
-            'source_file': info.get('source_file', 'unknown.bas'),
-        })
-
-    # Build control name → caption/type map from form metadata
-    # OCR controls with no caption from screenshot crop
+def _enrich_app_functions(ui_entries, all_funcs, meta, proc_to_canonical,
+                          short_to_full, reachable_bas, zip_stem, canon_fn):
+    """Phase 7: Enrich UI entry point functions with control info and code hints."""
     ctrl_info = {}
     screenshot = None
     for form in meta.get('forms', []):
@@ -545,7 +525,6 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
         for c in form.get('controls', []):
             caption = c.get('caption', '') or c.get('text', '')
             ci = {'caption': caption, 'type': c.get('type', '')}
-            # If no caption and we have position + screenshot, crop and OCR
             if not caption and fw and fh and all(k in c for k in ('left', 'top', 'width', 'height')):
                 if screenshot is None:
                     screenshot = _find_screenshot(zip_stem)
@@ -559,58 +538,59 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
     app_funcs = []
     for fname in sorted(ui_entries):
         info = all_funcs.get(fname)
-        if info:
-            # Match ControlName_Event() pattern
-            ctrl_caption = ''
-            ctrl_type = ''
-            code_hint = ''
-            m = re.match(r'(\w+?)_(\w+)\(', fname)
-            if m:
-                ci = ctrl_info.get(m.group(1).lower(), {})
-                ctrl_caption = ci.get('caption', '')
-                ctrl_type = ci.get('type', '')
-            # If no caption, extract a hint from the first action line
-            if not ctrl_caption and ctrl_type:
-                for line in info['code'].splitlines()[1:]:
-                    ls = re.sub(r'^loc_[0-9A-Fa-f]+:\s*', '', line.strip())
-                    if not ls or ls.startswith("'") or ls.startswith('Dim ') or ls.startswith('Exit ') or ls == 'End Sub':
-                        continue
-                    # Resolve proc names in hint
-                    for short, canon in proc_to_canonical.items():
-                        ls = ls.replace(short, canon)
-                    ls = re.sub(r'Proc_\d+_\d+_[A-F0-9]+', '', ls)
-                    code_hint = ls[:80]
-                    break
-            app_funcs.append({
-                'name': fname,
-                'size': info['size'],
-                'code': info['code'],
-                'source_file': info.get('source_file', 'unknown.bas'),
-                'control_caption': ctrl_caption,
-                'control_type': ctrl_type,
-                'code_hint': code_hint,
-                'calls_base': sorted(
-                    f for s in info['calls']
-                    if (f := short_to_full.get(s)) and f in reachable_bas
-                ),
-                'calls_base_names': sorted(
-                    _canon(f) or f for s in info['calls']
-                    if (f := short_to_full.get(s)) and f in reachable_bas
-                ),
-            })
+        if not info:
+            continue
+        ctrl_caption = ''
+        ctrl_type = ''
+        code_hint = ''
+        m = re.match(r'(\w+?)_(\w+)\(', fname)
+        if m:
+            ci = ctrl_info.get(m.group(1).lower(), {})
+            ctrl_caption = ci.get('caption', '')
+            ctrl_type = ci.get('type', '')
+        if not ctrl_caption and ctrl_type:
+            for line in info['code'].splitlines()[1:]:
+                ls = re.sub(r'^loc_[0-9A-Fa-f]+:\s*', '', line.strip())
+                if not ls or ls.startswith("'") or ls.startswith('Dim ') or ls.startswith('Exit ') or ls == 'End Sub':
+                    continue
+                for short, canon in proc_to_canonical.items():
+                    ls = ls.replace(short, canon)
+                ls = re.sub(r'Proc_\d+_\d+_[A-F0-9]+', '', ls)
+                code_hint = ls[:80]
+                break
+        app_funcs.append({
+            'name': fname,
+            'size': info['size'],
+            'code': info['code'],
+            'source_file': info.get('source_file', 'unknown.bas'),
+            'control_caption': ctrl_caption,
+            'control_type': ctrl_type,
+            'code_hint': code_hint,
+            'calls_base': sorted(
+                f for s in info['calls']
+                if (f := short_to_full.get(s)) and f in reachable_bas
+            ),
+            'calls_base_names': sorted(
+                canon_fn(f) or f for s in info['calls']
+                if (f := short_to_full.get(s)) and f in reachable_bas
+            ),
+        })
+    return app_funcs
 
-    # Match non-base module functions against known .bas files (cherry-pick detection)
+
+def _detect_cherry_picks(all_funcs, bas_indices, ui_entries, reachable_bas,
+                         meta, proc_to_canonical, proc_re):
+    """Phase 8: Match non-base module functions against known .bas files."""
     from match_functions import match_decompiled_functions
-    # Collect all .bas module functions that aren't from a known base
+    base_mod = meta.get('base_module')
     known_base_key = base_mod['name'].replace('.bas', '').lower() if base_mod else None
     cherrypick_input = []
     for fname, info in all_funcs.items():
         if info['module_idx'] in bas_indices:
-            continue  # skip known base module functions
+            continue
         if fname in ui_entries:
-            continue  # skip form event handlers
+            continue
         cherrypick_input.append({'name': fname, 'code': info['code'], 'size': info['size']})
-    # Also match reachable base functions if base module is NOT known
     if not known_base_key:
         for fname in reachable_bas:
             info = all_funcs[fname]
@@ -623,10 +603,56 @@ def _analyze_call_graph(base, frm_files, meta, zip_stem):
         for m in matched:
             if m['matched_module']:
                 cherry_picked.append(m)
-                # Add to proc_names so _replace_procs can resolve these
-                short_m = _proc_re.match(m['name'])
+                short_m = proc_re.match(m['name'])
                 if short_m:
                     proc_to_canonical[short_m.group(1)] = m['matched_func']
+    return cherry_picked
+
+
+def _analyze_call_graph(base, frm_files, meta, zip_stem):
+    """Trace which base module functions are actually called from UI event handlers."""
+    _proc_re = re.compile(r'(?:\d+_)?(Proc_(\d+)_(\d+))(?:_[A-Fa-f0-9]+)?')
+
+    # Phase 1: Identify base/form module indices
+    bas_indices, frm_indices = _find_module_indices(meta, _proc_re)
+    if not bas_indices:
+        return None
+
+    # Phase 2: Load canonical name mapping
+    proc_to_canonical = _build_canonical_map(meta, _proc_re)
+
+    # Phase 3: Parse all functions from source files
+    all_funcs, short_to_full = _parse_all_functions(base, frm_files, _proc_re)
+
+    # Phase 4: Trace reachable functions from UI
+    ui_entries, reachable_bas = _trace_reachable(all_funcs, short_to_full, bas_indices)
+
+    # Phase 5: Compute sizes
+    app_size = sum(v['size'] for k, v in all_funcs.items()
+                   if v['module_idx'] not in bas_indices or k in ui_entries)
+    reachable_size = sum(all_funcs[f]['size'] for f in reachable_bas)
+    dead_size = sum(v['size'] for k, v in all_funcs.items()
+                    if v['module_idx'] in bas_indices and k not in reachable_bas)
+    total = app_size + reachable_size + dead_size
+
+    def _canon(fname):
+        short = all_funcs[fname]['short'] if fname in all_funcs else fname
+        return proc_to_canonical.get(short, '')
+
+    # Phase 6: Build reachable function details
+    reachable_funcs = [
+        {'name': f, 'canonical_name': _canon(f), 'size': all_funcs[f]['size'],
+         'code': all_funcs[f]['code'], 'source_file': all_funcs[f].get('source_file', 'unknown.bas')}
+        for f in sorted(reachable_bas)
+    ]
+
+    # Phase 7: Enrich app functions with control info and code hints
+    app_funcs = _enrich_app_functions(
+        ui_entries, all_funcs, meta, proc_to_canonical, short_to_full, reachable_bas, zip_stem, _canon)
+
+    # Phase 8: Cherry-pick detection
+    cherry_picked = _detect_cherry_picks(
+        all_funcs, bas_indices, ui_entries, reachable_bas, meta, proc_to_canonical, _proc_re)
 
     return {
         'total_base_funcs': sum(1 for v in all_funcs.values() if v['module_idx'] in bas_indices),
