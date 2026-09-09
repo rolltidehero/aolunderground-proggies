@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decompile a VB5/VB6 executable using VB Decompiler Pro via injected C2 DLL.
+"""Decompile a VB5/VB6 executable using VB Decompiler via injected C2 DLL.
 
 Usage: vbdecompile.py <input_exe> <output_bas>
 

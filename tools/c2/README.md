@@ -1,6 +1,6 @@
 # C2 — In-Process Command & Control for Wine GUI Automation
 
-DLL injection-based C2 for automating VB Decompiler Pro v9.8 and standalone C2 host for screenshot capture, both running under Wine 9.0 on headless Xvfb.
+DLL injection-based C2 for automating VB Decompiler v9.8 and standalone C2 host for screenshot capture, both running under Wine 9.0 on headless Xvfb.
 
 ## Architecture
 
@@ -195,7 +195,7 @@ Tests: `python3 test_metadata.py` (52 tests)
 nohup sudo Xvfb :99 -screen 0 1024x768x24 -ac < /dev/null > /dev/null 2>&1 &
 sleep 2; nohup metacity --display=:99 --replace < /dev/null > /dev/null 2>&1 &
 sleep 2; nohup sudo -u wineuser DISPLAY=:99 wine \
-  "C:\Program Files\VB Decompiler Pro\VB Decompiler.exe" < /dev/null > /dev/null 2>&1 &
+  "C:\Program Files\VB Decompiler\VB Decompiler.exe" < /dev/null > /dev/null 2>&1 &
 sleep 12; nohup sudo -u wineuser DISPLAY=:99 wine "C:\inject.exe" < /dev/null > /dev/null 2>&1 &
 ```
 

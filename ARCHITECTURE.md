@@ -185,14 +185,14 @@ poc_walkthrough.py ──┤                  ├─ vbd_helper.py (VB Decompile
 
 **Guest-side** (`tools/vm/guest/`):
 - `agent.py` — C2 agent running inside the VM, listens on virtio-serial
-- `vbd_helper.py` — VB Decompiler Pro GUI automation (menus, dialogs, export)
+- `vbd_helper.py` — VB Decompiler GUI automation (menus, dialogs, export)
 - `vbd_extract.dll` / `vbd_plugin.c` — native VB Decompiler plugin for direct extraction
 
 **C2 pipeline scripts** (`tools/c2/`):
 - `batch_decompile.py` — batch orchestrator with resume-on-crash (checkpoint JSON)
 - `screenshot_proggies.py` — batch screenshot capture (main form, menus, about, GIF)
 - `poc_walkthrough.py` — proof-of-concept walkthrough using nav graph
-- `vbdecompile.py` — single exe decompile via VB Decompiler Pro + C2 DLL
+- `vbdecompile.py` — single exe decompile via VB Decompiler + C2 DLL
 - `extract_metadata.py` — parse metadata from decompiled .bas/.frm source
 - `enumerate_controls.py` — extract control inventory from VB6 apps
 - `extract_frx.py` — extract binary data from .frx resource files
@@ -266,7 +266,7 @@ Archive Zips (programs/)
    Python, no databases, no executables.
 
 7. **Decompiled output is local-only.** The `decompiled/` directory is
-   gitignored. It contains the raw output of VB Decompiler Pro and is
+   gitignored. It contains the raw output of VB Decompiler and is
    too large and legally ambiguous to distribute.
 
 ## Stack
@@ -279,7 +279,7 @@ Archive Zips (programs/)
 | VM hypervisor | QEMU/KVM |
 | VM control | QMP (monitor) + virtio-serial (C2) + QGA (file push) |
 | Guest OS | Windows 10 (network-isolated) |
-| Decompiler | VB Decompiler Pro (GUI + native DLL plugin) |
+| Decompiler | VB Decompiler (GUI + native DLL plugin) |
 | GUI automation | QMP input events (keyboard/mouse) + AHK |
 | CI/CD | GitHub Actions → GitHub Pages |
 | Large files | Git LFS |

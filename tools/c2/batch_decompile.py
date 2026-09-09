@@ -124,7 +124,7 @@ def ensure_vbdecompiler():
     logger.info('RECOVERY: Launching VB Decompiler')
     subprocess.Popen(
         ['sudo', '-u', 'wineuser', 'env', 'DISPLAY=:99',
-         'wine', 'C:\\Program Files\\VB Decompiler Pro\\VB Decompiler.exe'],
+         'wine', 'C:\\Program Files\\VB Decompiler\\VB Decompiler.exe'],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL)
     deadline = time.time() + 20

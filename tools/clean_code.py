@@ -1,4 +1,4 @@
-"""Clean decompiler noise from VB Decompiler Pro native-code output.
+"""Clean decompiler noise from VB Decompiler native-code output.
 
 Two levels:
   clean_for_display(code)  — aggressive, for HTML rendering

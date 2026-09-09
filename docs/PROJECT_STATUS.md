@@ -47,7 +47,7 @@ This repo is the largest known collection. We're building tooling to catalog eve
 | **Decompilable (all VB)** | **1,829** | |
 
 ### Decompilation Pipeline (In Progress)
-- Network-isolated Windows 10 VM with automated VB Decompiler Pro
+- Network-isolated Windows 10 VM with automated VB Decompiler
 - End-to-end pipeline proven: push exe, decompile, pull source, generate HTML
 - 3 of 1,829 VB exes decompiled so far (pipeline works, batch processing next)
 - Output includes .frm forms, .bas modules, .vbp project files
@@ -133,7 +133,7 @@ tools/
   c2/
     batch_decompile.py          # Batch decompile all VB5/VB6 exes via VM
     screenshot_proggies.py      # Batch screenshot capture (main form, menus, about, GIF)
-    vbdecompile.py              # Single exe decompile via VB Decompiler Pro + C2 DLL
+    vbdecompile.py              # Single exe decompile via VB Decompiler + C2 DLL
     extract_metadata.py         # Parse metadata from decompiled .bas/.frm source
     enumerate_controls.py       # Extract control inventory from VB6 apps
     poc_walkthrough.py          # POC walkthrough using nav graph + ENUMCHILDREN

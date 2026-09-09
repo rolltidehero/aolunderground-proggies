@@ -94,7 +94,7 @@ Old links broken? Check [REDIRECTS.md](.github/REDIRECTS.md) or switch to the `a
 We're recovering the original VB source code from every executable using an automated pipeline:
 
 1. Push the exe into a network-isolated Windows 10 VM (QEMU/KVM)
-2. VB Decompiler Pro opens and decompiles it via GUI automation
+2. VB Decompiler opens and decompiles it via GUI automation
 3. Pull the decompiled .frm/.bas/.vbp files back to the host
 4. Parse metadata (forms, controls, API calls, strings) into JSON
 5. Generate an enriched HTML analysis page with the source code

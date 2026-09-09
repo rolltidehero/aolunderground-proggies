@@ -1,8 +1,7 @@
 """Code graph SQLite schema and query functions.
 
-Compatible with the kali-pentest-scripts-tools code-graph schema. Stores
-function definitions, class definitions, imports, and call edges for
-structural codebase queries.
+Stores function definitions, class definitions, imports, and call edges
+for structural codebase queries.
 """
 from __future__ import annotations
 
